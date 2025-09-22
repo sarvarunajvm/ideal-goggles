@@ -98,3 +98,6 @@ minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "performance: marks tests as performance tests (deselect with '-m \"not performance\"')"
+]
