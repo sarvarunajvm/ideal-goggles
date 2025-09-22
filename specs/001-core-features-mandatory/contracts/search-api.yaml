@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: Photo Search API
+  version: 1.0.0
+  description: Local API for photo search and navigation system
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /config:
+    get:
+      summary: Get current configuration
+      responses:
+        '200':
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+
+  /config/roots:
+    post:
+      summary: Update root folders for indexing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roots:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of root folder paths
+              required: [roots]
+      responses:
+        '200':
+          description: Configuration updated successfully
+        '400':
+          description: Invalid folder paths provided
+
+  /index/start:
+    post:
+      summary: Start indexing process
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full:
+                  type: boolean
+                  default: false
+                  description: Whether to perform full re-index
+      responses:
+        '200':
+          description: Indexing started
+        '409':
+          description: Indexing already in progress
+
+  /index/status:
+    get:
+      summary: Get indexing status
+      responses:
+        '200':
+          description: Current indexing status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexStatus'
+
+  /search:
+    get:
+      summary: Search photos by text and filters
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query text
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date filter (YYYY-MM-DD)
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date filter (YYYY-MM-DD)
+        - name: folder
+          in: query
+          schema:
+            type: string
+          description: Folder path filter
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+          description: Maximum number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Results offset for pagination
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+
+  /search/semantic:
+    post:
+      summary: Semantic search using text description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Natural language description
+                top_k:
+                  type: integer
+                  default: 50
+                  minimum: 1
+                  maximum: 200
+              required: [text]
+      responses:
+        '200':
+          description: Semantic search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+
+  /search/image:
+    post:
+      summary: Reverse image search using uploaded photo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Uploaded image file
+                top_k:
+                  type: integer
+                  default: 50
+                  minimum: 1
+                  maximum: 200
+              required: [file]
+      responses:
+        '200':
+          description: Image search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+        '400':
+          description: Invalid image file
+
+  /search/faces:
+    post:
+      summary: Search photos by enrolled person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                person_id:
+                  type: integer
+                  description: ID of enrolled person
+                top_k:
+                  type: integer
+                  default: 50
+                  minimum: 1
+                  maximum: 200
+              required: [person_id]
+      responses:
+        '200':
+          description: Face search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+        '404':
+          description: Person not found
+
+  /people:
+    get:
+      summary: List enrolled people
+      responses:
+        '200':
+          description: List of enrolled people
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Person'
+
+    post:
+      summary: Enroll new person for face search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Person's display name
+                sample_file_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Array of photo IDs containing this person
+              required: [name, sample_file_ids]
+      responses:
+        '201':
+          description: Person enrolled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+        '400':
+          description: Invalid sample photos or name already exists
+
+  /people/{id}:
+    delete:
+      summary: Delete enrolled person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Person deleted successfully
+        '404':
+          description: Person not found
+
+components:
+  schemas:
+    Configuration:
+      type: object
+      properties:
+        roots:
+          type: array
+          items:
+            type: string
+          description: Configured root folders
+        ocr_languages:
+          type: array
+          items:
+            type: string
+          description: Enabled OCR languages
+        face_search_enabled:
+          type: boolean
+          description: Whether face search is enabled
+        index_version:
+          type: string
+          description: Current index version
+
+    IndexStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [idle, indexing, error]
+        progress:
+          type: object
+          properties:
+            total_files:
+              type: integer
+            processed_files:
+              type: integer
+            current_phase:
+              type: string
+              enum: [discovery, metadata, ocr, embeddings, faces]
+        errors:
+          type: array
+          items:
+            type: string
+        started_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+
+    SearchResults:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Original search query
+        total_matches:
+          type: integer
+          description: Total number of matching photos
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResultItem'
+        took_ms:
+          type: integer
+          description: Search execution time in milliseconds
+
+    SearchResultItem:
+      type: object
+      properties:
+        file_id:
+          type: integer
+        path:
+          type: string
+          description: Absolute path to photo file
+        folder:
+          type: string
+          description: Parent folder path
+        filename:
+          type: string
+          description: File name with extension
+        thumb_path:
+          type: string
+          description: Relative path to thumbnail
+        shot_dt:
+          type: string
+          format: date-time
+          description: Photo capture timestamp
+        score:
+          type: number
+          format: float
+          description: Relevance score (0.0-1.0)
+        badges:
+          type: array
+          items:
+            type: string
+            enum: [OCR, Face, Photo-Match, EXIF]
+          description: Types of matches found
+        snippet:
+          type: string
+          description: Relevant text excerpt for text matches
+
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sample_count:
+          type: integer
+          description: Number of sample photos used
+        created_at:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+          description: Whether person search is enabled
