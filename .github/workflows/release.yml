@@ -21,8 +21,25 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+
+    - name: Setup PNPM
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Get pnpm store directory
+      working-directory: ./frontend
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
 
     - name: Install backend dependencies
       working-directory: ./backend
@@ -32,15 +49,15 @@ jobs:
 
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: pnpm install --frozen-lockfile
 
     - name: Build frontend
       working-directory: ./frontend
-      run: npm run build
+      run: pnpm run build
 
     - name: Build Electron app
       working-directory: ./frontend
-      run: npm run build:electron
+      run: pnpm run build:electron
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
