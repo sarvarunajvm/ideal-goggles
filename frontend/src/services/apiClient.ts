@@ -5,10 +5,9 @@
 const API_BASE_URL = (() => {
   // In Electron production, backend runs at a dynamic localhost port (spawned by main)
   // In web dev, Vite proxy rewrites '/api' -> backend
-  if (typeof window !== 'undefined' && (window as any).electronAPI) {
-    // Port is injected by main process via env var at build-time or
-    // a fallback to 8000 for dev. Preload can expose a getter later if needed.
-    const port = (window as any).BACKEND_PORT || 8000;
+  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
+    // Port is injected by main process via preload on window.BACKEND_PORT
+    const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 8000;
     return `http://127.0.0.1:${port}`;
   }
   return '/api';

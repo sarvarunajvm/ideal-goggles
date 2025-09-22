@@ -29,5 +29,13 @@
     "@typescript-eslint/no-explicit-any": "warn",
     "no-console": "warn"
   },
-  "ignorePatterns": ["dist", "node_modules", "*.js", "tests", "vite.config.ts", "electron"]
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "*.js",
+    "tests",
+    "vite.config.ts",
+    "electron",
+    "playwright.config.ts"
+  ]
 }

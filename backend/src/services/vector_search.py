@@ -163,9 +163,8 @@ class FAISSVectorSearchService:
                     self._save_index()
 
                 # Consider upgrading to IVF if collection is large
-                if (
-                    self._should_use_ivf(self.index.ntotal)
-                    and not hasattr(self.index, "nlist")
+                if self._should_use_ivf(self.index.ntotal) and not hasattr(
+                    self.index, "nlist"
                 ):
                     self._upgrade_to_ivf_index()
 
@@ -329,7 +328,9 @@ class FAISSVectorSearchService:
                 logger.exception(f"Batch search failed: {e}")
                 return [[] for _ in range(len(query_vectors))]
 
-    def search_similar(self, query_vector: np.ndarray, k: int = 50) -> list[dict[str, Any]]:
+    def search_similar(
+        self, query_vector: np.ndarray, k: int = 50
+    ) -> list[dict[str, Any]]:
         """
         Search for similar vectors and return results in dictionary format.
 

@@ -1,13 +1,13 @@
 """FastAPI application entry point."""
 
+import sys
 from pathlib import Path
 from typing import Any
-import sys
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api import config, health, indexing, people, search
 from src.core.config import settings
@@ -39,12 +39,15 @@ else:
 
 _DOCS_ENABLED = False  # computed below and reused for root() response
 
+# Compute once for clarity and lint friendliness
+_DOCS_ENABLED = settings.DEBUG or not _UI_AVAILABLE
+
 app = FastAPI(
     title="Photo Search API",
     version="1.0.0",
     description="Local API for photo search and navigation system",
     # If no UI is bundled, expose /docs by default; otherwise follow DEBUG.
-    docs_url=("/docs" if ((_DOCS_ENABLED := (settings.DEBUG or not _UI_AVAILABLE))) else None),
+    docs_url="/docs" if _DOCS_ENABLED else None,
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
