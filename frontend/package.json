@@ -1,6 +1,6 @@
 {
   "name": "ideal-googles",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Photo search and navigation desktop application",
   "author": "Photo Search Team",
   "main": "electron/dist/main.js",

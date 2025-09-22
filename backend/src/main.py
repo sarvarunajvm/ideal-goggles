@@ -44,7 +44,7 @@ _DOCS_ENABLED = settings.DEBUG or not _UI_AVAILABLE
 
 app = FastAPI(
     title="Photo Search API",
-    version="1.0.0",
+    version="1.0.3",
     description="Local API for photo search and navigation system",
     # If no UI is bundled, expose /docs by default; otherwise follow DEBUG.
     docs_url="/docs" if _DOCS_ENABLED else None,
