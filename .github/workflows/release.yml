@@ -74,6 +74,7 @@ jobs:
 
     - name: Package app (electron-builder)
       working-directory: ./frontend
+      shell: bash
       run: |
         if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm exec electron-builder --mac; fi
         if [ "${{ matrix.os }}" = "windows-latest" ]; then pnpm exec electron-builder --win; fi
