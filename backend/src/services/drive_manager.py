@@ -130,7 +130,7 @@ class DriveManager:
                 if os.path.exists(drive_path):
                     # Create a basic device ID
                     device_id = f"win_drive_{letter}"
-                    self._update_drive_mapping(device_id, drive_path.rstrip("\\"), f"Drive {letter}", False)
+                    self._update_drive_mapping(device_id, drive_path.rstrip("\\"), f"Drive {letter}", is_removable=False)
 
         except Exception as e:
             logger.exception(f"Fallback drive scanning failed: {e}")
@@ -181,7 +181,7 @@ class DriveManager:
                     device_id = f"unix_net_{device.replace('/', '_').replace(':', '_')}"
                     is_removable = True
 
-                self._update_drive_mapping(device_id, mount_point, os.path.basename(device), is_removable)
+                self._update_drive_mapping(device_id, mount_point, Path(device).name, is_removable)
 
         except Exception as e:
             logger.exception(f"Unix drive scanning failed: {e}")
@@ -196,11 +196,7 @@ class DriveManager:
                 r"/dev/fd\d+",        # Floppy disks
             ]
 
-            for pattern in removable_patterns:
-                if re.match(pattern, device):
-                    return True
-
-            return False
+            return any(re.match(pattern, device) for pattern in removable_patterns)
 
         except Exception:
             return False
@@ -277,7 +273,7 @@ class DriveManager:
         try:
             # If path exists as-is, return it
             if os.path.exists(path):
-                return os.path.abspath(path)
+                return str(Path(path).resolve())
 
             # Try path resolution based on platform
             if self.platform == "windows":
@@ -297,7 +293,7 @@ class DriveManager:
                 rest_of_path = path[2:]
 
                 # Find current mapping for this drive type
-                for device_id, current_mount in self.current_mounts.items():
+                for current_mount in self.current_mounts.values():
                     if current_mount.lower().startswith(old_drive.lower()):
                         continue
 
@@ -308,7 +304,7 @@ class DriveManager:
                         return candidate_path
 
                 # Try all available drives
-                for device_id, current_mount in self.current_mounts.items():
+                for current_mount in self.current_mounts.values():
                     candidate_path = current_mount + rest_of_path
                     if os.path.exists(candidate_path):
                         logger.info(f"Resolved path {path} -> {candidate_path}")
@@ -324,7 +320,7 @@ class DriveManager:
         """Resolve Unix path with mount point changes."""
         try:
             # Try to find the path in alternative mount points
-            for device_id, current_mount in self.current_mounts.items():
+            for current_mount in self.current_mounts.values():
                 # Skip if it's the same mount point
                 if path.startswith(current_mount):
                     continue
@@ -358,7 +354,7 @@ class DriveManager:
             Stable path representation
         """
         try:
-            abs_path = os.path.abspath(path)
+            abs_path = str(Path(path).resolve())
 
             # Find the best matching device
             best_match = ""
@@ -372,8 +368,7 @@ class DriveManager:
             if best_device_id and best_device_id in self.drive_mappings:
                 alias = self.drive_mappings[best_device_id]
                 relative_path = abs_path[len(best_match):].lstrip(os.sep)
-                stable_path = f"${alias}${os.sep}{relative_path}" if relative_path else f"${alias}$"
-                return stable_path
+                return f"${alias}${os.sep}{relative_path}" if relative_path else f"${alias}$"
 
             # Fallback to original path
             return abs_path

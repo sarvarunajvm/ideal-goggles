@@ -459,7 +459,6 @@ class FAISSIndexManager:
 
         # Update running average
         current_avg = self.stats["average_search_time"]
-        count = self.stats["search_count"]
 
         # Use exponential moving average for recent performance
         alpha = 0.1  # Weight for new measurements

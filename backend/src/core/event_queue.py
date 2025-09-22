@@ -1,6 +1,7 @@
 """Event queue system for coordinating workers and background tasks."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import threading
@@ -268,7 +269,7 @@ class EventQueue:
             if event.scheduled_at and event.scheduled_at > datetime.now():
                 # Add to scheduled events
                 self._scheduled_events.append(event)
-                self._scheduled_events.sort(key=lambda e: e.scheduled_at or datetime.max)
+                self._scheduled_events.sort(key=lambda e: e.scheduled_at or datetime.max.replace(tzinfo=None))
             else:
                 # Add to immediate queue
                 self._event_queue.put(event)
@@ -329,10 +330,8 @@ class EventQueue:
         # Cancel scheduler
         if self._scheduler_task:
             self._scheduler_task.cancel()
-            try:
+            with contextlib.suppress(TimeoutError, asyncio.CancelledError):
                 await asyncio.wait_for(self._scheduler_task, timeout=5.0)
-            except (TimeoutError, asyncio.CancelledError):
-                pass
 
         # Cancel worker tasks
         for task in self._worker_tasks:
@@ -348,7 +347,7 @@ class EventQueue:
                 logger.warning("Some worker tasks did not stop within timeout")
 
         # Shutdown thread pool
-        self._executor.shutdown(wait=True, timeout=timeout)
+        self._executor.shutdown(wait=True)
 
         logger.info("Event queue stopped")
 

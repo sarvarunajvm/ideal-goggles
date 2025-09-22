@@ -20,7 +20,7 @@
       "@shared/*": ["../packages/shared/*"]
     }
   },
-  "include": ["src/**/*", "../packages/shared/**/*"],
+  "include": ["src/**/*", "../packages/shared/**/*", "playwright.config.ts"],
   "exclude": ["node_modules", "dist", "dist-electron", "electron"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
