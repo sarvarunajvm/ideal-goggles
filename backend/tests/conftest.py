@@ -1,9 +1,9 @@
 """Pytest configuration and shared fixtures."""
 
-from unittest.mock import Mock
-
+import contextlib
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -45,44 +45,40 @@ def sample_photos():
 
     # Insert sample photos
     sample_data = [
-        (1, '/test/photo1.jpg', '/test', 'photo1.jpg', '.jpg', 1024, 1640995200.0, 1640995200.0, 'hash1'),
-        (2, '/test/photo2.jpg', '/test', 'photo2.jpg', '.jpg', 2048, 1640995300.0, 1640995300.0, 'hash2'),
-        (3, '/test/photo3.jpg', '/test', 'photo3.jpg', '.jpg', 4096, 1640995400.0, 1640995400.0, 'hash3'),
+        (1, "/test/photo1.jpg", "/test", "photo1.jpg", ".jpg", 1024, 1640995200.0, 1640995200.0, "hash1"),
+        (2, "/test/photo2.jpg", "/test", "photo2.jpg", ".jpg", 2048, 1640995300.0, 1640995300.0, "hash2"),
+        (3, "/test/photo3.jpg", "/test", "photo3.jpg", ".jpg", 4096, 1640995400.0, 1640995400.0, "hash3"),
     ]
 
     for photo in sample_data:
-        try:
+        with contextlib.suppress(Exception):
             db_manager.execute_update(
                 "INSERT OR IGNORE INTO photos (id, path, folder, filename, ext, size, created_ts, modified_ts, sha1) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 photo
             )
-        except Exception:
-            pass  # Ignore if already exists
 
     yield sample_data
 
     # Cleanup
-    try:
+    with contextlib.suppress(Exception):
         db_manager.execute_update("DELETE FROM photos WHERE id IN (1, 2, 3)")
-    except Exception:
-        pass
 
 
 @pytest.fixture
 def enable_face_search():
     """Enable face search for testing."""
-    from src.db.connection import get_database_manager
     from src.api.config import _update_config_in_db
+    from src.db.connection import get_database_manager
 
     db_manager = get_database_manager()
 
     # Enable face search
-    _update_config_in_db(db_manager, "face_search_enabled", True)
+    _update_config_in_db(db_manager, "face_search_enabled", enabled=True)
 
     yield True
 
     # Restore to disabled (default)
-    _update_config_in_db(db_manager, "face_search_enabled", False)
+    _update_config_in_db(db_manager, "face_search_enabled", enabled=False)
 
 
 @pytest.fixture

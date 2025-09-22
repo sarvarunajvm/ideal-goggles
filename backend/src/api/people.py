@@ -209,7 +209,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
             SELECT id, path, filename, modified_ts
             FROM photos
             WHERE id IN ({file_ids_str})
-        """  # noqa: S608
+        """
 
         photo_rows = db_manager.execute_query(photos_query, request.sample_file_ids)
 
