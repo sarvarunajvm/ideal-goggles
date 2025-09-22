@@ -15,12 +15,17 @@ Var StartMenuFolder
 
 # Modern UI Configuration
 !define MUI_ABORTWARNING
-!define MUI_ICON "icon.ico"
-!define MUI_UNICON "icon.ico"
+# Use default Electron/NSIS icons unless provided by electron-builder.
+# If you want a custom icon, place `icon.ico` in build-resources and
+# change the defines below to reference `${BUILD_RESOURCES_DIR}\icon.ico`.
+#!define MUI_ICON "${BUILD_RESOURCES_DIR}\icon.ico"
+#!define MUI_UNICON "${BUILD_RESOURCES_DIR}\icon.ico"
 
 # Pages
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.txt"
+# Omit license page unless a license file is provided alongside build resources.
+# To enable, place `license.txt` in build-resources and uncomment the next line.
+#!insertmacro MUI_PAGE_LICENSE "${BUILD_RESOURCES_DIR}\license.txt"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 
