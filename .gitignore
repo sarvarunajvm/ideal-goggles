@@ -54,12 +54,26 @@ frontend/test-results/
 frontend/playwright-report/
 playwright-report/
 test-results/
+frontend/electron/dist/
 
 # Shared package build artifacts
 packages/shared/dist/
 
 # Vite/Electron misc
 *.asar
+
+# Backend packaging artifacts (PyInstaller)
+backend/dist/
+backend/build/
+backend/*.spec
+
+# Backend runtime data (created at runtime or by installers)
+backend/data/
+backend/cache/
+backend/performance_report.txt
+
+# PNPM lockfile (lockfiles not tracked in this repo)
+pnpm-lock.yaml
 
 # Environment files (keep examples)
 .env
@@ -74,5 +88,5 @@ yarn.lock
 .specify/
 .claude/
 
-.npmrc
 AGENTS.md
+*.xml

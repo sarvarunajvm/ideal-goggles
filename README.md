@@ -65,14 +65,12 @@ If you prefer manual setup:
 
 ## Running the System
 
-### Start the API Server
+### Start the API Server (dev)
 
+From `backend/`:
 ```bash
-# Using the start script
-./start.sh  # On Windows: start.bat
-
-# Or manually
-./venv/bin/python backend/main.py  # On Windows: venv\Scripts\python backend\main.py
+make install
+make dev
 ```
 
 The API will be available at: http://localhost:8000
@@ -193,7 +191,7 @@ backend/
 │   ├── services/     # Business logic
 │   └── workers/      # Background processing
 ├── tests/            # Test files
-└── main.py          # Application entry point
+└── src/main.py      # Application entry point
 ```
 
 ### Running Tests
@@ -216,7 +214,41 @@ pytest backend/tests/
 - `GET /people` - List enrolled people
 - `POST /people` - Enroll person
 
-## Packaging & Installers
+## Packaging & Installers (one click)
+
+From the repo root, use the Makefile targets:
+
+```bash
+# Install frontend deps (set registry/proxy if needed)
+make frontend-install FRONTEND_PM=pnpm
+
+# Build backend binary
+make package-backend PYTHON=python3
+
+# Build installers
+make dist-mac FRONTEND_PM=pnpm     # macOS DMG (on macOS)
+make dist-win FRONTEND_PM=pnpm     # Windows NSIS (on Windows)
+make dist-all FRONTEND_PM=pnpm     # mac/win/linux (host-dependent)
+```
+
+Notes:
+- Electron auto-starts the bundled backend and stores data in the OS app data folder.
+- If you see a white screen, open DevTools and check Network (backend at http://127.0.0.1:8000).
+
+## Release Checklist
+
+- Confirm app name and IDs match branding (`frontend/package.json:1`, build `appId`, `productName`).
+- Bump versions where needed (frontend `version`, backend `pyproject.toml:7`).
+- Build backend binary: `make package-backend PYTHON=python3`.
+- Install frontend deps (set registry/proxy if required): `make frontend-install FRONTEND_PM=pnpm`.
+- Build installers locally: `make dist-mac`, `make dist-win` (on Windows), `make dist-all`.
+- Smoke test DMG/EXE: launch app, verify backend starts (health OK), routes render, search works.
+- Provide signing assets:
+  - macOS: Apple Developer ID cert; configure electron-builder for hardened runtime + entitlements; notarize.
+  - Windows: Code-signing `.pfx` cert + password.
+- Tag and push release: `git tag v1.0.0 && git push --tags` to trigger CI matrix build.
+- Attach artifacts or let CI publish via GitHub Releases.
+- Update docs/screenshots as needed; record known limitations and system requirements.
 
 Build one‑click desktop installers that bundle the backend:
 
@@ -311,9 +343,10 @@ npm run build
 
 ### Running Locally
 
-- Start backend API:
+- Start backend API (from `backend/`):
   ```bash
-  ./venv/bin/python backend/main.py  # Windows: venv\\Scripts\\python backend\\main.py
+  make install
+  make dev
   ```
 - Start frontend app:
   ```bash

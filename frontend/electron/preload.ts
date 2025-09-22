@@ -10,6 +10,9 @@ const electronAPI = {
   // System information
   getVersion: () => ipcRenderer.invoke('get-version'),
   getPlatform: () => ipcRenderer.invoke('get-platform'),
+  getBackendLogPath: () => ipcRenderer.invoke('get-backend-log-path'),
+  getBackendPort: () => ipcRenderer.invoke('get-backend-port'),
+  readBackendLog: () => ipcRenderer.invoke('read-backend-log'),
 
   // Dialog operations
   showErrorDialog: (title: string, content: string) =>
@@ -40,6 +43,13 @@ const electronAPI = {
 
 // Security: Only expose specific API methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+// Also expose dynamic backend port selected by main process
+contextBridge.exposeInMainWorld('BACKEND_PORT', (global as any).BACKEND_PORT);
+
+// Additionally expose the dynamic backend port for renderer API client
+declare global {
+  interface Window { BACKEND_PORT?: number }
+}
 
 // Type declaration for TypeScript
 export type ElectronAPI = typeof electronAPI;

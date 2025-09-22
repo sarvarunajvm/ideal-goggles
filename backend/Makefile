@@ -1,9 +1,10 @@
 APP_NAME=photo-search-backend
+PYTHON ?= python3
 
-.PHONY: install dev test lint typecheck format run clean package package-windows package-mac
+.PHONY: install dev test lint typecheck format clean package package-windows package-mac
 
 install:
-	python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+	$(PYTHON) -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 dev:
 	uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
@@ -25,12 +26,19 @@ clean:
 
 # Package backend as a single executable with PyInstaller
 package:
-	python -m venv .venv && . .venv/bin/activate && pip install . && pip install pyinstaller && \
-	python -m PyInstaller --onefile --name photo-search-backend src/main.py
+	$(PYTHON) -m venv .venv && \
+	.venv/bin/pip install -e ".[dev]" && \
+	.venv/bin/pip install pyinstaller && \
+	.venv/bin/python -m PyInstaller --onefile --name photo-search-backend -p src -s src/main.py
 
 package-windows:
-	python -m PyInstaller --onefile --name photo-search-backend src/main.py
+	$(PYTHON) -m venv .venv && \
+	.venv/bin/pip install -e ".[dev]" && \
+	.venv/bin/pip install pyinstaller && \
+	.venv/bin/python -m PyInstaller --onefile --name photo-search-backend -p src -s src/main.py
 
 package-mac:
-	python -m venv .venv && . .venv/bin/activate && pip install . && pip install pyinstaller && \
-	python -m PyInstaller --onefile --name photo-search-backend src/main.py
+	$(PYTHON) -m venv .venv && \
+	.venv/bin/pip install -e ".[dev]" && \
+	.venv/bin/pip install pyinstaller && \
+	.venv/bin/python -m PyInstaller --onefile --name photo-search-backend -p src -s src/main.py

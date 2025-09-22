@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # Server configuration
     HOST: str = Field(default="127.0.0.1", env="HOST")
     PORT: int = Field(default=8000, env="PORT")
-    DEBUG: bool = Field(default=True, env="DEBUG")
+    DEBUG: bool = Field(default=False, env="DEBUG")
 
     # Database configuration
     DATABASE_URL: str = Field(
@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     # Storage paths
     DATA_DIR: Path = Field(default=Path("./data"), env="DATA_DIR")
     CACHE_DIR: Path = Field(default=Path("./cache"), env="CACHE_DIR")
-    THUMBNAILS_DIR: Path = Field(default=Path("./cache/thumbs"), env="THUMBNAILS_DIR")
+    # Compute thumbnails dir relative to CACHE_DIR unless explicitly overridden.
+    THUMBNAILS_DIR: Path | None = Field(default=None, env="THUMBNAILS_DIR")
 
     # ML model paths (bundled with application)
     MODELS_DIR: Path = Field(default=Path("./models"), env="MODELS_DIR")
@@ -57,15 +58,19 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize settings and create required directories."""
         super().__init__(**kwargs)
+        # Derive thumbnails directory if not set
+        if self.THUMBNAILS_DIR is None:
+            self.THUMBNAILS_DIR = self.CACHE_DIR / "thumbs"
         self._create_directories()
 
     def _create_directories(self) -> None:
         """Create required application directories."""
+        # Create data/cache directories. Do not attempt to create MODELS_DIR
+        # because packaged apps bundle models in a read-only location.
         directories = [
             self.DATA_DIR,
             self.CACHE_DIR,
             self.THUMBNAILS_DIR,
-            self.MODELS_DIR,
         ]
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)

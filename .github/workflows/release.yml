@@ -6,16 +6,20 @@ on:
       - 'v*'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        python-version: ["3.11"]
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: ${{ matrix.python-version }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -30,45 +34,69 @@ jobs:
     - name: Get pnpm store directory
       working-directory: ./frontend
       shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
     - name: Setup pnpm cache
       uses: actions/cache@v3
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
-    - name: Install backend dependencies
+    - name: Build backend binary (PyInstaller)
       working-directory: ./backend
+      shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[dev]"
+        pip install pyinstaller
+        pyinstaller --onefile --name photo-search-backend src/main.py
 
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --no-frozen-lockfile
 
-    - name: Build frontend
+    - name: Build renderer
       working-directory: ./frontend
       run: pnpm run build
 
-    - name: Build Electron app
+    - name: Build Electron main/preload
       working-directory: ./frontend
-      run: pnpm run build:electron
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: pnpm run build:electron:main
 
-    - name: Upload artifacts
+    - name: Package app (electron-builder)
+      working-directory: ./frontend
+      run: |
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm exec electron-builder --mac; fi
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then pnpm exec electron-builder --win; fi
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then pnpm exec electron-builder --linux; fi
+
+    - name: Upload artifacts (mac)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-dmg
+        path: frontend/dist-electron/*.dmg
+
+    - name: Upload artifacts (windows)
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v3
       with:
         name: windows-installer
         path: frontend/dist-electron/*.exe
 
+    - name: Upload artifacts (linux)
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-packages
+        path: |
+          frontend/dist-electron/*.AppImage
+          frontend/dist-electron/*.deb
+
   create-release:
-    needs: [build-windows]
+    needs: [build]
     runs-on: ubuntu-latest
 
     steps:
@@ -81,7 +109,10 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
+          macos-dmg/*.dmg
           windows-installer/*.exe
+          linux-packages/*.AppImage
+          linux-packages/*.deb
         draft: false
         prerelease: false
         generate_release_notes: true

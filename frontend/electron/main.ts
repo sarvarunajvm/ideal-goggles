@@ -1,5 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { join } from 'path';
+import { createWriteStream, readFileSync } from 'fs';
+import net from 'net';
 import { spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync } from 'fs';
 
@@ -8,11 +10,51 @@ let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
-const BACKEND_PORT = 8000;
+let BACKEND_PORT = 8000; // resolved at runtime in production
 
 // Backend management
 async function startBackend(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  const findFreePort = async (): Promise<number> => {
+    return await new Promise<number>((resolve, reject) => {
+      const server = net.createServer();
+      server.listen(0, '127.0.0.1');
+      server.on('listening', () => {
+        const address = server.address();
+        if (typeof address === 'object' && address && 'port' in address) {
+          const port = (address as net.AddressInfo).port;
+          server.close(() => resolve(port));
+        } else {
+          server.close(() => reject(new Error('Failed to allocate port')));
+        }
+      });
+      server.on('error', (err) => {
+        try { server.close(); } catch {}
+        reject(err);
+      });
+    });
+  };
+  const waitForPort = (port: number, host = '127.0.0.1', retries = 40, delayMs = 500): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const tryOnce = (attempt: number) => {
+        const socket = net.connect({ port, host });
+        socket.once('connect', () => {
+          socket.end();
+          resolve();
+        });
+        socket.once('error', () => {
+          socket.destroy();
+          if (attempt >= retries) {
+            reject(new Error(`Backend port ${host}:${port} not responding`));
+          } else {
+            setTimeout(() => tryOnce(attempt + 1), delayMs);
+          }
+        });
+      };
+      tryOnce(0);
+    });
+  };
+
+  return new Promise(async (resolve, reject) => {
     try {
       // In development, assume backend is running separately
       if (isDev) {
@@ -22,6 +64,8 @@ async function startBackend(): Promise<void> {
       }
 
       // In production, start the packaged backend binary (PyInstaller output)
+      // Pick a free localhost port to avoid collisions
+      BACKEND_PORT = await findFreePort();
       const backendPath = join(process.resourcesPath, 'backend');
       const binaryName = process.platform === 'win32' ? 'photo-search-backend.exe' : 'photo-search-backend';
       const backendExecutable = join(backendPath, binaryName);
@@ -45,6 +89,12 @@ async function startBackend(): Promise<void> {
       // Models directory packaged with app (optional ML features)
       const modelsDir = join(process.resourcesPath, 'models');
 
+      // Prepare logging
+      const logsDir = join(userDataDir, 'logs');
+      mkdirSync(logsDir, { recursive: true });
+      const logFile = join(logsDir, 'backend.log');
+      const logStream = createWriteStream(logFile, { flags: 'a' });
+
       backendProcess = spawn(backendExecutable, [], {
         cwd: backendPath,
         env: {
@@ -52,17 +102,22 @@ async function startBackend(): Promise<void> {
           PORT: BACKEND_PORT.toString(),
           DATA_DIR: dataDir,
           CACHE_DIR: cacheDir,
+          THUMBNAILS_DIR: join(cacheDir, 'thumbs'),
           DATABASE_URL: databaseUrl,
           MODELS_DIR: modelsDir,
         },
       });
 
       backendProcess.stdout?.on('data', (data) => {
-        console.log('Backend stdout:', data.toString());
+        const msg = data.toString();
+        console.log('Backend stdout:', msg);
+        logStream.write(`[STDOUT] ${msg}`);
       });
 
       backendProcess.stderr?.on('data', (data) => {
-        console.log('Backend stderr:', data.toString());
+        const msg = data.toString();
+        console.error('Backend stderr:', msg);
+        logStream.write(`[STDERR] ${msg}`);
       });
 
       backendProcess.on('close', (code) => {
@@ -75,14 +130,10 @@ async function startBackend(): Promise<void> {
         reject(error);
       });
 
-      // Give backend time to start
-      setTimeout(() => {
-        if (backendProcess && !backendProcess.killed) {
-          resolve();
-        } else {
-          reject(new Error('Backend failed to start'));
-        }
-      }, 3000);
+      // Wait until the backend port is responsive
+      waitForPort(BACKEND_PORT)
+        .then(() => resolve())
+        .catch((err) => reject(err));
 
     } catch (error) {
       console.error('Failed to start backend:', error);
@@ -119,7 +170,6 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
       preload: join(__dirname, 'preload.js'),
     },
     icon: join(__dirname, '../../assets/icon.png'), // App icon
@@ -128,7 +178,7 @@ function createWindow(): void {
   // Load the app
   const startUrl = isDev
     ? 'http://localhost:5173'  // Vite dev server
-    : `file://${join(__dirname, '../dist/index.html')}`;
+    : `file://${join(__dirname, '../../dist/index.html')}#/`;
 
   mainWindow.loadURL(startUrl);
 
@@ -152,11 +202,7 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  // Security: prevent new window creation
-  mainWindow.webContents.on('new-window', (event, url) => {
-    event.preventDefault();
-    shell.openExternal(url);
-  });
+  // Security: new windows are denied via setWindowOpenHandler above
 
   // Handle navigation security
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
@@ -198,6 +244,32 @@ function setupIpcHandlers(): void {
   // Get platform
   ipcMain.handle('get-platform', () => {
     return process.platform;
+  });
+
+  // Get backend log file path
+  ipcMain.handle('get-backend-log-path', () => {
+    const userDataDir = app.getPath('userData');
+    const logsDir = join(userDataDir, 'logs');
+    const logFile = join(logsDir, 'backend.log');
+    return logFile;
+  });
+
+  // Get current backend port selected by main
+  ipcMain.handle('get-backend-port', () => {
+    return BACKEND_PORT;
+  });
+
+  // Read backend log contents (last N bytes)
+  ipcMain.handle('read-backend-log', () => {
+    try {
+      const userDataDir = app.getPath('userData');
+      const logsDir = join(userDataDir, 'logs');
+      const logFile = join(logsDir, 'backend.log');
+      const data = readFileSync(logFile, 'utf-8');
+      return data;
+    } catch (e) {
+      return '';
+    }
   });
 
   // Show error dialog
@@ -256,6 +328,10 @@ app.whenReady().then(async () => {
     // Setup IPC handlers
     setupIpcHandlers();
 
+    // Expose the selected port to renderer via global shared object BEFORE creating the window,
+    // so preload can read it and expose window.BACKEND_PORT properly.
+    (global as any).BACKEND_PORT = BACKEND_PORT;
+
     // Create main window
     createWindow();
 
@@ -304,11 +380,11 @@ app.on('will-quit', (event) => {
   }
 });
 
-// Security: Prevent new window creation
+// Security: Prevent new window creation for any WebContents
 app.on('web-contents-created', (_, contents) => {
-  contents.on('new-window', (event, navigationUrl) => {
-    event.preventDefault();
-    shell.openExternal(navigationUrl);
+  contents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 });
 
