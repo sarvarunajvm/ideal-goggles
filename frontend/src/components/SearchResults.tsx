@@ -1,4 +1,4 @@
-import { SearchResponse } from '../services/api';
+import { SearchResponse } from '../services/apiClient';
 
 interface SearchResultsProps {
   results: SearchResponse;

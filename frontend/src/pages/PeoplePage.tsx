@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import { apiService } from '../services/apiClient';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService, IndexStatus } from '../services/api';
+import { apiService, IndexStatus } from '../services/apiClient';
 
 export default function StatusBar() {
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);

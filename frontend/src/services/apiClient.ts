@@ -2,7 +2,7 @@
  * API service for photo search backend
  */
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://localhost:8000';
 
 export interface SearchResult {
   file_id: number;
@@ -78,11 +78,11 @@ class ApiService {
 
   // Configuration endpoints
   async getConfig(): Promise<ConfigResponse> {
-    return this.request<ConfigResponse>('/config/config');
+    return this.request<ConfigResponse>('/config');
   }
 
   async updateRoots(roots: string[]): Promise<void> {
-    return this.request('/config/config/roots', {
+    return this.request('/config/roots', {
       method: 'POST',
       body: JSON.stringify({ roots }),
     });
@@ -94,7 +94,7 @@ class ApiService {
     thumbnail_size: number;
     thumbnail_quality: number;
   }>): Promise<void> {
-    return this.request('/config/config', {
+    return this.request('/config', {
       method: 'PUT',
       body: JSON.stringify(config),
     });
@@ -117,11 +117,11 @@ class ApiService {
       }
     });
 
-    return this.request<SearchResponse>(`/search/search?${searchParams}`);
+    return this.request<SearchResponse>(`/search?${searchParams}`);
   }
 
   async semanticSearch(text: string, topK = 50): Promise<SearchResponse> {
-    return this.request<SearchResponse>('/search/search/semantic', {
+    return this.request<SearchResponse>('/search/semantic', {
       method: 'POST',
       body: JSON.stringify({ text, top_k: topK }),
     });
@@ -132,7 +132,7 @@ class ApiService {
     formData.append('file', file);
     formData.append('top_k', topK.toString());
 
-    return this.request<SearchResponse>('/search/search/image', {
+    return this.request<SearchResponse>('/search/image', {
       method: 'POST',
       body: formData,
       headers: {}, // Let browser set Content-Type for FormData
@@ -141,33 +141,33 @@ class ApiService {
 
   // Indexing endpoints
   async getIndexStatus(): Promise<IndexStatus> {
-    return this.request<IndexStatus>('/index/index/status');
+    return this.request<IndexStatus>('/index/status');
   }
 
   async startIndexing(full = false): Promise<Record<string, unknown>> {
-    return this.request('/index/index/start', {
+    return this.request('/index/start', {
       method: 'POST',
       body: JSON.stringify({ full }),
     });
   }
 
   async stopIndexing(): Promise<Record<string, unknown>> {
-    return this.request('/index/index/stop', {
+    return this.request('/index/stop', {
       method: 'POST',
     });
   }
 
   async getIndexStats(): Promise<Record<string, unknown>> {
-    return this.request('/index/index/stats');
+    return this.request('/index/stats');
   }
 
   // People endpoints
   async getPeople(): Promise<Record<string, unknown>[]> {
-    return this.request('/people/people');
+    return this.request('/people');
   }
 
   async createPerson(name: string, sampleFileIds: number[]): Promise<Record<string, unknown>> {
-    return this.request('/people/people', {
+    return this.request('/people', {
       method: 'POST',
       body: JSON.stringify({
         name,
@@ -177,7 +177,7 @@ class ApiService {
   }
 
   async searchFaces(personId: number, topK = 50): Promise<SearchResponse> {
-    return this.request<SearchResponse>('/search/search/faces', {
+    return this.request<SearchResponse>('/search/faces', {
       method: 'POST',
       body: JSON.stringify({
         person_id: personId,

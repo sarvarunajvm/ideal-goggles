@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService, IndexStatus } from '../services/api';
+import { apiService, IndexStatus } from '../services/apiClient';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 
@@ -240,7 +240,7 @@ export default function SettingsPage() {
                           {indexStatus.errors.length} error(s)
                         </summary>
                         <div className="mt-2 space-y-1">
-                          {indexStatus.errors.map((error, index) => (
+                          {indexStatus.errors.map((error: string, index: number) => (
                             <div key={index} className="text-red-600 font-mono text-xs">
                               {error}
                             </div>

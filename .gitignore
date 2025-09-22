@@ -74,3 +74,4 @@ yarn.lock
 .specify/
 .claude/
 
+.npmrc

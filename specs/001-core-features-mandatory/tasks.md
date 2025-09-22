@@ -109,33 +109,33 @@
 ## Phase 3.4: Frontend Implementation
 
 ### Core Components
-- [ ] T051 Search page with input and filters in frontend/src/pages/SearchPage.tsx
-- [ ] T052 Results grid with thumbnails in frontend/src/components/ResultsGrid.tsx
-- [ ] T053 Preview drawer with actions in frontend/src/components/PreviewDrawer.tsx
-- [ ] T054 Settings page with folder management in frontend/src/pages/SettingsPage.tsx
-- [ ] T055 People management page in frontend/src/pages/PeoplePage.tsx
+- [x] T051 Search page with input and filters in frontend/src/pages/SearchPage.tsx
+- [x] T052 Results grid with thumbnails in frontend/src/components/ResultsGrid.tsx
+- [x] T053 Preview drawer with actions in frontend/src/components/PreviewDrawer.tsx
+- [x] T054 Settings page with folder management in frontend/src/pages/SettingsPage.tsx
+- [x] T055 People management page in frontend/src/pages/PeoplePage.tsx
 
 ### Services & Integration
-- [ ] T056 API client service in frontend/src/services/apiClient.ts
-- [ ] T057 Electron main process with IPC in frontend/src/main.ts
-- [ ] T058 OS integration for "reveal in folder" in frontend/src/services/osIntegration.ts
+- [x] T056 API client service in frontend/src/services/apiClient.ts
+- [x] T057 Electron main process with IPC in frontend/electron/main.ts
+- [x] T058 OS integration for "reveal in folder" in frontend/src/services/osIntegration.ts
 
 ## Phase 3.5: Integration & Polish
 
 ### Performance & Optimization
-- [ ] T059 [P] FAISS index optimization and persistence in backend/src/services/faiss_manager.py
-- [ ] T060 [P] Drive aliasing and path resolution in backend/src/services/drive_manager.py
-- [ ] T061 [P] Event queue system for worker coordination in backend/src/core/event_queue.py
+- [x] T059 [P] FAISS index optimization and persistence in backend/src/services/faiss_manager.py
+- [x] T060 [P] Drive aliasing and path resolution in backend/src/services/drive_manager.py
+- [x] T061 [P] Event queue system for worker coordination in backend/src/core/event_queue.py
 
 ### Testing & Quality
-- [ ] T062 [P] Unit tests for search services in backend/tests/unit/test_search_services.py
-- [ ] T063 [P] Performance benchmarks in backend/tests/performance/
-- [ ] T064 [P] Frontend end-to-end tests in frontend/tests/e2e/
+- [x] T062 [P] Unit tests for search services in backend/tests/unit/test_search_services.py
+- [x] T063 [P] Performance benchmarks in backend/tests/performance/
+- [x] T064 [P] Frontend end-to-end tests in frontend/tests/e2e/
 
 ### Packaging & Deployment
-- [ ] T065 Electron packaging configuration in frontend/package.json
-- [ ] T066 Windows installer with code signing
-- [ ] T067 [P] Application documentation and user manual
+- [x] T065 Electron packaging configuration in frontend/package.json
+- [x] T066 Windows installer with code signing
+- [x] T067 [P] Application documentation and user manual
 
 ## Dependencies
 

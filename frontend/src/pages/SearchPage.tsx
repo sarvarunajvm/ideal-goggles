@@ -1,16 +1,20 @@
 import { useState } from 'react';
-import { apiService, SearchResponse } from '../services/api';
+import { apiService, SearchResponse, SearchResult } from '../services/apiClient';
 import SearchBar from '../components/SearchBar';
-import SearchResults from '../components/SearchResults';
+import ResultsGrid from '../components/ResultsGrid';
+import PreviewDrawer from '../components/PreviewDrawer';
 import SearchFilters from '../components/SearchFilters';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
+import { osIntegration } from '../services/osIntegration';
 
 export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>('text');
+  const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Search filters
   const [filters, setFilters] = useState({
@@ -67,6 +71,33 @@ export default function SearchPage() {
 
   const handleFilterChange = (newFilters: Partial<typeof filters>) => {
     setFilters({ ...filters, ...newFilters });
+  };
+
+  const handleItemClick = (item: SearchResult) => {
+    setSelectedItem(item);
+    setPreviewOpen(true);
+  };
+
+  const handleRevealInFolder = async (item: SearchResult) => {
+    try {
+      await osIntegration.revealInFolder(item.path);
+    } catch (error) {
+      // Silent failure - error will be handled by osIntegration service
+    }
+  };
+
+  const handleNextItem = () => {
+    if (!searchResults || !selectedItem) return;
+    const currentIndex = searchResults.items.findIndex(item => item.file_id === selectedItem.file_id);
+    const nextIndex = (currentIndex + 1) % searchResults.items.length;
+    setSelectedItem(searchResults.items[nextIndex]);
+  };
+
+  const handlePreviousItem = () => {
+    if (!searchResults || !selectedItem) return;
+    const currentIndex = searchResults.items.findIndex(item => item.file_id === selectedItem.file_id);
+    const prevIndex = (currentIndex - 1 + searchResults.items.length) % searchResults.items.length;
+    setSelectedItem(searchResults.items[prevIndex]);
   };
 
   return (
@@ -141,7 +172,26 @@ export default function SearchPage() {
           )}
 
           {searchResults && !loading && (
-            <SearchResults results={searchResults} />
+            <div>
+              {/* Results Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {searchResults.total_matches.toLocaleString()} photo{searchResults.total_matches !== 1 ? 's' : ''} found
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Search for "{searchResults.query}" completed in {searchResults.took_ms}ms
+                  </p>
+                </div>
+              </div>
+
+              {/* Results Grid */}
+              <ResultsGrid
+                results={searchResults.items}
+                onItemClick={handleItemClick}
+                onRevealInFolder={handleRevealInFolder}
+              />
+            </div>
           )}
 
           {!searchResults && !loading && !error && (
@@ -175,6 +225,16 @@ export default function SearchPage() {
 
       {/* Status Bar */}
       <StatusBar />
+
+      {/* Preview Drawer */}
+      <PreviewDrawer
+        item={selectedItem}
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        onRevealInFolder={handleRevealInFolder}
+        onNext={searchResults?.items && searchResults.items.length > 1 ? handleNextItem : undefined}
+        onPrevious={searchResults?.items && searchResults.items.length > 1 ? handlePreviousItem : undefined}
+      />
     </div>
   );
 }
