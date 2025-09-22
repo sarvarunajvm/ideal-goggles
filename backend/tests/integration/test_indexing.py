@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 class TestIndexingWorkflow:
     """Test complete file indexing user scenario."""
 
-    def test_indexing_pipeline_scenario(self, client: TestClient) -> None:
+    def test_indexing_pipeline_scenario(self, client: TestClient, temp_dirs) -> None:
         """Test complete indexing workflow from folder setup to searchable content."""
         # Given: User configures root folders
-        config_payload = {"roots": ["/test/photos", "/another/folder"]}
+        config_payload = {"roots": [temp_dirs["photos"], temp_dirs["another"]]}
         config_response = client.post("/config/roots", json=config_payload)
 
         # Will fail until implemented (mock returns 404)

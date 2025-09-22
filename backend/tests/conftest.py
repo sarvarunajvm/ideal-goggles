@@ -104,12 +104,12 @@ def enable_face_search():
     db_manager = get_database_manager()
 
     # Enable face search
-    _update_config_in_db(db_manager, "face_search_enabled", enabled=True)
+    _update_config_in_db(db_manager, "face_search_enabled", value=True)
 
     yield True
 
     # Restore to disabled (default)
-    _update_config_in_db(db_manager, "face_search_enabled", enabled=False)
+    _update_config_in_db(db_manager, "face_search_enabled", value=False)
 
 
 @pytest.fixture

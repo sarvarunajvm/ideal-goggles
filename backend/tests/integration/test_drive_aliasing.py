@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 class TestDriveAliasingWorkflow:
     """Test drive letter changes and path resolution scenarios."""
 
-    def test_drive_letter_change_scenario(self, client: TestClient) -> None:
+    def test_drive_letter_change_scenario(self, client: TestClient, temp_dirs) -> None:
         """Test system handles drive letter changes (Windows scenario)."""
-        # Given: Photos indexed from external drive D:\photos
-        config_payload = {"roots": ["D:\\photos"]}
+        # Given: Photos indexed from external drive (using temp dir)
+        config_payload = {"roots": [temp_dirs["photos"]]}
         config_response = client.post("/config/roots", json=config_payload)
 
         # Will fail until implemented (mock returns 404)
