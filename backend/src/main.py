@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import health
+from .api import config, health, indexing, people, search
 from .core.config import settings
 
 app = FastAPI(
@@ -26,6 +26,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router)
+app.include_router(config.router)
+app.include_router(indexing.router)
+app.include_router(people.router)
+app.include_router(search.router)
 
 
 @app.get("/")

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from ..db.connection import get_database_manager
 
@@ -26,14 +26,16 @@ class UpdateRootsRequest(BaseModel):
 
     roots: list[str] = Field(description="Array of root folder paths")
 
-    @validator("roots")
-    def validate_roots(self, v):
+    @field_validator("roots")
+    @classmethod
+    def validate_roots(cls, v):
         """Validate root folder paths."""
-        if not v:
-            msg = "At least one root folder is required"
-            raise ValueError(msg)
-
         for root_path in v:
+            # Check for empty strings
+            if not root_path or not root_path.strip():
+                msg = "Root path cannot be empty"
+                raise ValueError(msg)
+
             path = Path(root_path)
             if not path.exists():
                 msg = f"Path does not exist: {root_path}"
@@ -59,12 +61,14 @@ class UpdateConfigRequest(BaseModel):
         None, ge=50, le=100, description="Thumbnail quality"
     )
 
-    @validator("ocr_languages")
-    def validate_ocr_languages(self, v):
+    @field_validator("ocr_languages")
+    @classmethod
+    def validate_ocr_languages(cls, v):
         """Validate OCR language codes."""
         if v is not None:
             valid_languages = [
                 "eng",
+                "tam",
                 "fra",
                 "deu",
                 "spa",
@@ -233,13 +237,14 @@ async def get_default_configuration() -> dict[str, Any]:
     """
     return {
         "roots": [],
-        "ocr_languages": ["eng"],
+        "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
         "thumbnail_size": 512,
         "thumbnail_quality": 85,
         "index_version": "1",
         "supported_ocr_languages": [
             "eng",
+            "tam",
             "fra",
             "deu",
             "spa",
@@ -320,7 +325,7 @@ async def reset_configuration() -> dict[str, Any]:
         # Reset to default values
         default_config = {
             "roots": [],
-            "ocr_languages": ["eng"],
+            "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
             "thumbnail_size": 512,
             "thumbnail_quality": 85,
@@ -355,7 +360,7 @@ def _parse_json_setting(key: str, value: str) -> Any:
 
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
-        return {"roots": [], "ocr_languages": ["eng"]}.get(key, [])
+        return {"roots": [], "ocr_languages": ["eng", "tam"]}.get(key, [])
 
 
 def _parse_boolean_setting(value: str) -> bool:
@@ -386,7 +391,7 @@ def _get_config_defaults() -> dict[str, Any]:
     """Get default configuration values."""
     return {
         "roots": [],
-        "ocr_languages": ["eng"],
+        "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
         "thumbnail_size": 512,
         "thumbnail_quality": 85,
@@ -424,7 +429,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         # Return defaults on error
         return {
             "roots": [],
-            "ocr_languages": ["eng"],
+            "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
             "thumbnail_size": 512,
             "thumbnail_quality": 85,

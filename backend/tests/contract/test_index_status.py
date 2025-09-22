@@ -33,4 +33,5 @@ class TestIndexStatusEndpoint:
                 "ocr",
                 "embeddings",
                 "faces",
+                "completed",
             ]

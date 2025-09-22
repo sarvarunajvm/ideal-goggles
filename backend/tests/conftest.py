@@ -2,6 +2,9 @@
 
 from unittest.mock import Mock
 
+import tempfile
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,38 +15,74 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client() -> TestClient:
     """Create a test client for the FastAPI application."""
-    # Mock client since main app doesn't have endpoints implemented yet
-    Mock()
-    mock_client = Mock(spec=TestClient)
+    # Use real app now that endpoints are implemented
+    from src.main import app
+    return TestClient(app)
 
-    # Configure mock responses for contract tests to FAIL
-    # This ensures TDD compliance - tests fail before implementation
-    def mock_get(url: str):
-        mock_response = Mock()
-        mock_response.status_code = 404  # Will fail until implemented
-        mock_response.json.return_value = {"error": "Endpoint not implemented"}
-        mock_response.headers = {"content-type": "application/json"}
-        return mock_response
 
-    def mock_post(url: str, **kwargs):
-        mock_response = Mock()
-        mock_response.status_code = 404  # Will fail until implemented
-        mock_response.json.return_value = {"error": "Endpoint not implemented"}
-        mock_response.headers = {"content-type": "application/json"}
-        return mock_response
+@pytest.fixture
+def temp_dirs():
+    """Create temporary directories for testing."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        photos_dir = temp_path / "photos"
+        another_dir = temp_path / "another"
+        photos_dir.mkdir()
+        another_dir.mkdir()
+        yield {
+            "photos": str(photos_dir),
+            "another": str(another_dir),
+            "base": str(temp_path)
+        }
 
-    def mock_delete(url: str):
-        mock_response = Mock()
-        mock_response.status_code = 404  # Will fail until implemented
-        mock_response.json.return_value = {"error": "Endpoint not implemented"}
-        mock_response.headers = {"content-type": "application/json"}
-        return mock_response
 
-    mock_client.get = mock_get
-    mock_client.post = mock_post
-    mock_client.delete = mock_delete
+@pytest.fixture
+def sample_photos():
+    """Create sample photos in database for testing."""
+    from src.db.connection import get_database_manager
 
-    return mock_client
+    db_manager = get_database_manager()
+
+    # Insert sample photos
+    sample_data = [
+        (1, '/test/photo1.jpg', '/test', 'photo1.jpg', '.jpg', 1024, 1640995200.0, 1640995200.0, 'hash1'),
+        (2, '/test/photo2.jpg', '/test', 'photo2.jpg', '.jpg', 2048, 1640995300.0, 1640995300.0, 'hash2'),
+        (3, '/test/photo3.jpg', '/test', 'photo3.jpg', '.jpg', 4096, 1640995400.0, 1640995400.0, 'hash3'),
+    ]
+
+    for photo in sample_data:
+        try:
+            db_manager.execute_update(
+                "INSERT OR IGNORE INTO photos (id, path, folder, filename, ext, size, created_ts, modified_ts, sha1) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                photo
+            )
+        except Exception:
+            pass  # Ignore if already exists
+
+    yield sample_data
+
+    # Cleanup
+    try:
+        db_manager.execute_update("DELETE FROM photos WHERE id IN (1, 2, 3)")
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def enable_face_search():
+    """Enable face search for testing."""
+    from src.db.connection import get_database_manager
+    from src.api.config import _update_config_in_db
+
+    db_manager = get_database_manager()
+
+    # Enable face search
+    _update_config_in_db(db_manager, "face_search_enabled", True)
+
+    yield True
+
+    # Restore to disabled (default)
+    _update_config_in_db(db_manager, "face_search_enabled", False)
 
 
 @pytest.fixture

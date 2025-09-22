@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from ..db.connection import get_database_manager
 
@@ -29,8 +29,9 @@ class CreatePersonRequest(BaseModel):
         description="Array of photo IDs containing this person"
     )
 
-    @validator("name")
-    def validate_name(self, v):
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
         """Validate person name."""
         if not v or not v.strip():
             msg = "Person name cannot be empty"
@@ -40,8 +41,9 @@ class CreatePersonRequest(BaseModel):
             raise ValueError(msg)
         return v.strip()
 
-    @validator("sample_file_ids")
-    def validate_sample_file_ids(self, v):
+    @field_validator("sample_file_ids")
+    @classmethod
+    def validate_sample_file_ids(cls, v):
         """Validate sample file IDs."""
         if not v or len(v) < 1:
             msg = "At least one sample photo is required"
@@ -61,8 +63,9 @@ class UpdatePersonRequest(BaseModel):
         None, description="Additional sample photos"
     )
 
-    @validator("name")
-    def validate_name(self, v):
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
         """Validate person name."""
         if v is not None:
             if not v or not v.strip():
@@ -181,6 +184,15 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
 
         db_manager = get_database_manager()
 
+        # Check if face search is enabled
+        from ..api.config import _get_config_from_db
+        config = _get_config_from_db(db_manager)
+        if not config.get("face_search_enabled", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Face search is disabled. Enable face search in configuration to create people.",
+            )
+
         # Check if name already exists
         name_check_query = "SELECT id FROM people WHERE name = ?"
         existing = db_manager.execute_query(name_check_query, (request.name,))
@@ -193,11 +205,11 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
 
         # Validate that all sample file IDs exist
         file_ids_str = ",".join("?" * len(request.sample_file_ids))
-        photos_query = f"""  # noqa: S608
+        photos_query = f"""
             SELECT id, path, filename, modified_ts
             FROM photos
             WHERE id IN ({file_ids_str})
-        """
+        """  # noqa: S608
 
         photo_rows = db_manager.execute_query(photos_query, request.sample_file_ids)
 

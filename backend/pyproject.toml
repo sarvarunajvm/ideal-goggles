@@ -25,6 +25,8 @@ dependencies = [
     "python-magic>=0.4.27",
     "watchdog>=3.0.0",
     "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "psutil>=5.9.0",
     "cryptography>=41.0.7",
     "keyring>=24.3.0",
 ]
@@ -106,7 +108,7 @@ disable_error_code = ["var-annotated", "assignment", "arg-type", "operator", "un
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --strict-config --continue-on-collection-errors"
+addopts = "-ra -q --strict-markers --strict-config --continue-on-collection-errors --tb=short"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [

@@ -43,7 +43,7 @@ async def health_check() -> dict[str, Any]:
         health_data["dependencies"] = deps_health
 
         # Determine overall health status
-        if not db_health["healthy"] or not deps_health["all_available"]:
+        if not db_health["healthy"] or not deps_health["critical_available"]:
             health_data["status"] = "degraded"
 
         return health_data
@@ -61,8 +61,8 @@ def _get_system_info() -> dict[str, Any]:
         # Disk information
         disk = psutil.disk_usage("/")
 
-        # CPU information
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # CPU information (non-blocking)
+        cpu_percent = psutil.cpu_percent(interval=None)
 
         return {
             "memory": {

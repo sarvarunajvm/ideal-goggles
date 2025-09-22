@@ -123,14 +123,32 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
     start_time = datetime.now()
 
     try:
+        # Check if CLIP dependencies are available
+        try:
+            import clip
+            import torch
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Semantic search unavailable: CLIP dependencies not installed ({e})",
+            )
+
         # Import embedding worker here to avoid circular imports
         from ..workers.embedding_worker import CLIPEmbeddingWorker
 
         db_manager = get_database_manager()
 
         # Generate text embedding
-        embedding_worker = CLIPEmbeddingWorker()
-        query_embedding = await embedding_worker.generate_text_embedding(request.text)
+        try:
+            embedding_worker = CLIPEmbeddingWorker()
+            query_embedding = await embedding_worker.generate_text_embedding(request.text)
+        except RuntimeError as e:
+            if "CLIP dependencies not installed" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Semantic search unavailable: CLIP dependencies not properly configured",
+                )
+            raise
 
         if query_embedding is None:
             raise HTTPException(
@@ -180,6 +198,16 @@ async def image_search(
     start_time = datetime.now()
 
     try:
+        # Check if CLIP dependencies are available
+        try:
+            import clip
+            import torch
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Image search unavailable: CLIP dependencies not installed ({e})",
+            )
+
         # Validate file type
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(
@@ -203,8 +231,16 @@ async def image_search(
             temp_photo = Photo(path=temp_path)
 
             # Generate embedding for uploaded image
-            embedding_worker = CLIPEmbeddingWorker()
-            query_embedding_obj = await embedding_worker.generate_embedding(temp_photo)
+            try:
+                embedding_worker = CLIPEmbeddingWorker()
+                query_embedding_obj = await embedding_worker.generate_embedding(temp_photo)
+            except RuntimeError as e:
+                if "CLIP dependencies not installed" in str(e):
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Image search unavailable: CLIP dependencies not properly configured",
+                    )
+                raise
 
             if query_embedding_obj is None:
                 raise HTTPException(
@@ -258,6 +294,15 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
 
     try:
         db_manager = get_database_manager()
+
+        # Check if face search is enabled
+        from .config import _get_config_from_db
+        config = _get_config_from_db(db_manager)
+        if not config.get("face_search_enabled", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Face search is disabled. Enable face search in configuration.",
+            )
 
         # Check if person exists
         person_query = "SELECT id, name, face_vector, active FROM people WHERE id = ? AND active = 1"
