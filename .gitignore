@@ -75,3 +75,4 @@ yarn.lock
 .claude/
 
 .npmrc
+AGENTS.md

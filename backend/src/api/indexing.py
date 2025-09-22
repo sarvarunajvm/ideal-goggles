@@ -9,8 +9,8 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..db.connection import get_database_manager
 from ..core.config import settings
+from ..db.connection import get_database_manager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

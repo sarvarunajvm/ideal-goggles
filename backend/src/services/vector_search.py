@@ -6,10 +6,11 @@ import pickle
 import threading
 import time
 from pathlib import Path
-from ..core.config import settings
 from typing import Any
 
 import numpy as np
+
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -163,8 +164,7 @@ class FAISSVectorSearchService:
 
                 # Consider upgrading to IVF if collection is large
                 if (
-                    self.index.ntotal > 200000
-                    and hasattr(self.index, "ntotal")
+                    self._should_use_ivf(self.index.ntotal)
                     and not hasattr(self.index, "nlist")
                 ):
                     self._upgrade_to_ivf_index()
@@ -191,7 +191,7 @@ class FAISSVectorSearchService:
         with self._lock:
             try:
                 if file_id not in self.file_id_to_index:
-                    return True  # Already removed
+                    return False  # Vector doesn't exist
 
                 index_pos = self.file_id_to_index[file_id]
 
@@ -328,6 +328,27 @@ class FAISSVectorSearchService:
             except Exception as e:
                 logger.exception(f"Batch search failed: {e}")
                 return [[] for _ in range(len(query_vectors))]
+
+    def search_similar(self, query_vector: np.ndarray, k: int = 50) -> list[dict[str, Any]]:
+        """
+        Search for similar vectors and return results in dictionary format.
+
+        Args:
+            query_vector: Query embedding vector
+            k: Number of results to return
+
+        Returns:
+            List of dictionaries with 'file_id' and 'distance' keys
+        """
+        results = self.search(query_vector, top_k=k, score_threshold=0.0)
+
+        # Convert to expected format (distance = 1 - similarity for consistency with tests)
+        formatted_results = []
+        for file_id, similarity in results:
+            distance = 1.0 - similarity  # Convert similarity to distance
+            formatted_results.append({"file_id": file_id, "distance": distance})
+
+        return formatted_results
 
     def get_vector(self, file_id: int) -> np.ndarray | None:
         """

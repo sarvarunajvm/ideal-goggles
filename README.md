@@ -216,6 +216,18 @@ pytest backend/tests/
 - `GET /people` - List enrolled people
 - `POST /people` - Enroll person
 
+## Packaging & Installers
+
+Build one‑click desktop installers that bundle the backend:
+
+- macOS: `cd frontend && pnpm dist:mac`
+- Windows: `cd frontend && pnpm dist:win`
+- All (on host OS): `cd frontend && pnpm dist:all`
+
+Notes:
+- The backend is packaged with PyInstaller and auto‑started by Electron.
+- App data (database, cache) is stored under the OS app data folder (e.g., `~/Library/Application Support/Photo Search`, `%AppData%/Photo Search`).
+
 ## Performance Tuning
 
 ### For Large Libraries (1M+ photos)

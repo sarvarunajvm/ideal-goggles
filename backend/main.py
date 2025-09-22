@@ -15,10 +15,10 @@ from src.api.health import router as health_router
 from src.api.indexing import router as indexing_router
 from src.api.people import router as people_router
 from src.api.search import router as search_router
+from src.core.config import Settings
 
 # Import database initialization
 from src.db.connection import init_database
-from src.core.config import Settings
 
 # Configure logging
 logging.basicConfig(

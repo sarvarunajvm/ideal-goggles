@@ -1,7 +1,6 @@
 APP_NAME=photo-search-backend
-IMAGE_NAME=$(APP_NAME):latest
 
-.PHONY: install dev test lint typecheck format run docker-build docker-run clean
+.PHONY: install dev test lint typecheck format run clean package package-windows package-mac
 
 install:
 	python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
@@ -21,11 +20,17 @@ typecheck:
 format:
 	black .
 
-docker-build:
-	docker build -t $(IMAGE_NAME) .
-
-docker-run:
-	docker run --rm -p 8000:8000 -v $(PWD)/data:/app/data -v $(PWD)/cache:/app/cache $(IMAGE_NAME)
-
 clean:
 	rm -rf .venv data cache performance_report.txt
+
+# Package backend as a single executable with PyInstaller
+package:
+	python -m venv .venv && . .venv/bin/activate && pip install . && pip install pyinstaller && \
+	python -m PyInstaller --onefile --name photo-search-backend src/main.py
+
+package-windows:
+	python -m PyInstaller --onefile --name photo-search-backend src/main.py
+
+package-mac:
+	python -m venv .venv && . .venv/bin/activate && pip install . && pip install pyinstaller && \
+	python -m PyInstaller --onefile --name photo-search-backend src/main.py

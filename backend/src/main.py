@@ -2,6 +2,7 @@
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import config, health, indexing, people, search
@@ -31,11 +32,19 @@ app.include_router(indexing.router)
 app.include_router(people.router)
 app.include_router(search.router)
 
+# Mount UAT static UI under /ui
+app.mount("/ui", StaticFiles(directory="frontend", html=True), name="ui")
+
 
 @app.get("/")
 async def root() -> dict[str, str]:
     """Root endpoint."""
-    return {"message": "Photo Search API", "version": "1.0.0"}
+    return {
+        "message": "Photo Search API",
+        "version": "1.0.0",
+        "ui": "/ui",
+        "docs": "/docs" if settings.DEBUG else None,
+    }
 
 
 def main() -> None:

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { join } from 'path';
 import { spawn, ChildProcess } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -21,22 +21,39 @@ async function startBackend(): Promise<void> {
         return;
       }
 
-      // In production, start the bundled Python backend
+      // In production, start the packaged backend binary (PyInstaller output)
       const backendPath = join(process.resourcesPath, 'backend');
-      const pythonExecutable = join(backendPath, 'python');
-      const mainScript = join(backendPath, 'main.py');
+      const binaryName = process.platform === 'win32' ? 'photo-search-backend.exe' : 'photo-search-backend';
+      const backendExecutable = join(backendPath, binaryName);
 
-      if (!existsSync(pythonExecutable) || !existsSync(mainScript)) {
-        console.error('Backend files not found:', { pythonExecutable, mainScript });
-        reject(new Error('Backend files not found'));
+      if (!existsSync(backendExecutable)) {
+        console.error('Backend executable not found:', { backendExecutable });
+        reject(new Error('Backend executable not found'));
         return;
       }
 
-      backendProcess = spawn(pythonExecutable, [mainScript], {
+      // Compute writable data and cache directories under userData
+      const userDataDir = app.getPath('userData');
+      const dataDir = join(userDataDir, 'data');
+      const cacheDir = join(userDataDir, 'cache');
+      // Ensure directories exist
+      mkdirSync(dataDir, { recursive: true });
+      mkdirSync(cacheDir, { recursive: true });
+
+      // Build database URL pointing to user data dir
+      const databaseUrl = `sqlite+aiosqlite:///${join(dataDir, 'photos.db').replace(/\\/g, '/')}`;
+      // Models directory packaged with app (optional ML features)
+      const modelsDir = join(process.resourcesPath, 'models');
+
+      backendProcess = spawn(backendExecutable, [], {
         cwd: backendPath,
         env: {
           ...process.env,
           PORT: BACKEND_PORT.toString(),
+          DATA_DIR: dataDir,
+          CACHE_DIR: cacheDir,
+          DATABASE_URL: databaseUrl,
+          MODELS_DIR: modelsDir,
         },
       });
 
