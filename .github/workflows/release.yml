@@ -57,7 +57,7 @@ jobs:
       working-directory: ./frontend
       run: pnpm install --no-frozen-lockfile
 
-    - name: Lint + typecheck frontend (unit only)
+    - name: Lint + typecheck frontend (unit only; UI/E2E disabled)
       working-directory: ./frontend
       run: |
         pnpm run lint

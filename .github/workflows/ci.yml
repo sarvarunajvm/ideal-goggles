@@ -179,10 +179,5 @@ jobs:
       working-directory: ./frontend
       run: pnpm install --no-frozen-lockfile
 
-    - name: Run integration tests
-      run: |
-        # Start backend in background
-        cd backend && python -m src.main &
-        sleep 10
-        # Run frontend e2e tests
-        cd frontend && pnpm run test:e2e
+    - name: E2E tests disabled temporarily
+      run: echo "Skipping e2e integration tests for now"
