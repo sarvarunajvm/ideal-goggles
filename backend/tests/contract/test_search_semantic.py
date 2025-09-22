@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 class TestSemanticSearchEndpoint:
     """Test semantic search endpoint contract compliance."""
 
-    def test_semantic_search_endpoint_returns_200_or_503(self, client: TestClient) -> None:
+    def test_semantic_search_endpoint_returns_200_or_503(
+        self, client: TestClient
+    ) -> None:
         """Test that semantic search endpoint returns 200 or 503 status code."""
         payload = {"text": "bride on stage", "top_k": 50}
         response = client.post("/search/semantic", json=payload)

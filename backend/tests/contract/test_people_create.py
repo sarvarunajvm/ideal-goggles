@@ -6,7 +6,9 @@ from fastapi.testclient import TestClient
 class TestPeopleCreateEndpoint:
     """Test people creation endpoint contract compliance."""
 
-    def test_people_create_endpoint_returns_201(self, client: TestClient, sample_photos) -> None:
+    def test_people_create_endpoint_returns_201(
+        self, client: TestClient, sample_photos
+    ) -> None:
         """Test that people create endpoint returns 201 status code."""
         payload = {"name": "John Smith", "sample_file_ids": [1, 2, 3]}
         response = client.post("/people", json=payload)
@@ -25,7 +27,9 @@ class TestPeopleCreateEndpoint:
         response = client.post("/people", json=payload)
         assert response.status_code == 422
 
-    def test_people_create_validates_unique_name(self, client: TestClient, sample_photos) -> None:
+    def test_people_create_validates_unique_name(
+        self, client: TestClient, sample_photos
+    ) -> None:
         """Test that people create validates unique person names."""
         payload = {"name": "John Smith", "sample_file_ids": [1, 2, 3]}
 
@@ -38,7 +42,9 @@ class TestPeopleCreateEndpoint:
             response2 = client.post("/people", json=payload)
             assert response2.status_code == 400
 
-    def test_people_create_requires_privacy_consent(self, client: TestClient, sample_photos) -> None:
+    def test_people_create_requires_privacy_consent(
+        self, client: TestClient, sample_photos
+    ) -> None:
         """Test that people create requires privacy consent (constitutional requirement)."""
         payload = {"name": "Test Person", "sample_file_ids": [1, 2, 3]}
         response = client.post("/people", json=payload)

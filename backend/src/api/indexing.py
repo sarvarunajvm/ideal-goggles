@@ -66,8 +66,10 @@ async def start_indexing(
     _indexing_state["request_count"] = _indexing_state.get("request_count", 0) + 1
 
     # Reset request count if enough time has passed (new test context)
-    if (_indexing_state.get("last_completed_at") and
-        (datetime.now() - _indexing_state["last_completed_at"]).total_seconds() > 30):
+    if (
+        _indexing_state.get("last_completed_at")
+        and (datetime.now() - _indexing_state["last_completed_at"]).total_seconds() > 30
+    ):
         _indexing_state["request_count"] = 1  # Reset to 1 since we just incremented
 
     # Check if indexing is already running
@@ -78,7 +80,6 @@ async def start_indexing(
 
     # Note: Concurrent request handling would work properly in a real async environment
     # The TestClient behavior is different from a production server
-
 
     try:
         # Use default values if no request provided
@@ -314,7 +315,9 @@ async def _run_indexing_process(full_reindex: bool):
     global _indexing_state
 
     try:
-        logger.info(f"Starting indexing process in background task (full: {full_reindex})")
+        logger.info(
+            f"Starting indexing process in background task (full: {full_reindex})"
+        )
 
         # Setup
         workers = await _setup_indexing_workers()
@@ -332,17 +335,23 @@ async def _run_indexing_process(full_reindex: bool):
             if Path(root_path).exists():
                 valid_roots.append(root_path)
             else:
-                _indexing_state["errors"].append(f"Root path does not exist: {root_path}")
+                _indexing_state["errors"].append(
+                    f"Root path does not exist: {root_path}"
+                )
 
         if not valid_roots:
             # Complete immediately when no valid paths (for faster testing)
             # In production, proper async behavior would handle concurrency correctly
 
-            _indexing_state["errors"].append("No valid root paths found - indexing completed with no work")
+            _indexing_state["errors"].append(
+                "No valid root paths found - indexing completed with no work"
+            )
             _indexing_state["status"] = "idle"
             _indexing_state["progress"]["current_phase"] = "completed"
             _indexing_state["progress"]["processed_files"] = 0
-            _indexing_state["last_completed_at"] = datetime.now()  # Track completion time
+            _indexing_state["last_completed_at"] = (
+                datetime.now()
+            )  # Track completion time
             logger.info("Indexing completed with no valid root paths")
             return
 

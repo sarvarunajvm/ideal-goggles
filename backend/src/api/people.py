@@ -186,6 +186,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
 
         # Check if face search is enabled
         from ..api.config import _get_config_from_db
+
         config = _get_config_from_db(db_manager)
         if not config.get("face_search_enabled", False):
             raise HTTPException(

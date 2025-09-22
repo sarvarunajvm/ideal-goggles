@@ -37,7 +37,11 @@ class TestImageSearchEndpoint:
             files = {"file": (filename, BytesIO(image_data), content_type)}
             response = client.post("/search/image", files=files)
             # Should accept all supported formats if CLIP available, or return 503 if not
-            assert response.status_code in [200, 400, 503]  # 400 for invalid format, 503 for missing CLIP
+            assert response.status_code in [
+                200,
+                400,
+                503,
+            ]  # 400 for invalid format, 503 for missing CLIP
 
     def test_image_search_rejects_non_image_files(self, client: TestClient) -> None:
         """Test that image search rejects non-image files."""

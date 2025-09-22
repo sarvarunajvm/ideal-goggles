@@ -141,7 +141,9 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
         # Generate text embedding
         try:
             embedding_worker = CLIPEmbeddingWorker()
-            query_embedding = await embedding_worker.generate_text_embedding(request.text)
+            query_embedding = await embedding_worker.generate_text_embedding(
+                request.text
+            )
         except RuntimeError as e:
             if "CLIP dependencies not installed" in str(e):
                 raise HTTPException(
@@ -233,7 +235,9 @@ async def image_search(
             # Generate embedding for uploaded image
             try:
                 embedding_worker = CLIPEmbeddingWorker()
-                query_embedding_obj = await embedding_worker.generate_embedding(temp_photo)
+                query_embedding_obj = await embedding_worker.generate_embedding(
+                    temp_photo
+                )
             except RuntimeError as e:
                 if "CLIP dependencies not installed" in str(e):
                     raise HTTPException(
@@ -297,6 +301,7 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
 
         # Check if face search is enabled
         from .config import _get_config_from_db
+
         config = _get_config_from_db(db_manager)
         if not config.get("face_search_enabled", False):
             raise HTTPException(

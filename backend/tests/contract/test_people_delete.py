@@ -10,12 +10,13 @@ class TestPeopleDeleteEndpoint:
         """Test that people delete endpoint returns 204 status code."""
         # Create a test person in database first
         from src.db.connection import get_database_manager
+
         db_manager = get_database_manager()
 
         # Insert a test person directly to avoid face recognition dependencies
         db_manager.execute_update(
             "INSERT OR IGNORE INTO people (id, name, face_vector, sample_count, created_at, updated_at, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (1, "Test Person", b"dummy_vector", 0, 1640995200.0, 1640995200.0, 1)
+            (1, "Test Person", b"dummy_vector", 0, 1640995200.0, 1640995200.0, 1),
         )
 
         response = client.delete("/people/1")

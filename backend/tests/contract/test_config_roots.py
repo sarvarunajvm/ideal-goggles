@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 class TestConfigRootsEndpoint:
     """Test configuration roots endpoint contract compliance."""
 
-    def test_config_roots_endpoint_returns_200(self, client: TestClient, temp_dirs) -> None:
+    def test_config_roots_endpoint_returns_200(
+        self, client: TestClient, temp_dirs
+    ) -> None:
         """Test that config/roots endpoint returns 200 for valid request."""
         payload = {"roots": [temp_dirs["photos"], temp_dirs["another"]]}
         response = client.post("/config/roots", json=payload)
@@ -85,14 +87,18 @@ class TestConfigRootsEndpoint:
         response = client.post("/config/roots", json=payload)
         assert response.status_code == 200
 
-    def test_config_roots_endpoint_content_type(self, client: TestClient, temp_dirs) -> None:
+    def test_config_roots_endpoint_content_type(
+        self, client: TestClient, temp_dirs
+    ) -> None:
         """Test that config/roots endpoint returns JSON content type."""
         payload = {"roots": [temp_dirs["photos"]]}
         response = client.post("/config/roots", json=payload)
         assert response.headers["content-type"] == "application/json"
 
     @pytest.mark.performance
-    def test_config_roots_endpoint_response_time(self, client: TestClient, temp_dirs) -> None:
+    def test_config_roots_endpoint_response_time(
+        self, client: TestClient, temp_dirs
+    ) -> None:
         """Test that config/roots endpoint responds quickly."""
         import time
 

@@ -17,6 +17,7 @@ def client() -> TestClient:
     """Create a test client for the FastAPI application."""
     # Use real app now that endpoints are implemented
     from src.main import app
+
     return TestClient(app)
 
 
@@ -32,7 +33,7 @@ def temp_dirs():
         yield {
             "photos": str(photos_dir),
             "another": str(another_dir),
-            "base": str(temp_path)
+            "base": str(temp_path),
         }
 
 
@@ -45,16 +46,46 @@ def sample_photos():
 
     # Insert sample photos
     sample_data = [
-        (1, "/test/photo1.jpg", "/test", "photo1.jpg", ".jpg", 1024, 1640995200.0, 1640995200.0, "hash1"),
-        (2, "/test/photo2.jpg", "/test", "photo2.jpg", ".jpg", 2048, 1640995300.0, 1640995300.0, "hash2"),
-        (3, "/test/photo3.jpg", "/test", "photo3.jpg", ".jpg", 4096, 1640995400.0, 1640995400.0, "hash3"),
+        (
+            1,
+            "/test/photo1.jpg",
+            "/test",
+            "photo1.jpg",
+            ".jpg",
+            1024,
+            1640995200.0,
+            1640995200.0,
+            "hash1",
+        ),
+        (
+            2,
+            "/test/photo2.jpg",
+            "/test",
+            "photo2.jpg",
+            ".jpg",
+            2048,
+            1640995300.0,
+            1640995300.0,
+            "hash2",
+        ),
+        (
+            3,
+            "/test/photo3.jpg",
+            "/test",
+            "photo3.jpg",
+            ".jpg",
+            4096,
+            1640995400.0,
+            1640995400.0,
+            "hash3",
+        ),
     ]
 
     for photo in sample_data:
         with contextlib.suppress(Exception):
             db_manager.execute_update(
                 "INSERT OR IGNORE INTO photos (id, path, folder, filename, ext, size, created_ts, modified_ts, sha1) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                photo
+                photo,
             )
 
     yield sample_data
