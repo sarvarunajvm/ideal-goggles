@@ -54,8 +54,16 @@ class PerformanceBenchmark:
             "stdev": statistics.stdev(times) if len(times) > 1 else 0,
             "min": min(times),
             "max": max(times),
-            "p95": sorted(times)[int(0.95 * len(times))] if len(times) >= 20 else max(times),
-            "p99": sorted(times)[int(0.99 * len(times))] if len(times) >= 100 else max(times),
+            "p95": (
+                sorted(times)[int(0.95 * len(times))]
+                if len(times) >= 20
+                else max(times)
+            ),
+            "p99": (
+                sorted(times)[int(0.99 * len(times))]
+                if len(times) >= 100
+                else max(times)
+            ),
         }
 
 
@@ -73,7 +81,14 @@ class TestTextSearchPerformance(PerformanceBenchmark):
     def _generate_mock_photos(self, count: int) -> list[dict]:
         """Generate mock photo data for testing."""
         photos = []
-        folders = ["/photos/2020", "/photos/2021", "/photos/2022", "/photos/2023", "/documents", "/scans"]
+        folders = [
+            "/photos/2020",
+            "/photos/2021",
+            "/photos/2022",
+            "/photos/2023",
+            "/documents",
+            "/scans",
+        ]
         extensions = [".jpg", ".jpeg", ".png", ".tiff"]
 
         for i in range(count):
@@ -81,20 +96,27 @@ class TestTextSearchPerformance(PerformanceBenchmark):
             filename = f"photo_{i:06d}{random.choice(extensions)}"
             path = f"{folder}/{filename}"
 
-            photos.append({
-                "file_id": i + 1,
-                "path": path,
-                "filename": filename,
-                "folder": folder,
-                "score": random.uniform(0.1, 1.0),
-            })
+            photos.append(
+                {
+                    "file_id": i + 1,
+                    "path": path,
+                    "filename": filename,
+                    "folder": folder,
+                    "score": random.uniform(0.1, 1.0),
+                }
+            )
 
         return photos
 
     def test_filename_search_performance(self):
         """Benchmark filename search performance."""
         # Test with different query lengths
-        queries = ["photo", "photo_001", "specific_filename", "very_specific_long_filename_with_details"]
+        queries = [
+            "photo",
+            "photo_001",
+            "specific_filename",
+            "very_specific_long_filename_with_details",
+        ]
 
         for query in queries:
             with self.service._get_database() as db:
@@ -106,14 +128,19 @@ class TestTextSearchPerformance(PerformanceBenchmark):
                 self.results[f"filename_search_{len(query)}_chars"] = results
 
                 # Performance assertions
-                assert results["mean"] < 0.05, f"Filename search too slow: {results['mean']:.3f}s"
-                assert results["p95"] < 0.1, f"95th percentile too slow: {results['p95']:.3f}s"
+                assert (
+                    results["mean"] < 0.05
+                ), f"Filename search too slow: {results['mean']:.3f}s"
+                assert (
+                    results["p95"] < 0.1
+                ), f"95th percentile too slow: {results['p95']:.3f}s"
 
     def _mock_filename_search(self, query: str):
         """Mock filename search for performance testing."""
         # Simulate database query processing
         matching_photos = [
-            photo for photo in self.mock_photos
+            photo
+            for photo in self.mock_photos
             if query.lower() in photo["filename"].lower()
         ]
         return matching_photos[:50]  # Limit results
@@ -136,7 +163,9 @@ class TestTextSearchPerformance(PerformanceBenchmark):
 
             # Performance assertions
             assert results["mean"] < 0.2, f"FTS search too slow: {results['mean']:.3f}s"
-            assert results["p95"] < 0.5, f"95th percentile too slow: {results['p95']:.3f}s"
+            assert (
+                results["p95"] < 0.5
+            ), f"95th percentile too slow: {results['p95']:.3f}s"
 
     def _mock_fts_search(self, query: str):
         """Mock full-text search for performance testing."""
@@ -148,8 +177,18 @@ class TestTextSearchPerformance(PerformanceBenchmark):
         """Benchmark combined search performance."""
         test_cases = [
             {"query": "photo", "from_date": None, "to_date": None, "folder": None},
-            {"query": "wedding", "from_date": "2023-01-01", "to_date": "2023-12-31", "folder": None},
-            {"query": "document", "from_date": None, "to_date": None, "folder": "/documents"},
+            {
+                "query": "wedding",
+                "from_date": "2023-01-01",
+                "to_date": "2023-12-31",
+                "folder": None,
+            },
+            {
+                "query": "document",
+                "from_date": None,
+                "to_date": None,
+                "folder": "/documents",
+            },
         ]
 
         for i, case in enumerate(test_cases):
@@ -160,10 +199,16 @@ class TestTextSearchPerformance(PerformanceBenchmark):
             self.results[f"combined_search_case_{i}"] = results
 
             # Performance assertions
-            assert results["mean"] < 0.5, f"Combined search too slow: {results['mean']:.3f}s"
-            assert results["p95"] < 1.0, f"95th percentile too slow: {results['p95']:.3f}s"
+            assert (
+                results["mean"] < 0.5
+            ), f"Combined search too slow: {results['mean']:.3f}s"
+            assert (
+                results["p95"] < 1.0
+            ), f"95th percentile too slow: {results['p95']:.3f}s"
 
-    def _mock_combined_search(self, query: str, from_date=None, to_date=None, folder=None):
+    def _mock_combined_search(
+        self, query: str, from_date=None, to_date=None, folder=None
+    ):
         """Mock combined search for performance testing."""
         # Simulate multiple database queries
         filename_results = self._mock_filename_search(query)
@@ -186,8 +231,7 @@ class TestTextSearchPerformance(PerformanceBenchmark):
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [
-                executor.submit(self._mock_filename_search, query)
-                for query in queries
+                executor.submit(self._mock_filename_search, query) for query in queries
             ]
 
             results = []
@@ -203,8 +247,9 @@ class TestTextSearchPerformance(PerformanceBenchmark):
         }
 
         # Performance assertions
-        assert self.results["concurrent_search"]["queries_per_second"] > 50, \
-            "Concurrent search throughput too low"
+        assert (
+            self.results["concurrent_search"]["queries_per_second"] > 50
+        ), "Concurrent search throughput too low"
 
 
 @pytest.mark.performance
@@ -214,6 +259,7 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
     def setup_method(self):
         """Set up test fixtures."""
         import tempfile
+
         self.temp_dir = tempfile.mkdtemp()
         self.index_path = Path(self.temp_dir) / "benchmark_index.bin"
 
@@ -247,7 +293,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
         self.results["single_vector_addition"] = results
 
         # Performance assertions
-        assert results["mean"] < 0.01, f"Vector addition too slow: {results['mean']:.4f}s"
+        assert (
+            results["mean"] < 0.01
+        ), f"Vector addition too slow: {results['mean']:.4f}s"
 
     def _add_single_vector(self, vectors: list[np.ndarray]):
         """Add a single vector for performance testing."""
@@ -276,8 +324,12 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
             }
 
             # Performance assertions
-            vectors_per_second = self.results[f"batch_addition_{batch_size}"]["vectors_per_second"]
-            assert vectors_per_second > 100, f"Batch addition too slow: {vectors_per_second:.1f} vectors/s"
+            vectors_per_second = self.results[f"batch_addition_{batch_size}"][
+                "vectors_per_second"
+            ]
+            assert (
+                vectors_per_second > 100
+            ), f"Batch addition too slow: {vectors_per_second:.1f} vectors/s"
 
     def test_similarity_search_performance(self):
         """Benchmark similarity search performance."""
@@ -291,13 +343,18 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
 
         for k in k_values:
             results = self.run_multiple_iterations(
-                self.service.search_similar, iterations=100, query_vector=query_vector, k=k
+                self.service.search_similar,
+                iterations=100,
+                query_vector=query_vector,
+                k=k,
             )
 
             self.results[f"similarity_search_k{k}"] = results
 
             # Performance assertions
-            assert results["mean"] < 0.1, f"Similarity search k={k} too slow: {results['mean']:.3f}s"
+            assert (
+                results["mean"] < 0.1
+            ), f"Similarity search k={k} too slow: {results['mean']:.3f}s"
 
     def test_index_size_scaling(self):
         """Test performance scaling with index size."""
@@ -332,7 +389,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
 
             # Performance should not degrade significantly with size
             mean_search_time = statistics.mean(search_times)
-            assert mean_search_time < 0.2, f"Search time degraded with size {size}: {mean_search_time:.3f}s"
+            assert (
+                mean_search_time < 0.2
+            ), f"Search time degraded with size {size}: {mean_search_time:.3f}s"
 
     def test_concurrent_search_performance(self):
         """Benchmark concurrent similarity search."""
@@ -363,12 +422,17 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
         }
 
         # Performance assertions
-        searches_per_second = self.results["concurrent_vector_search"]["searches_per_second"]
-        assert searches_per_second > 10, f"Concurrent search throughput too low: {searches_per_second:.1f}/s"
+        searches_per_second = self.results["concurrent_vector_search"][
+            "searches_per_second"
+        ]
+        assert (
+            searches_per_second > 10
+        ), f"Concurrent search throughput too low: {searches_per_second:.1f}/s"
 
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
 
@@ -391,11 +455,13 @@ class TestRankFusionPerformance(PerformanceBenchmark):
         for set_size in [10, 50, 100, 500]:
             result_set = []
             for i in range(set_size):
-                result_set.append({
-                    "file_id": i + 1,
-                    "score": random.uniform(0.1, 1.0),
-                    "source": f"test_source_{set_size}",
-                })
+                result_set.append(
+                    {
+                        "file_id": i + 1,
+                        "score": random.uniform(0.1, 1.0),
+                        "source": f"test_source_{set_size}",
+                    }
+                )
             sets.append(result_set)
 
         return sets
@@ -405,9 +471,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
         test_cases = [
             [self.test_result_sets[0]],  # Single small set
             [self.test_result_sets[1]],  # Single medium set
-            self.test_result_sets[:2],   # Two sets
-            self.test_result_sets[:3],   # Three sets
-            self.test_result_sets,       # All sets
+            self.test_result_sets[:2],  # Two sets
+            self.test_result_sets[:3],  # Three sets
+            self.test_result_sets,  # All sets
         ]
 
         for i, result_sets in enumerate(test_cases):
@@ -418,7 +484,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
             self.results[f"fusion_case_{i}"] = results
 
             # Performance assertions
-            assert results["mean"] < 0.1, f"Fusion case {i} too slow: {results['mean']:.3f}s"
+            assert (
+                results["mean"] < 0.1
+            ), f"Fusion case {i} too slow: {results['mean']:.3f}s"
 
     def test_large_scale_fusion(self):
         """Test fusion performance with large result sets."""
@@ -427,11 +495,13 @@ class TestRankFusionPerformance(PerformanceBenchmark):
         for _ in range(5):
             large_set = []
             for i in range(1000):
-                large_set.append({
-                    "file_id": i + 1,
-                    "score": random.uniform(0.1, 1.0),
-                    "metadata": f"item_{i}",
-                })
+                large_set.append(
+                    {
+                        "file_id": i + 1,
+                        "score": random.uniform(0.1, 1.0),
+                        "metadata": f"item_{i}",
+                    }
+                )
             large_sets.append(large_set)
 
         results = self.run_multiple_iterations(
@@ -441,7 +511,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
         self.results["large_scale_fusion"] = results
 
         # Performance assertions
-        assert results["mean"] < 1.0, f"Large scale fusion too slow: {results['mean']:.3f}s"
+        assert (
+            results["mean"] < 1.0
+        ), f"Large scale fusion too slow: {results['mean']:.3f}s"
         assert results["p95"] < 2.0, "Large scale fusion 95th percentile too slow"
 
     def test_reciprocal_rank_fusion_performance(self):
@@ -454,7 +526,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
             ranked_lists.append(ranked_list)
 
         results = self.run_multiple_iterations(
-            self.service._reciprocal_rank_fusion, iterations=100, ranked_lists=ranked_lists
+            self.service._reciprocal_rank_fusion,
+            iterations=100,
+            ranked_lists=ranked_lists,
         )
 
         self.results["reciprocal_rank_fusion"] = results
@@ -521,7 +595,9 @@ def _generate_performance_report(results: dict):
                 if isinstance(test_results, dict) and "mean" in test_results:
                     f.write(f"    Mean: {test_results['mean']:.4f}s\n")
                     f.write(f"    Median: {test_results['median']:.4f}s\n")
-                    f.write(f"    95th percentile: {test_results.get('p95', 'N/A'):.4f}s\n")
+                    f.write(
+                        f"    95th percentile: {test_results.get('p95', 'N/A'):.4f}s\n"
+                    )
                     f.write(f"    Min: {test_results['min']:.4f}s\n")
                     f.write(f"    Max: {test_results['max']:.4f}s\n")
                 else:

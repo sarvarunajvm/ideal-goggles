@@ -30,13 +30,16 @@ class TestTextSearchService(unittest.TestCase):
         # Mock database manager
         self.mock_db_manager = MagicMock()
 
-        with patch("src.services.text_search.get_database_manager") as mock_get_db_manager:
+        with patch(
+            "src.services.text_search.get_database_manager"
+        ) as mock_get_db_manager:
             mock_get_db_manager.return_value = self.mock_db_manager
             self.service = TextSearchService()
 
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_initialization(self):
@@ -80,13 +83,31 @@ class TestTextSearchService(unittest.TestCase):
         """Test basic photo search."""
         # Mock database response - format matches actual query result
         mock_search_results = [
-            (1, "/path/photo1.jpg", "/path", "photo1.jpg", 12345, 1234567890, 1234567891, "sha1hash",
-             "/thumbs/photo1.jpg", "2023-01-01 12:00:00", "Canon", "EOS R5", "sample text", 0.95, 1.2),
+            (
+                1,
+                "/path/photo1.jpg",
+                "/path",
+                "photo1.jpg",
+                12345,
+                1234567890,
+                1234567891,
+                "sha1hash",
+                "/thumbs/photo1.jpg",
+                "2023-01-01 12:00:00",
+                "Canon",
+                "EOS R5",
+                "sample text",
+                0.95,
+                1.2,
+            ),
         ]
         mock_count_results = [(1,)]  # Count query result
 
         # Mock execute_query to return different results for different calls
-        self.mock_db_manager.execute_query.side_effect = [mock_search_results, mock_count_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_search_results,
+            mock_count_results,
+        ]
 
         results = self.service.search_photos("photo")
 
@@ -102,12 +123,30 @@ class TestTextSearchService(unittest.TestCase):
     def test_search_photos_with_folders(self):
         """Test photo search with folder filtering."""
         mock_search_results = [
-            (1, "/projects/wedding/photo1.jpg", "/projects/wedding", "photo1.jpg", 12345, 1234567890, 1234567891, "sha1hash",
-             "/thumbs/photo1.jpg", "2023-01-01 12:00:00", "Canon", "EOS R5", "sample text", 0.95, 1.2),
+            (
+                1,
+                "/projects/wedding/photo1.jpg",
+                "/projects/wedding",
+                "photo1.jpg",
+                12345,
+                1234567890,
+                1234567891,
+                "sha1hash",
+                "/thumbs/photo1.jpg",
+                "2023-01-01 12:00:00",
+                "Canon",
+                "EOS R5",
+                "sample text",
+                0.95,
+                1.2,
+            ),
         ]
         mock_count_results = [(1,)]
 
-        self.mock_db_manager.execute_query.side_effect = [mock_search_results, mock_count_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_search_results,
+            mock_count_results,
+        ]
 
         results = self.service.search_photos("wedding", folders=["/projects/wedding"])
 
@@ -120,16 +159,33 @@ class TestTextSearchService(unittest.TestCase):
         from datetime import date
 
         mock_search_results = [
-            (1, "/path/scan1.jpg", "/path", "scan1.jpg", 12345, 1234567890, 1234567891, "sha1hash",
-             "/thumbs/scan1.jpg", "2023-06-15 12:00:00", "Canon", "EOS R5", "matching text snippet", 0.95, 1.2),
+            (
+                1,
+                "/path/scan1.jpg",
+                "/path",
+                "scan1.jpg",
+                12345,
+                1234567890,
+                1234567891,
+                "sha1hash",
+                "/thumbs/scan1.jpg",
+                "2023-06-15 12:00:00",
+                "Canon",
+                "EOS R5",
+                "matching text snippet",
+                0.95,
+                1.2,
+            ),
         ]
         mock_count_results = [(1,)]
 
-        self.mock_db_manager.execute_query.side_effect = [mock_search_results, mock_count_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_search_results,
+            mock_count_results,
+        ]
 
         results = self.service.search_photos(
-            "matching text",
-            date_range=(date(2023, 1, 1), date(2023, 12, 31))
+            "matching text", date_range=(date(2023, 1, 1), date(2023, 12, 31))
         )
 
         self.assertIsInstance(results, dict)
@@ -139,13 +195,31 @@ class TestTextSearchService(unittest.TestCase):
     def test_search_photos_pagination(self):
         """Test search result pagination."""
         mock_search_results = [
-            (i, f"/path/photo{i}.jpg", "/path", f"photo{i}.jpg", 12345, 1234567890, 1234567891, f"sha1hash{i}",
-             f"/thumbs/photo{i}.jpg", "2023-01-01 12:00:00", "Canon", "EOS R5", "sample text", 0.95, 1.2)
+            (
+                i,
+                f"/path/photo{i}.jpg",
+                "/path",
+                f"photo{i}.jpg",
+                12345,
+                1234567890,
+                1234567891,
+                f"sha1hash{i}",
+                f"/thumbs/photo{i}.jpg",
+                "2023-01-01 12:00:00",
+                "Canon",
+                "EOS R5",
+                "sample text",
+                0.95,
+                1.2,
+            )
             for i in range(1, 21)  # 20 results
         ]
         mock_count_results = [(100,)]  # Total count
 
-        self.mock_db_manager.execute_query.side_effect = [mock_search_results, mock_count_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_search_results,
+            mock_count_results,
+        ]
 
         results = self.service.search_photos("test", limit=20, offset=20)
 
@@ -161,7 +235,10 @@ class TestTextSearchService(unittest.TestCase):
         mock_camera_results = [("Canon EOS R5",), ("Nikon D850",)]
 
         # Mock execute_query to return different results for different calls
-        self.mock_db_manager.execute_query.side_effect = [mock_filename_results, mock_camera_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_filename_results,
+            mock_camera_results,
+        ]
 
         results = self.service.get_search_suggestions("vacation")
 
@@ -174,7 +251,10 @@ class TestTextSearchService(unittest.TestCase):
         mock_camera_results = [("Canon EOS R5", 50), ("Nikon D850", 30)]
         mock_ext_results = [(".jpg", 1000), (".png", 200)]
 
-        self.mock_db_manager.execute_query.side_effect = [mock_camera_results, mock_ext_results]
+        self.mock_db_manager.execute_query.side_effect = [
+            mock_camera_results,
+            mock_ext_results,
+        ]
 
         results = self.service.get_popular_searches(limit=5)
 
@@ -199,14 +279,13 @@ class TestTextSearchService(unittest.TestCase):
 
 try:
     import faiss
+
     FAISS_AVAILABLE = True
 except ImportError:
     FAISS_AVAILABLE = False
 
-@pytest.mark.skipif(
-    not FAISS_AVAILABLE,
-    reason="FAISS library not installed"
-)
+
+@pytest.mark.skipif(not FAISS_AVAILABLE, reason="FAISS library not installed")
 class TestFAISSVectorSearchService(unittest.TestCase):
     """Test cases for FAISSVectorSearchService."""
 
@@ -221,6 +300,7 @@ class TestFAISSVectorSearchService(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_initialization(self):
@@ -398,9 +478,15 @@ class TestRankFusionService(unittest.TestCase):
         """Test fusion with single result set."""
         result_sets = {
             SearchType.TEXT: [
-                SearchResult(file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}),
-                SearchResult(file_id=2, score=0.8, search_type=SearchType.TEXT, metadata={}),
-                SearchResult(file_id=3, score=0.7, search_type=SearchType.TEXT, metadata={}),
+                SearchResult(
+                    file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}
+                ),
+                SearchResult(
+                    file_id=2, score=0.8, search_type=SearchType.TEXT, metadata={}
+                ),
+                SearchResult(
+                    file_id=3, score=0.7, search_type=SearchType.TEXT, metadata={}
+                ),
             ]
         }
 
@@ -414,12 +500,20 @@ class TestRankFusionService(unittest.TestCase):
         """Test fusion with multiple result sets."""
         result_sets = {
             SearchType.TEXT: [
-                SearchResult(file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}),
-                SearchResult(file_id=2, score=0.7, search_type=SearchType.TEXT, metadata={}),
+                SearchResult(
+                    file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}
+                ),
+                SearchResult(
+                    file_id=2, score=0.7, search_type=SearchType.TEXT, metadata={}
+                ),
             ],
             SearchType.SEMANTIC: [
-                SearchResult(file_id=2, score=0.8, search_type=SearchType.SEMANTIC, metadata={}),
-                SearchResult(file_id=3, score=0.6, search_type=SearchType.SEMANTIC, metadata={}),
+                SearchResult(
+                    file_id=2, score=0.8, search_type=SearchType.SEMANTIC, metadata={}
+                ),
+                SearchResult(
+                    file_id=3, score=0.6, search_type=SearchType.SEMANTIC, metadata={}
+                ),
             ],
         }
 
@@ -436,8 +530,16 @@ class TestRankFusionService(unittest.TestCase):
     def test_fuse_results_with_weights(self):
         """Test fusion with custom weights."""
         result_sets = {
-            SearchType.TEXT: [SearchResult(file_id=1, score=0.5, search_type=SearchType.TEXT, metadata={})],
-            SearchType.SEMANTIC: [SearchResult(file_id=2, score=0.9, search_type=SearchType.SEMANTIC, metadata={})],
+            SearchType.TEXT: [
+                SearchResult(
+                    file_id=1, score=0.5, search_type=SearchType.TEXT, metadata={}
+                )
+            ],
+            SearchType.SEMANTIC: [
+                SearchResult(
+                    file_id=2, score=0.9, search_type=SearchType.SEMANTIC, metadata={}
+                )
+            ],
         }
 
         # Custom weights favoring text over semantic
@@ -454,12 +556,20 @@ class TestRankFusionService(unittest.TestCase):
         """Test different fusion methods."""
         result_sets = {
             SearchType.TEXT: [
-                SearchResult(file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}),
-                SearchResult(file_id=2, score=0.7, search_type=SearchType.TEXT, metadata={}),
+                SearchResult(
+                    file_id=1, score=0.9, search_type=SearchType.TEXT, metadata={}
+                ),
+                SearchResult(
+                    file_id=2, score=0.7, search_type=SearchType.TEXT, metadata={}
+                ),
             ],
             SearchType.SEMANTIC: [
-                SearchResult(file_id=2, score=0.8, search_type=SearchType.SEMANTIC, metadata={}),
-                SearchResult(file_id=3, score=0.6, search_type=SearchType.SEMANTIC, metadata={}),
+                SearchResult(
+                    file_id=2, score=0.8, search_type=SearchType.SEMANTIC, metadata={}
+                ),
+                SearchResult(
+                    file_id=3, score=0.6, search_type=SearchType.SEMANTIC, metadata={}
+                ),
             ],
         }
 
@@ -483,7 +593,7 @@ class TestRankFusionService(unittest.TestCase):
                     file_id=1,
                     score=0.9,
                     search_type=SearchType.TEXT,
-                    metadata={"snippet": "text match", "source": "filename"}
+                    metadata={"snippet": "text match", "source": "filename"},
                 ),
             ],
             SearchType.IMAGE: [
@@ -491,7 +601,7 @@ class TestRankFusionService(unittest.TestCase):
                     file_id=1,
                     score=0.8,
                     search_type=SearchType.IMAGE,
-                    metadata={"similarity": 0.85, "source": "visual"}
+                    metadata={"similarity": 0.85, "source": "visual"},
                 ),
             ],
         }

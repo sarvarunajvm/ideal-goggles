@@ -58,11 +58,13 @@ class DriveManager:
         """Initialize drive mappings from database."""
         try:
             with get_database() as db:
-                cursor = db.execute("""
+                cursor = db.execute(
+                    """
                     SELECT device_id, alias, mount_point, last_seen
                     FROM drive_aliases
                     ORDER BY last_seen DESC
-                """)
+                """
+                )
 
                 for row in cursor.fetchall():
                     device_id, alias, mount_point, _last_seen = row
@@ -102,17 +104,28 @@ class DriveManager:
                 try:
                     # Get volume information
                     volume_info = win32api.GetVolumeInformation(drive)
-                    volume_name, volume_serial, _max_component_length, _file_system_flags, _file_system_name = volume_info
+                    (
+                        volume_name,
+                        volume_serial,
+                        _max_component_length,
+                        _file_system_flags,
+                        _file_system_name,
+                    ) = volume_info
 
                     # Create device ID from volume serial
                     device_id = f"win_vol_{volume_serial:08X}"
 
                     # Get drive type
                     drive_type = win32file.GetDriveType(drive)
-                    is_removable = drive_type in [win32file.DRIVE_REMOVABLE, win32file.DRIVE_CDROM]
+                    is_removable = drive_type in [
+                        win32file.DRIVE_REMOVABLE,
+                        win32file.DRIVE_CDROM,
+                    ]
 
                     # Update mappings
-                    self._update_drive_mapping(device_id, drive.rstrip("\\"), volume_name, is_removable)
+                    self._update_drive_mapping(
+                        device_id, drive.rstrip("\\"), volume_name, is_removable
+                    )
 
                 except Exception as e:
                     logger.warning(f"Failed to get info for drive {drive}: {e}")
@@ -130,7 +143,12 @@ class DriveManager:
                 if os.path.exists(drive_path):
                     # Create a basic device ID
                     device_id = f"win_drive_{letter}"
-                    self._update_drive_mapping(device_id, drive_path.rstrip("\\"), f"Drive {letter}", is_removable=False)
+                    self._update_drive_mapping(
+                        device_id,
+                        drive_path.rstrip("\\"),
+                        f"Drive {letter}",
+                        is_removable=False,
+                    )
 
         except Exception as e:
             logger.exception(f"Fallback drive scanning failed: {e}")
@@ -181,7 +199,9 @@ class DriveManager:
                     device_id = f"unix_net_{device.replace('/', '_').replace(':', '_')}"
                     is_removable = True
 
-                self._update_drive_mapping(device_id, mount_point, Path(device).name, is_removable)
+                self._update_drive_mapping(
+                    device_id, mount_point, Path(device).name, is_removable
+                )
 
         except Exception as e:
             logger.exception(f"Unix drive scanning failed: {e}")
@@ -192,8 +212,8 @@ class DriveManager:
             # Check if device is in removable device directory
             removable_patterns = [
                 r"/dev/sd[a-z]+\d*",  # USB drives
-                r"/dev/mmcblk\d+",    # SD cards
-                r"/dev/fd\d+",        # Floppy disks
+                r"/dev/mmcblk\d+",  # SD cards
+                r"/dev/fd\d+",  # Floppy disks
             ]
 
             return any(re.match(pattern, device) for pattern in removable_patterns)
@@ -201,7 +221,9 @@ class DriveManager:
         except Exception:
             return False
 
-    def _update_drive_mapping(self, device_id: str, mount_point: str, volume_name: str, is_removable: bool):
+    def _update_drive_mapping(
+        self, device_id: str, mount_point: str, volume_name: str, is_removable: bool
+    ):
         """Update drive mapping in memory and database."""
         with self._lock:
             try:
@@ -227,9 +249,13 @@ class DriveManager:
                     self.alias_mappings[alias] = device_id
 
                 # Update database
-                self._save_drive_mapping(device_id, self.drive_mappings[device_id], mount_point)
+                self._save_drive_mapping(
+                    device_id, self.drive_mappings[device_id], mount_point
+                )
 
-                logger.debug(f"Updated drive mapping: {device_id} -> {alias} at {mount_point}")
+                logger.debug(
+                    f"Updated drive mapping: {device_id} -> {alias} at {mount_point}"
+                )
 
             except Exception as e:
                 logger.exception(f"Failed to update drive mapping: {e}")
@@ -251,11 +277,14 @@ class DriveManager:
         """Save drive mapping to database."""
         try:
             with get_database() as db:
-                db.execute("""
+                db.execute(
+                    """
                     INSERT OR REPLACE INTO drive_aliases
                     (device_id, alias, mount_point, last_seen)
                     VALUES (?, ?, ?, ?)
-                """, (device_id, alias, mount_point, time.time()))
+                """,
+                    (device_id, alias, mount_point, time.time()),
+                )
 
         except Exception as e:
             logger.exception(f"Failed to save drive mapping: {e}")
@@ -361,14 +390,20 @@ class DriveManager:
             best_device_id = ""
 
             for device_id, mount_point in self.current_mounts.items():
-                if abs_path.startswith(mount_point) and len(mount_point) > len(best_match):
+                if abs_path.startswith(mount_point) and len(mount_point) > len(
+                    best_match
+                ):
                     best_match = mount_point
                     best_device_id = device_id
 
             if best_device_id and best_device_id in self.drive_mappings:
                 alias = self.drive_mappings[best_device_id]
-                relative_path = abs_path[len(best_match):].lstrip(os.sep)
-                return f"${alias}${os.sep}{relative_path}" if relative_path else f"${alias}$"
+                relative_path = abs_path[len(best_match) :].lstrip(os.sep)
+                return (
+                    f"${alias}${os.sep}{relative_path}"
+                    if relative_path
+                    else f"${alias}$"
+                )
 
             # Fallback to original path
             return abs_path
@@ -489,7 +524,9 @@ class DriveManager:
 
         return results
 
-    def update_photo_paths(self, photo_id_paths: list[tuple[int, str]]) -> list[tuple[int, str, str]]:
+    def update_photo_paths(
+        self, photo_id_paths: list[tuple[int, str]]
+    ) -> list[tuple[int, str, str]]:
         """
         Update photo paths in bulk and return changes.
 

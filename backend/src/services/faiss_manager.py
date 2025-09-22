@@ -95,7 +95,9 @@ class FAISSIndexManager:
 
                     # Calculate index size
                     if self.index_path.exists():
-                        self.stats["index_size_mb"] = self.index_path.stat().st_size / (1024 * 1024)
+                        self.stats["index_size_mb"] = self.index_path.stat().st_size / (
+                            1024 * 1024
+                        )
 
             with open(self.stats_path, "w") as f:
                 json.dump(self.stats, f, indent=2, default=str)
@@ -229,7 +231,7 @@ class FAISSIndexManager:
             # Add vectors in batches for better memory efficiency
             batch_size = 10000
             for i in range(0, len(vectors), batch_size):
-                batch = vectors[i:i + batch_size]
+                batch = vectors[i : i + batch_size]
                 new_index.add(batch)
 
             return new_index
@@ -253,7 +255,11 @@ class FAISSIndexManager:
             vectors = index.reconstruct_n(0, num_vectors)
 
             # Create quantizer
-            quantizer = faiss.IndexFlatIP(dimension) if dimension == 512 else faiss.IndexFlatL2(dimension)
+            quantizer = (
+                faiss.IndexFlatIP(dimension)
+                if dimension == 512
+                else faiss.IndexFlatL2(dimension)
+            )
 
             if use_pq:
                 # Use Product Quantization for large collections
@@ -271,13 +277,15 @@ class FAISSIndexManager:
             # Add vectors in batches
             batch_size = 10000
             for i in range(0, len(vectors), batch_size):
-                batch = vectors[i:i + batch_size]
+                batch = vectors[i : i + batch_size]
                 new_index.add(batch)
 
             # Optimize search parameters
             new_index.nprobe = min(100, nlist // 4)
 
-            logger.info(f"Created IVF index with {nlist} clusters, nprobe={new_index.nprobe}")
+            logger.info(
+                f"Created IVF index with {nlist} clusters, nprobe={new_index.nprobe}"
+            )
             return new_index
 
         except Exception as e:
@@ -328,17 +336,29 @@ class FAISSIndexManager:
                 return False
 
             # Copy index files to backup location
-            if self.vector_service.index_path and os.path.exists(self.vector_service.index_path):
+            if self.vector_service.index_path and os.path.exists(
+                self.vector_service.index_path
+            ):
                 shutil.copy2(self.vector_service.index_path, backup_dir / "index.faiss")
 
-            if self.vector_service.metadata_path and os.path.exists(self.vector_service.metadata_path):
-                shutil.copy2(self.vector_service.metadata_path, backup_dir / "metadata.pkl")
+            if self.vector_service.metadata_path and os.path.exists(
+                self.vector_service.metadata_path
+            ):
+                shutil.copy2(
+                    self.vector_service.metadata_path, backup_dir / "metadata.pkl"
+                )
 
             # Save backup metadata
             backup_info = {
                 "created_at": datetime.now().isoformat(),
-                "vector_count": self.vector_service.index.ntotal if self.vector_service.index else 0,
-                "index_type": str(type(self.vector_service.index)) if self.vector_service.index else "None",
+                "vector_count": (
+                    self.vector_service.index.ntotal if self.vector_service.index else 0
+                ),
+                "index_type": (
+                    str(type(self.vector_service.index))
+                    if self.vector_service.index
+                    else "None"
+                ),
                 "backup_name": backup_name,
             }
 
@@ -424,18 +444,25 @@ class FAISSIndexManager:
                             backups.append((created_at, backup_dir))
                         except Exception:
                             # If we can't parse the info, use directory modification time
-                            backups.append((datetime.fromtimestamp(backup_dir.stat().st_mtime), backup_dir))
+                            backups.append(
+                                (
+                                    datetime.fromtimestamp(backup_dir.stat().st_mtime),
+                                    backup_dir,
+                                )
+                            )
 
             # Sort by creation time (newest first)
             backups.sort(reverse=True)
 
             # Remove old backups
-            for _, backup_dir in backups[self.max_backups:]:
+            for _, backup_dir in backups[self.max_backups :]:
                 try:
                     shutil.rmtree(backup_dir)
                     logger.info(f"Removed old backup: {backup_dir.name}")
                 except Exception as e:
-                    logger.warning(f"Failed to remove old backup {backup_dir.name}: {e}")
+                    logger.warning(
+                        f"Failed to remove old backup {backup_dir.name}: {e}"
+                    )
 
         except Exception as e:
             logger.exception(f"Error cleaning up old backups: {e}")
@@ -462,10 +489,13 @@ class FAISSIndexManager:
 
         # Use exponential moving average for recent performance
         alpha = 0.1  # Weight for new measurements
-        self.stats["average_search_time"] = alpha * search_time + (1 - alpha) * current_avg
+        self.stats["average_search_time"] = (
+            alpha * search_time + (1 - alpha) * current_avg
+        )
 
     def _start_background_scheduler(self):
         """Start background scheduler for automatic optimization and backups."""
+
         def scheduler():
             """Background scheduler loop."""
             while True:
@@ -485,7 +515,10 @@ class FAISSIndexManager:
                     else:
                         try:
                             last_backup_time = datetime.fromisoformat(last_backup)
-                            should_backup = datetime.now() - last_backup_time > timedelta(hours=self.backup_interval_hours)
+                            should_backup = (
+                                datetime.now() - last_backup_time
+                                > timedelta(hours=self.backup_interval_hours)
+                            )
                         except (ValueError, TypeError):
                             should_backup = True
 

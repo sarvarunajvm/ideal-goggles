@@ -82,7 +82,18 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "S106", "S107", "PLR2004", "SLF001"]
+"tests/*" = [
+    "S105", "S106", "S107",  # test data may include secrets-like strings
+    "PLR2004",                  # allow magic values in tests
+    "SLF001",                   # private member access in tests
+    "PT",                       # allow unittest-style assertions in tests
+    "T201",                     # allow prints in performance/diagnostic tests
+    "S311",                     # allow non-crypto random usage in tests
+    "PERF401",                  # allow simple loops over comprehensions in tests
+    "B007",                     # allow unused loop variable naming in tests
+    "F841",                     # allow unused local variables in tests
+    "SIM117",                   # allow nested with statements in tests
+]
 
 [tool.black]
 target-version = ["py311"]

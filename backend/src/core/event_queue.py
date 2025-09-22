@@ -56,11 +56,11 @@ class EventType(Enum):
 class Priority(Enum):
     """Event priority levels."""
 
-    CRITICAL = 1    # System critical events
-    HIGH = 2        # User-triggered events
-    NORMAL = 3      # Regular processing
-    LOW = 4         # Background tasks
-    CLEANUP = 5     # Cleanup operations
+    CRITICAL = 1  # System critical events
+    HIGH = 2  # User-triggered events
+    NORMAL = 3  # Regular processing
+    LOW = 4  # Background tasks
+    CLEANUP = 5  # Cleanup operations
 
 
 @dataclass
@@ -96,7 +96,7 @@ class Event:
         elif self.scheduled_at:
             return False  # Scheduled events come after immediate events
         elif other.scheduled_at:
-            return True   # Immediate events come before scheduled events
+            return True  # Immediate events come before scheduled events
 
         # Then by priority
         if self.priority.value != other.priority.value:
@@ -119,7 +119,9 @@ class Event:
             "priority": self.priority.value,
             "data": self.data,
             "created_at": self.created_at.isoformat(),
-            "scheduled_at": self.scheduled_at.isoformat() if self.scheduled_at else None,
+            "scheduled_at": (
+                self.scheduled_at.isoformat() if self.scheduled_at else None
+            ),
             "retry_count": self.retry_count,
             "max_retries": self.max_retries,
             "correlation_id": self.correlation_id,
@@ -135,7 +137,11 @@ class Event:
             priority=Priority(data["priority"]),
             data=data["data"],
             created_at=datetime.fromisoformat(data["created_at"]),
-            scheduled_at=datetime.fromisoformat(data["scheduled_at"]) if data.get("scheduled_at") else None,
+            scheduled_at=(
+                datetime.fromisoformat(data["scheduled_at"])
+                if data.get("scheduled_at")
+                else None
+            ),
             retry_count=data.get("retry_count", 0),
             max_retries=data.get("max_retries", 3),
             correlation_id=data.get("correlation_id"),
@@ -189,7 +195,9 @@ class EventQueue:
         self._scheduled_events: list[Event] = []
 
         # Thread management
-        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="EventWorker")
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="EventWorker"
+        )
         self._running = False
         self._scheduler_task: asyncio.Task | None = None
         self._worker_tasks: set[asyncio.Task] = set()
@@ -231,11 +239,15 @@ class EventQueue:
         self._middleware.append(middleware)
         logger.info("Added event middleware")
 
-    def publish(self, event_type: EventType, data: dict[str, Any],
-                priority: Priority = Priority.NORMAL,
-                delay: timedelta | None = None,
-                correlation_id: str | None = None,
-                source: str | None = None) -> str:
+    def publish(
+        self,
+        event_type: EventType,
+        data: dict[str, Any],
+        priority: Priority = Priority.NORMAL,
+        delay: timedelta | None = None,
+        correlation_id: str | None = None,
+        source: str | None = None,
+    ) -> str:
         """
         Publish an event to the queue.
 
@@ -269,7 +281,9 @@ class EventQueue:
             if event.scheduled_at and event.scheduled_at > datetime.now():
                 # Add to scheduled events
                 self._scheduled_events.append(event)
-                self._scheduled_events.sort(key=lambda e: e.scheduled_at or datetime.max.replace(tzinfo=None))
+                self._scheduled_events.sort(
+                    key=lambda e: e.scheduled_at or datetime.max.replace(tzinfo=None)
+                )
             else:
                 # Add to immediate queue
                 self._event_queue.put(event)
@@ -278,9 +292,14 @@ class EventQueue:
         logger.debug(f"Enqueued event {event.id} of type {event.type.value}")
         return event.id
 
-    def schedule_event(self, event_type: EventType, data: dict[str, Any],
-                      scheduled_at: datetime, priority: Priority = Priority.NORMAL,
-                      correlation_id: str | None = None) -> str:
+    def schedule_event(
+        self,
+        event_type: EventType,
+        data: dict[str, Any],
+        scheduled_at: datetime,
+        priority: Priority = Priority.NORMAL,
+        correlation_id: str | None = None,
+    ) -> str:
         """
         Schedule an event for future processing.
 
@@ -341,7 +360,7 @@ class EventQueue:
             try:
                 await asyncio.wait_for(
                     asyncio.gather(*self._worker_tasks, return_exceptions=True),
-                    timeout=timeout
+                    timeout=timeout,
                 )
             except TimeoutError:
                 logger.warning("Some worker tasks did not stop within timeout")
@@ -414,7 +433,9 @@ class EventQueue:
         start_time = time.time()
 
         try:
-            logger.debug(f"Worker {worker_name} processing event {event.id} ({event.type.value})")
+            logger.debug(
+                f"Worker {worker_name} processing event {event.id} ({event.type.value})"
+            )
 
             # Run middleware
             for middleware in self._middleware:
@@ -438,7 +459,9 @@ class EventQueue:
                             success = False
                             break
                     except Exception as e:
-                        logger.exception(f"Handler {handler.name} failed for event {event.id}: {e}")
+                        logger.exception(
+                            f"Handler {handler.name} failed for event {event.id}: {e}"
+                        )
                         success = False
                         break
 
@@ -450,9 +473,13 @@ class EventQueue:
 
                     # Keep only last 1000 processing times for moving average
                     if len(self._stats["processing_times"]) > 1000:
-                        self._stats["processing_times"] = self._stats["processing_times"][-1000:]
+                        self._stats["processing_times"] = self._stats[
+                            "processing_times"
+                        ][-1000:]
 
-                logger.debug(f"Event {event.id} processed successfully in {processing_time:.3f}s")
+                logger.debug(
+                    f"Event {event.id} processed successfully in {processing_time:.3f}s"
+                )
             else:
                 await self._handle_failed_event(event)
 
@@ -466,27 +493,33 @@ class EventQueue:
 
         if event.retry_count <= event.max_retries:
             # Retry with exponential backoff
-            delay_seconds = 2 ** event.retry_count
+            delay_seconds = 2**event.retry_count
             retry_at = datetime.now() + timedelta(seconds=delay_seconds)
 
             event.scheduled_at = retry_at
             self._enqueue_event(event)
 
-            logger.warning(f"Event {event.id} failed, retrying in {delay_seconds}s (attempt {event.retry_count}/{event.max_retries})")
+            logger.warning(
+                f"Event {event.id} failed, retrying in {delay_seconds}s (attempt {event.retry_count}/{event.max_retries})"
+            )
         else:
             # Move to dead letter queue
             self._dead_letter_queue.put(event)
             with self._lock:
                 self._stats["total_failed"] += 1
 
-            logger.error(f"Event {event.id} failed permanently after {event.max_retries} retries")
+            logger.error(
+                f"Event {event.id} failed permanently after {event.max_retries} retries"
+            )
 
     def get_statistics(self) -> dict[str, Any]:
         """Get queue statistics."""
         with self._lock:
             avg_processing_time = 0.0
             if self._stats["processing_times"]:
-                avg_processing_time = sum(self._stats["processing_times"]) / len(self._stats["processing_times"])
+                avg_processing_time = sum(self._stats["processing_times"]) / len(
+                    self._stats["processing_times"]
+                )
 
             return {
                 "total_processed": self._stats["total_processed"],
@@ -532,11 +565,14 @@ def get_event_queue() -> EventQueue:
     return _event_queue
 
 
-def publish_event(event_type: EventType, data: dict[str, Any],
-                  priority: Priority = Priority.NORMAL,
-                  delay: timedelta | None = None,
-                  correlation_id: str | None = None,
-                  source: str | None = None) -> str:
+def publish_event(
+    event_type: EventType,
+    data: dict[str, Any],
+    priority: Priority = Priority.NORMAL,
+    delay: timedelta | None = None,
+    correlation_id: str | None = None,
+    source: str | None = None,
+) -> str:
     """Convenience function to publish an event."""
     queue = get_event_queue()
     return queue.publish(event_type, data, priority, delay, correlation_id, source)

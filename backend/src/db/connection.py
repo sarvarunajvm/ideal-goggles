@@ -13,11 +13,15 @@ class DatabaseManager:
     """Manages SQLite database connections and migrations."""
 
     def __init__(self, db_path: str | None = None):
-        """Initialize database manager with optional custom path."""
+        """Initialize database manager with optional custom path.
+
+        Defaults to a workspace-local path (./data/photos.db) to work in
+        sandboxed and CI environments where writing to the user home directory
+        may be restricted.
+        """
         if db_path is None:
-            # Default to user data directory
-            data_dir = Path.home() / ".photo-search"
-            data_dir.mkdir(exist_ok=True)
+            data_dir = Path("./data")
+            data_dir.mkdir(parents=True, exist_ok=True)
             db_path = data_dir / "photos.db"
 
         self.db_path = Path(db_path)
