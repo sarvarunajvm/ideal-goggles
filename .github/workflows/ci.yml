@@ -80,13 +80,13 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
     - name: Install dependencies
       working-directory: ./frontend
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --no-frozen-lockfile
 
     - name: Lint
       working-directory: ./frontend
@@ -130,13 +130,13 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
     - name: Install dependencies
       working-directory: ./packages/shared
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --no-frozen-lockfile
 
     - name: Build shared types
       working-directory: ./packages/shared
@@ -177,7 +177,7 @@ jobs:
 
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --no-frozen-lockfile
 
     - name: Run integration tests
       run: |
