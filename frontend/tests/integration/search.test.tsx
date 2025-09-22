@@ -7,48 +7,49 @@ import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import App from '../../src/App'
 
-// Mock API client with realistic responses
-const mockApiResponses = {
-  searchPhotos: {
-    query: 'wedding smith 2023',
-    total_matches: 3,
-    items: [
-      {
-        file_id: 1,
-        path: '/photos/2023/weddings/smith-johnson/ceremony.jpg',
-        folder: '/photos/2023/weddings/smith-johnson',
-        filename: 'ceremony.jpg',
-        thumb_path: 'cache/thumbs/abc123.webp',
-        shot_dt: '2023-06-15T14:30:00Z',
-        score: 0.95,
-        badges: ['OCR', 'EXIF'],
-        snippet: 'Smith Johnson Wedding Ceremony'
-      },
-      {
-        file_id: 2,
-        path: '/photos/2023/weddings/smith-johnson/reception.jpg',
-        folder: '/photos/2023/weddings/smith-johnson',
-        filename: 'reception.jpg',
-        thumb_path: 'cache/thumbs/def456.webp',
-        shot_dt: '2023-06-15T18:00:00Z',
-        score: 0.88,
-        badges: ['OCR'],
-        snippet: 'Reception venue Smith family'
-      }
-    ],
-    took_ms: 150
+// Mock API client with realistic responses (defined inside factory to avoid hoist issues)
+jest.mock('../../src/services/apiClient', () => {
+  const mockApiResponses = {
+    searchPhotos: {
+      query: 'wedding smith 2023',
+      total_matches: 3,
+      items: [
+        {
+          file_id: 1,
+          path: '/photos/2023/weddings/smith-johnson/ceremony.jpg',
+          folder: '/photos/2023/weddings/smith-johnson',
+          filename: 'ceremony.jpg',
+          thumb_path: 'cache/thumbs/abc123.webp',
+          shot_dt: '2023-06-15T14:30:00Z',
+          score: 0.95,
+          badges: ['OCR', 'EXIF'],
+          snippet: 'Smith Johnson Wedding Ceremony',
+        },
+        {
+          file_id: 2,
+          path: '/photos/2023/weddings/smith-johnson/reception.jpg',
+          folder: '/photos/2023/weddings/smith-johnson',
+          filename: 'reception.jpg',
+          thumb_path: 'cache/thumbs/def456.webp',
+          shot_dt: '2023-06-15T18:00:00Z',
+          score: 0.88,
+          badges: ['OCR'],
+          snippet: 'Reception venue Smith family',
+        },
+      ],
+      took_ms: 150,
+    },
   }
-}
-
-jest.mock('../../src/services/apiClient', () => ({
-  searchPhotos: jest.fn().mockResolvedValue(mockApiResponses.searchPhotos),
-  getConfig: jest.fn().mockResolvedValue({
-    roots: ['/photos'],
-    ocr_languages: ['eng', 'tam'],
-    face_search_enabled: false,
-    index_version: '1.0.0'
-  })
-}))
+  return {
+    searchPhotos: jest.fn().mockResolvedValue(mockApiResponses.searchPhotos),
+    getConfig: jest.fn().mockResolvedValue({
+      roots: ['/photos'],
+      ocr_languages: ['eng', 'tam'],
+      face_search_enabled: false,
+      index_version: '1.0.0',
+    }),
+  }
+})
 
 const renderApp = () => {
   return render(
