@@ -6,6 +6,7 @@ import pickle
 import threading
 import time
 from pathlib import Path
+from ..core.config import settings
 from typing import Any
 
 import numpy as np
@@ -18,9 +19,9 @@ class FAISSVectorSearchService:
 
     def __init__(self, index_path: str | None = None, dimension: int = 512):
         self.dimension = dimension
-        self.index_path = index_path or str(
-            Path.home() / ".photo-search" / "faiss_index.bin"
-        )
+        default_index = Path(settings.CACHE_DIR) / "faiss_index.bin"
+        default_index.parent.mkdir(parents=True, exist_ok=True)
+        self.index_path = index_path or str(default_index)
         self.metadata_path = self.index_path.replace(".bin", "_metadata.pkl")
 
         # FAISS components

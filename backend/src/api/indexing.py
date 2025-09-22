@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..db.connection import get_database_manager
+from ..core.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -295,7 +296,7 @@ async def _run_processing_phases(workers, config, photos_to_process):
     _indexing_state["progress"]["current_phase"] = "thumbnails"
     logger.info("Phase 5: Thumbnail generation")
     thumbnail_generator = workers["SmartThumbnailGenerator"](
-        cache_root=str(Path.home() / ".photo-search" / "thumbnails")
+        cache_root=str(settings.THUMBNAILS_DIR)
     )
     await thumbnail_generator.generate_batch(photos_to_process)
 

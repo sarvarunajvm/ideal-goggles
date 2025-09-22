@@ -18,6 +18,7 @@ from src.api.search import router as search_router
 
 # Import database initialization
 from src.db.connection import init_database
+from src.core.config import Settings
 
 # Configure logging
 logging.basicConfig(
@@ -25,7 +26,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(Path.home() / ".photo-search" / "app.log"),
+        logging.FileHandler(Path("./cache/app.log")),
     ],
 )
 
@@ -38,23 +39,21 @@ async def lifespan(_app: FastAPI):
     # Startup
     logger.info("Starting Photo Search API")
 
-    # Initialize database
+    # Initialize database (use configured path)
     try:
-        init_database()
+        # Ensure runtime directories exist from settings
+        settings = Settings()
+        for p in [settings.DATA_DIR, settings.CACHE_DIR, settings.THUMBNAILS_DIR]:
+            Path(p).mkdir(parents=True, exist_ok=True)
+
+        init_database(str(settings.DATA_DIR / "photos.db"))
         logger.info("Database initialized successfully")
     except Exception:
         logger.exception("Failed to initialize database")
         raise
 
     # Create necessary directories
-    directories = [
-        Path.home() / ".photo-search",
-        Path.home() / ".photo-search" / "thumbnails",
-        Path.home() / ".photo-search" / "logs",
-    ]
-
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
+    # No-op: directories created above from settings
 
     yield
 
