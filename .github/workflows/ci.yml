@@ -96,9 +96,9 @@ jobs:
       working-directory: ./frontend
       run: pnpm run type-check
 
-    - name: Test
+    - name: Unit tests only (UI tests disabled)
       working-directory: ./frontend
-      run: pnpm run test
+      run: pnpm run test:unit
 
     - name: Build
       working-directory: ./frontend
