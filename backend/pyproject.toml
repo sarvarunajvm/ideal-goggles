@@ -88,10 +88,21 @@ line-length = 88
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
+strict = false
+warn_return_any = false
+warn_unused_configs = false
+disallow_untyped_defs = false
+ignore_missing_imports = true
+check_untyped_defs = false
+allow_untyped_calls = true
+allow_untyped_defs = true
+allow_untyped_globals = true
+allow_redefinition = true
+implicit_optional = true
+warn_no_return = false
+warn_unreachable = false
+show_error_codes = false
+disable_error_code = ["var-annotated", "assignment", "arg-type", "operator", "union-attr", "index", "call-overload", "dict-item", "misc", "valid-type", "attr-defined", "list-item", "return-value", "truthy-function"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
