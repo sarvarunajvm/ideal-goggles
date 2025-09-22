@@ -450,8 +450,7 @@ class TextSearchService:
                 (f"%{partial_query}%", limit // 2)
             )
 
-            for row in filename_results:
-                suggestions.append(row[0])
+            suggestions.extend(row[0] for row in filename_results)
 
             # Get suggestions from camera models
             camera_query = """
@@ -503,13 +502,14 @@ class TextSearchService:
 
             camera_results = self.db_manager.execute_query(camera_query, (limit // 2,))
 
-            popular_searches = []
-            for row in camera_results:
-                popular_searches.append({
+            popular_searches = [
+                {
                     "term": row[0],
                     "type": "camera_model",
                     "count": row[1]
-                })
+                }
+                for row in camera_results
+            ]
 
             # Get most common file extensions
             ext_query = """
@@ -522,12 +522,14 @@ class TextSearchService:
 
             ext_results = self.db_manager.execute_query(ext_query, (limit // 2,))
 
-            for row in ext_results:
-                popular_searches.append({
+            popular_searches.extend([
+                {
                     "term": row[0],
                     "type": "file_extension",
                     "count": row[1]
-                })
+                }
+                for row in ext_results
+            ])
 
             return popular_searches[:limit]
 

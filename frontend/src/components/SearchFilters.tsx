@@ -1,13 +1,15 @@
 import { useState } from 'react';
 
+interface SearchFilters {
+  from: string;
+  to: string;
+  folder: string;
+  limit: number;
+}
+
 interface SearchFiltersProps {
-  filters: {
-    from: string;
-    to: string;
-    folder: string;
-    limit: number;
-  };
-  onChange: (filters: any) => void;
+  filters: SearchFilters;
+  onChange: (filters: Partial<SearchFilters>) => void;
 }
 
 export default function SearchFilters({ filters, onChange }: SearchFiltersProps) {

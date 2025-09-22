@@ -27,7 +27,7 @@ class Thumbnail:
 
     @classmethod
     def create_for_photo(cls, file_id: int, original_width: int, original_height: int,
-                        max_size: int = 512, format: str = "webp") -> "Thumbnail":
+                        max_size: int = 512, img_format: str = "webp") -> "Thumbnail":
         """Create thumbnail specification for a photo."""
         # Calculate thumbnail dimensions while preserving aspect ratio
         thumb_width, thumb_height = cls._calculate_thumbnail_size(
@@ -35,14 +35,14 @@ class Thumbnail:
         )
 
         # Generate thumbnail path
-        thumb_path = cls._generate_thumbnail_path(file_id, format)
+        thumb_path = cls._generate_thumbnail_path(file_id, img_format)
 
         return cls(
             file_id=file_id,
             thumb_path=thumb_path,
             width=thumb_width,
             height=thumb_height,
-            format=format,
+            format=img_format,
             generated_at=datetime.now().timestamp()
         )
 
@@ -205,7 +205,7 @@ class Thumbnail:
         return thumb_width, thumb_height
 
     @staticmethod
-    def _generate_thumbnail_path(file_id: int, format: str) -> str:
+    def _generate_thumbnail_path(file_id: int, img_format: str) -> str:
         """Generate relative path for thumbnail storage."""
         # Use file_id to create directory structure for better performance
         # e.g., file_id 12345 -> 12/34/12345.webp
@@ -218,7 +218,7 @@ class Thumbnail:
             dir1 = "00"
             dir2 = "00"
 
-        filename = f"{file_id}.{format}"
+        filename = f"{file_id}.{img_format}"
         return f"{dir1}/{dir2}/{filename}"
 
     @staticmethod
@@ -258,10 +258,10 @@ class Thumbnail:
 class ThumbnailCache:
     """Manager for thumbnail cache operations."""
 
-    def __init__(self, cache_root: str, max_size: int = 512, format: str = "webp"):
+    def __init__(self, cache_root: str, max_size: int = 512, img_format: str = "webp"):
         self.cache_root = Path(cache_root)
         self.max_size = max_size
-        self.format = format
+        self.format = img_format
         self.cache_root.mkdir(parents=True, exist_ok=True)
 
     def get_thumbnail_path(self, file_id: int) -> str:

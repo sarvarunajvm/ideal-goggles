@@ -374,10 +374,11 @@ class BatchFileCrawler:
 
         try:
             # Collect all files first
+            # Collect all files from all root paths
             all_files = []
             for root_path in root_paths:
-                async for file_data in self._collect_files(root_path):
-                    all_files.append(file_data)
+                root_files = [file_data async for file_data in self._collect_files(root_path)]
+                all_files.extend(root_files)
 
             result.total_files = len(all_files)
 

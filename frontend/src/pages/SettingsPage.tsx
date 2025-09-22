@@ -3,9 +3,18 @@ import { apiService, IndexStatus } from '../services/api';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 
+interface IndexStats {
+  database: {
+    total_photos: number;
+    indexed_photos: number;
+    photos_with_embeddings: number;
+    total_faces: number;
+  };
+}
+
 export default function SettingsPage() {
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
-  const [indexStats, setIndexStats] = useState<any>(null);
+  const [indexStats, setIndexStats] = useState<IndexStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +40,7 @@ export default function SettingsPage() {
       ]);
 
       setIndexStatus(statusData);
-      setIndexStats(statsData);
+      setIndexStats(statsData as unknown as IndexStats);
 
       // Update form state
       setRootFolders(configData.roots);

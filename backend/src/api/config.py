@@ -313,6 +313,51 @@ async def reset_configuration() -> dict[str, Any]:
         )
 
 
+def _parse_json_setting(key: str, value: str) -> Any:
+    """Parse JSON setting with fallbacks."""
+    try:
+        import json
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return {"roots": [], "ocr_languages": ["eng"]}.get(key, [])
+
+
+def _parse_boolean_setting(value: str) -> bool:
+    """Parse boolean setting."""
+    return value.lower() in ("true", "1", "yes")
+
+
+def _parse_int_setting(key: str, value: str) -> int:
+    """Parse integer setting with fallbacks."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return {"thumbnail_size": 512, "thumbnail_quality": 85}.get(key, 0)
+
+
+def _parse_setting_value(key: str, value: str) -> Any:
+    """Parse setting value based on key type."""
+    if key in ["roots", "ocr_languages"]:
+        return _parse_json_setting(key, value)
+    if key == "face_search_enabled":
+        return _parse_boolean_setting(value)
+    if key in ["thumbnail_size", "thumbnail_quality"]:
+        return _parse_int_setting(key, value)
+    return value
+
+
+def _get_config_defaults() -> dict[str, Any]:
+    """Get default configuration values."""
+    return {
+        "roots": [],
+        "ocr_languages": ["eng"],
+        "face_search_enabled": False,
+        "thumbnail_size": 512,
+        "thumbnail_quality": 85,
+        "index_version": "1"
+    }
+
+
 def _get_config_from_db(db_manager) -> dict[str, Any]:
     """Get configuration settings from database."""
     try:
@@ -320,44 +365,14 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         settings_query = "SELECT key, value FROM settings"
         settings_rows = db_manager.execute_query(settings_query)
 
+        # Parse settings
         settings_dict = {}
         for row in settings_rows:
             key, value = row[0], row[1]
+            settings_dict[key] = _parse_setting_value(key, value)
 
-            # Parse JSON values for complex settings
-            if key in ["roots", "ocr_languages"]:
-                try:
-                    import json
-                    settings_dict[key] = json.loads(value)
-                except (json.JSONDecodeError, TypeError):
-                    # Fallback to default for invalid JSON
-                    if key == "roots":
-                        settings_dict[key] = []
-                    elif key == "ocr_languages":
-                        settings_dict[key] = ["eng"]
-            elif key == "face_search_enabled":
-                settings_dict[key] = value.lower() in ("true", "1", "yes")
-            elif key in ["thumbnail_size", "thumbnail_quality"]:
-                try:
-                    settings_dict[key] = int(value)
-                except (ValueError, TypeError):
-                    if key == "thumbnail_size":
-                        settings_dict[key] = 512
-                    elif key == "thumbnail_quality":
-                        settings_dict[key] = 85
-            else:
-                settings_dict[key] = value
-
-        # Set defaults for missing settings
-        defaults = {
-            "roots": [],
-            "ocr_languages": ["eng"],
-            "face_search_enabled": False,
-            "thumbnail_size": 512,
-            "thumbnail_quality": 85,
-            "index_version": "1"
-        }
-
+        # Apply defaults for missing settings
+        defaults = _get_config_defaults()
         for key, default_value in defaults.items():
             if key not in settings_dict:
                 settings_dict[key] = default_value

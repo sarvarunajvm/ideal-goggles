@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
@@ -203,6 +204,86 @@ async def get_indexing_statistics() -> dict[str, Any]:
         )
 
 
+async def _setup_indexing_workers():
+    """Setup and import all required workers."""
+    from ..workers.crawler import FileCrawler
+    from ..workers.embedding_worker import OptimizedCLIPWorker
+    from ..workers.exif_extractor import EXIFExtractionPipeline
+    from ..workers.face_worker import FaceDetectionWorker
+    from ..workers.ocr_worker import SmartOCRWorker
+    from ..workers.thumbnail_worker import SmartThumbnailGenerator
+
+    return {
+        "FileCrawler": FileCrawler,
+        "OptimizedCLIPWorker": OptimizedCLIPWorker,
+        "EXIFExtractionPipeline": EXIFExtractionPipeline,
+        "FaceDetectionWorker": FaceDetectionWorker,
+        "SmartOCRWorker": SmartOCRWorker,
+        "SmartThumbnailGenerator": SmartThumbnailGenerator,
+    }
+
+
+async def _run_discovery_phase(workers, config, full_reindex):
+    """Run file discovery phase."""
+    global _indexing_state
+
+    _indexing_state["progress"]["current_phase"] = "discovery"
+    logger.info("Phase 1: File discovery")
+
+    crawler = workers["FileCrawler"]()
+    for root_path in config.get("roots", []):
+        crawler.add_root_path(root_path)
+
+    crawl_result = await crawler.crawl_all_paths(full_reindex)
+    _indexing_state["progress"]["total_files"] = crawl_result.total_files
+
+    if crawl_result.errors > 0:
+        _indexing_state["errors"].extend(crawl_result.error_details)
+
+    return crawl_result
+
+
+async def _run_processing_phases(workers, config, photos_to_process):
+    """Run all processing phases for photos."""
+    global _indexing_state
+
+    # Phase 2: Metadata extraction
+    _indexing_state["progress"]["current_phase"] = "metadata"
+    logger.info("Phase 2: EXIF metadata extraction")
+    exif_pipeline = workers["EXIFExtractionPipeline"]()
+    await exif_pipeline.process_photos(photos_to_process)
+
+    # Phase 3: OCR processing
+    _indexing_state["progress"]["current_phase"] = "ocr"
+    logger.info("Phase 3: OCR text extraction")
+    ocr_worker = workers["SmartOCRWorker"](languages=config.get("ocr_languages", ["eng"]))
+    await ocr_worker.extract_batch(photos_to_process)
+
+    # Phase 4: Embedding generation
+    _indexing_state["progress"]["current_phase"] = "embeddings"
+    logger.info("Phase 4: Embedding generation")
+    embedding_worker = workers["OptimizedCLIPWorker"]()
+    await embedding_worker.generate_batch_optimized(photos_to_process)
+
+    # Phase 5: Thumbnail generation
+    _indexing_state["progress"]["current_phase"] = "thumbnails"
+    logger.info("Phase 5: Thumbnail generation")
+    thumbnail_generator = workers["SmartThumbnailGenerator"](
+        cache_root=str(Path.home() / ".photo-search" / "thumbnails")
+    )
+    await thumbnail_generator.generate_batch(photos_to_process)
+
+    # Phase 6: Face detection (if enabled)
+    if config.get("face_search_enabled", False):
+        _indexing_state["progress"]["current_phase"] = "faces"
+        logger.info("Phase 6: Face detection")
+        face_worker = workers["FaceDetectionWorker"]()
+        if face_worker.is_available():
+            await face_worker.process_batch(photos_to_process)
+        else:
+            logger.warning("Face detection not available, skipping")
+
+
 async def _run_indexing_process(full_reindex: bool):
     """Run the complete indexing process."""
     global _indexing_state
@@ -210,87 +291,25 @@ async def _run_indexing_process(full_reindex: bool):
     try:
         logger.info("Starting indexing process")
 
-        # Import workers
-        from ..workers.crawler import FileCrawler
-        from ..workers.embedding_worker import OptimizedCLIPWorker
-        from ..workers.exif_extractor import EXIFExtractionPipeline
-        from ..workers.face_worker import FaceDetectionWorker
-        from ..workers.ocr_worker import SmartOCRWorker
-        from ..workers.thumbnail_worker import SmartThumbnailGenerator
-
-        # Get configuration
+        # Setup
+        workers = await _setup_indexing_workers()
         db_manager = get_database_manager()
         config = _get_config_from_db(db_manager)
-        root_paths = config.get("roots", [])
 
-        if not root_paths:
+        if not config.get("roots", []):
             _indexing_state["errors"].append("No root paths configured")
             _indexing_state["status"] = "error"
             return
 
-        # Phase 1: Discovery
-        _indexing_state["progress"]["current_phase"] = "discovery"
-        logger.info("Phase 1: File discovery")
-
-        crawler = FileCrawler()
-        for root_path in root_paths:
-            crawler.add_root_path(root_path)
-
-        crawl_result = await crawler.crawl_all_paths(full_reindex)
-        _indexing_state["progress"]["total_files"] = crawl_result.total_files
-
-        if crawl_result.errors > 0:
-            _indexing_state["errors"].extend(crawl_result.error_details)
-
-        # Get photos that need processing
+        # Run phases
+        await _run_discovery_phase(workers, config, full_reindex)
         photos_to_process = _get_photos_for_processing(db_manager, full_reindex)
-
-        # Phase 2: Metadata extraction
-        _indexing_state["progress"]["current_phase"] = "metadata"
-        logger.info("Phase 2: EXIF metadata extraction")
-
-        exif_pipeline = EXIFExtractionPipeline()
-        await exif_pipeline.process_photos(photos_to_process)
-
-        # Phase 3: OCR processing
-        _indexing_state["progress"]["current_phase"] = "ocr"
-        logger.info("Phase 3: OCR text extraction")
-
-        ocr_worker = SmartOCRWorker(languages=config.get("ocr_languages", ["eng"]))
-        await ocr_worker.extract_batch(photos_to_process)
-
-        # Phase 4: Embedding generation
-        _indexing_state["progress"]["current_phase"] = "embeddings"
-        logger.info("Phase 4: Embedding generation")
-
-        embedding_worker = OptimizedCLIPWorker()
-        await embedding_worker.generate_batch_optimized(photos_to_process)
-
-        # Phase 5: Thumbnail generation
-        _indexing_state["progress"]["current_phase"] = "thumbnails"
-        logger.info("Phase 5: Thumbnail generation")
-
-        thumbnail_generator = SmartThumbnailGenerator(
-            cache_root=str(Path.home() / ".photo-search" / "thumbnails")
-        )
-        await thumbnail_generator.generate_batch(photos_to_process)
-
-        # Phase 6: Face detection (if enabled)
-        if config.get("face_search_enabled", False):
-            _indexing_state["progress"]["current_phase"] = "faces"
-            logger.info("Phase 6: Face detection")
-
-            face_worker = FaceDetectionWorker()
-            if face_worker.is_available():
-                await face_worker.process_batch(photos_to_process)
-            else:
-                logger.warning("Face detection not available, skipping")
+        await _run_processing_phases(workers, config, photos_to_process)
 
         # Complete indexing
         _indexing_state["status"] = "idle"
         _indexing_state["progress"]["current_phase"] = "completed"
         _indexing_state["progress"]["processed_files"] = len(photos_to_process)
-
         logger.info("Indexing process completed successfully")
 
     except asyncio.CancelledError:

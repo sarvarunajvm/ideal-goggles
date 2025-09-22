@@ -65,7 +65,7 @@ export default function SearchPage() {
     }
   };
 
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: Partial<typeof filters>) => {
     setFilters({ ...filters, ...newFilters });
   };
 
@@ -88,7 +88,7 @@ export default function SearchPage() {
             ].map((mode) => (
               <button
                 key={mode.key}
-                onClick={() => setSearchMode(mode.key as any)}
+                onClick={() => setSearchMode(mode.key as 'text' | 'semantic' | 'image')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   searchMode === mode.key
                     ? 'bg-blue-600 text-white'

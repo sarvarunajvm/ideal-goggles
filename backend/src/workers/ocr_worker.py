@@ -289,7 +289,7 @@ class SmartOCRWorker(TesseractOCRWorker):
 
     def _preprocess_image(self, img):
         """Apply image preprocessing for better OCR accuracy."""
-        from PIL import ImageEnhance, ImageFilter
+        from PIL import Image, ImageEnhance, ImageFilter
 
         # Resize if image is too small or too large
         width, height = img.size

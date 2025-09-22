@@ -28,9 +28,9 @@ export interface HealthResponse {
   timestamp: string;
   version: string;
   service: string;
-  system: any;
-  database: any;
-  dependencies: any;
+  system: Record<string, unknown>;
+  database: Record<string, unknown>;
+  dependencies: Record<string, unknown>;
 }
 
 export interface ConfigResponse {
@@ -56,24 +56,19 @@ class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
 
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`API request failed: ${endpoint}`, error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.json();
   }
 
   // Health and system endpoints
@@ -86,7 +81,7 @@ class ApiService {
     return this.request<ConfigResponse>('/config/config');
   }
 
-  async updateRoots(roots: string[]): Promise<any> {
+  async updateRoots(roots: string[]): Promise<void> {
     return this.request('/config/config/roots', {
       method: 'POST',
       body: JSON.stringify({ roots }),
@@ -98,7 +93,7 @@ class ApiService {
     face_search_enabled: boolean;
     thumbnail_size: number;
     thumbnail_quality: number;
-  }>): Promise<any> {
+  }>): Promise<void> {
     return this.request('/config/config', {
       method: 'PUT',
       body: JSON.stringify(config),
@@ -149,29 +144,29 @@ class ApiService {
     return this.request<IndexStatus>('/index/index/status');
   }
 
-  async startIndexing(full = false): Promise<any> {
+  async startIndexing(full = false): Promise<Record<string, unknown>> {
     return this.request('/index/index/start', {
       method: 'POST',
       body: JSON.stringify({ full }),
     });
   }
 
-  async stopIndexing(): Promise<any> {
+  async stopIndexing(): Promise<Record<string, unknown>> {
     return this.request('/index/index/stop', {
       method: 'POST',
     });
   }
 
-  async getIndexStats(): Promise<any> {
+  async getIndexStats(): Promise<Record<string, unknown>> {
     return this.request('/index/index/stats');
   }
 
   // People endpoints
-  async getPeople(): Promise<any[]> {
+  async getPeople(): Promise<Record<string, unknown>[]> {
     return this.request('/people/people');
   }
 
-  async createPerson(name: string, sampleFileIds: number[]): Promise<any> {
+  async createPerson(name: string, sampleFileIds: number[]): Promise<Record<string, unknown>> {
     return this.request('/people/people', {
       method: 'POST',
       body: JSON.stringify({

@@ -125,8 +125,8 @@ class Photo:
 
     @staticmethod
     def _calculate_sha1(file_path: str) -> str:
-        """Calculate SHA1 hash of file."""
-        sha1_hash = hashlib.sha1()
+        """Calculate SHA256 hash of file."""
+        sha1_hash = hashlib.sha256()
 
         try:
             with open(file_path, "rb") as f:

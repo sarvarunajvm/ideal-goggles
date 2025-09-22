@@ -185,7 +185,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
 
         # Validate that all sample file IDs exist
         file_ids_str = ",".join("?" * len(request.sample_file_ids))
-        photos_query = f"""
+        photos_query = f"""  # noqa: S608
             SELECT id, path, filename, modified_ts
             FROM photos
             WHERE id IN ({file_ids_str})
@@ -341,7 +341,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
 
             # Validate sample file IDs
             file_ids_str = ",".join("?" * len(request.additional_sample_file_ids))
-            photos_query = f"""
+            photos_query = f"""  # noqa: S608
                 SELECT id, path, filename, modified_ts
                 FROM photos
                 WHERE id IN ({file_ids_str})
@@ -403,7 +403,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             update_fields.append("updated_at = datetime('now')")
 
             # Execute update
-            update_query = f"""
+            update_query = f"""  # noqa: S608
                 UPDATE people
                 SET {', '.join(update_fields)}
                 WHERE id = ?

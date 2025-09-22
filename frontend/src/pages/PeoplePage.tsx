@@ -3,8 +3,16 @@ import { apiService } from '../services/api';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 
+interface Person {
+  id: number;
+  name: string;
+  sample_count: number;
+  created_at: string;
+  active: boolean;
+}
+
 export default function PeoplePage() {
-  const [people, setPeople] = useState<any[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +24,7 @@ export default function PeoplePage() {
     try {
       setLoading(true);
       const peopleData = await apiService.getPeople();
-      setPeople(peopleData);
+      setPeople(peopleData as unknown as Person[]);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load people');
@@ -27,9 +35,8 @@ export default function PeoplePage() {
 
   const searchForPerson = async (personId: number) => {
     try {
-      const results = await apiService.searchFaces(personId);
-      // Navigate to search results or handle differently
-      console.log('Face search results:', results);
+      await apiService.searchFaces(personId);
+      // TODO: Navigate to search results page with results
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Face search failed');
     }

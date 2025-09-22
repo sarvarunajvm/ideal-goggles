@@ -20,11 +20,11 @@ class ThumbnailGenerator:
     """Worker for generating thumbnail images."""
 
     def __init__(self, cache_root: str, max_workers: int = 4,
-                 max_size: int = 512, format: str = "webp", quality: int = 85):
+                 max_size: int = 512, img_format: str = "webp", quality: int = 85):
         self.cache_root = Path(cache_root)
         self.max_workers = max_workers
         self.max_size = max_size
-        self.format = format.lower()
+        self.format = img_format.lower()
         self.quality = quality
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
 

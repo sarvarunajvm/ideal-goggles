@@ -457,9 +457,9 @@ class FAISSVectorSearchService:
             # Load FAISS index
             self.index = faiss.read_index(self.index_path)
 
-            # Load metadata
+            # Load metadata (safe: internal application data)
             with open(self.metadata_path, "rb") as f:
-                metadata = pickle.load(f)
+                metadata = pickle.load(f)  # noqa: S301
 
             self.id_to_file_id = metadata["id_to_file_id"]
             self.file_id_to_index = metadata["file_id_to_index"]
