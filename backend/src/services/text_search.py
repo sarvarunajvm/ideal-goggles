@@ -24,7 +24,7 @@ class TextSearchService:
         date_range: tuple[date, date] | None = None,
         file_types: list[str] | None = None,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> dict[str, Any]:
         """
         Search photos using text query with optional filters.
@@ -71,7 +71,7 @@ class TextSearchService:
                 "processed_query": processed_query,
                 "search_time_ms": round(search_time * 1000, 2),
                 "limit": limit,
-                "offset": offset
+                "offset": offset,
             }
 
         except Exception as e:
@@ -83,7 +83,7 @@ class TextSearchService:
                 "error": str(e),
                 "search_time_ms": 0,
                 "limit": limit,
-                "offset": offset
+                "offset": offset,
             }
 
     def _process_search_query(self, query: str) -> str:
@@ -120,7 +120,6 @@ class TextSearchService:
         # Join with AND operator for FTS5
         return " AND ".join(processed_words)
 
-
     def _build_search_query(
         self,
         processed_query: str,
@@ -128,7 +127,7 @@ class TextSearchService:
         date_range: tuple[date, date] | None,
         file_types: list[str] | None,
         limit: int,
-        offset: int
+        offset: int,
     ) -> tuple[str, list[Any]]:
         """Build the complete search SQL query."""
         params = []
@@ -174,12 +173,16 @@ class TextSearchService:
 
             # Search in EXIF data
             text_conditions.append("(e.camera_make LIKE ? OR e.camera_model LIKE ?)")
-            search_pattern = f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
+            search_pattern = (
+                f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
+            )
             params.extend([search_pattern, search_pattern])
 
             # Search in OCR text using FTS5
             if processed_query.strip():
-                text_conditions.append("p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)")
+                text_conditions.append(
+                    "p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)"
+                )
                 params.append(processed_query)
 
             # Combine text conditions with OR
@@ -244,7 +247,7 @@ class TextSearchService:
         processed_query: str,
         folders: list[str] | None,
         date_range: tuple[date, date] | None,
-        file_types: list[str] | None
+        file_types: list[str] | None,
     ) -> tuple[str, list[Any]]:
         """Build count query for pagination."""
         params = []
@@ -269,11 +272,15 @@ class TextSearchService:
             params.append(f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%")
 
             text_conditions.append("(e.camera_make LIKE ? OR e.camera_model LIKE ?)")
-            search_pattern = f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
+            search_pattern = (
+                f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
+            )
             params.extend([search_pattern, search_pattern])
 
             if processed_query.strip():
-                text_conditions.append("p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)")
+                text_conditions.append(
+                    "p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)"
+                )
                 params.append(processed_query)
 
             where_conditions.append(f"({' OR '.join(text_conditions)})")
@@ -314,7 +321,9 @@ class TextSearchService:
 
         return full_query, params
 
-    def _process_search_results(self, results: list[sqlite3.Row], original_query: str) -> list[dict[str, Any]]:
+    def _process_search_results(
+        self, results: list[sqlite3.Row], original_query: str
+    ) -> list[dict[str, Any]]:
         """Process raw search results into formatted output."""
         processed_results = []
 
@@ -334,8 +343,9 @@ class TextSearchService:
                 relevance_score += 0.2
 
             # Check EXIF match
-            if (row[10] and original_query.lower() in row[10].lower()) or \
-               (row[11] and original_query.lower() in row[11].lower()):
+            if (row[10] and original_query.lower() in row[10].lower()) or (
+                row[11] and original_query.lower() in row[11].lower()
+            ):
                 match_types.append("exif")
                 relevance_score += 0.2
 
@@ -373,7 +383,7 @@ class TextSearchService:
                 "relevance_score": round(relevance_score, 3),
                 "match_types": match_types,
                 "snippet": snippet,
-                "ocr_confidence": row[13] if row[13] else None
+                "ocr_confidence": row[13] if row[13] else None,
             }
 
             processed_results.append(result_item)
@@ -446,8 +456,7 @@ class TextSearchService:
             """
 
             filename_results = self.db_manager.execute_query(
-                filename_query,
-                (f"%{partial_query}%", limit // 2)
+                filename_query, (f"%{partial_query}%", limit // 2)
             )
 
             suggestions.extend(row[0] for row in filename_results)
@@ -462,8 +471,7 @@ class TextSearchService:
             """
 
             camera_results = self.db_manager.execute_query(
-                camera_query,
-                (f"%{partial_query}%", limit // 2)
+                camera_query, (f"%{partial_query}%", limit // 2)
             )
 
             for row in camera_results:
@@ -503,11 +511,7 @@ class TextSearchService:
             camera_results = self.db_manager.execute_query(camera_query, (limit // 2,))
 
             popular_searches = [
-                {
-                    "term": row[0],
-                    "type": "camera_model",
-                    "count": row[1]
-                }
+                {"term": row[0], "type": "camera_model", "count": row[1]}
                 for row in camera_results
             ]
 
@@ -522,14 +526,12 @@ class TextSearchService:
 
             ext_results = self.db_manager.execute_query(ext_query, (limit // 2,))
 
-            popular_searches.extend([
-                {
-                    "term": row[0],
-                    "type": "file_extension",
-                    "count": row[1]
-                }
-                for row in ext_results
-            ])
+            popular_searches.extend(
+                [
+                    {"term": row[0], "type": "file_extension", "count": row[1]}
+                    for row in ext_results
+                ]
+            )
 
             return popular_searches[:limit]
 
@@ -561,8 +563,12 @@ class TextSearchService:
                     "photos_with_ocr": row[1],
                     "photos_with_exif": row[2],
                     "avg_ocr_length": round(row[3], 2) if row[3] else 0,
-                    "ocr_coverage": round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0,
-                    "exif_coverage": round((row[2] / row[0]) * 100, 2) if row[0] > 0 else 0
+                    "ocr_coverage": (
+                        round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0
+                    ),
+                    "exif_coverage": (
+                        round((row[2] / row[0]) * 100, 2) if row[0] > 0 else 0
+                    ),
                 }
 
             return {}

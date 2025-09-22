@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CrawlResult:
     """Result of a crawl operation."""
+
     total_files: int = 0
     new_files: int = 0
     modified_files: int = 0
@@ -87,18 +88,16 @@ class PhotoFileHandler(FileSystemEventHandler):
         try:
             if event_type == "created":
                 asyncio.run_coroutine_threadsafe(
-                    self.crawler.handle_file_created(file_path),
-                    self.crawler.event_loop
+                    self.crawler.handle_file_created(file_path), self.crawler.event_loop
                 )
             elif event_type == "modified":
                 asyncio.run_coroutine_threadsafe(
                     self.crawler.handle_file_modified(file_path),
-                    self.crawler.event_loop
+                    self.crawler.event_loop,
                 )
             elif event_type == "deleted":
                 asyncio.run_coroutine_threadsafe(
-                    self.crawler.handle_file_deleted(file_path),
-                    self.crawler.event_loop
+                    self.crawler.handle_file_deleted(file_path), self.crawler.event_loop
                 )
         except RuntimeError:
             # Event loop might be closed
@@ -162,12 +161,16 @@ class FileCrawler:
             for root_path in self.root_paths:
                 logger.info(f"Crawling path: {root_path}")
 
-                async for file_result in self._crawl_directory(root_path, force_full_crawl):
+                async for file_result in self._crawl_directory(
+                    root_path, force_full_crawl
+                ):
                     result.total_files += 1
 
                     if file_result["status"] == "new":
                         result.new_files += 1
-                        await self._notify_crawl_callbacks("file_discovered", file_result)
+                        await self._notify_crawl_callbacks(
+                            "file_discovered", file_result
+                        )
                     elif file_result["status"] == "modified":
                         result.modified_files += 1
                         await self._notify_crawl_callbacks("file_modified", file_result)
@@ -190,13 +193,17 @@ class FileCrawler:
             self.is_crawling = False
             self.last_crawl_result = result
 
-        logger.info(f"Crawl completed: {result.total_files} files, "
-                   f"{result.new_files} new, {result.modified_files} modified, "
-                   f"{result.errors} errors in {result.duration_seconds:.2f}s")
+        logger.info(
+            f"Crawl completed: {result.total_files} files, "
+            f"{result.new_files} new, {result.modified_files} modified, "
+            f"{result.errors} errors in {result.duration_seconds:.2f}s"
+        )
 
         return result
 
-    async def _crawl_directory(self, root_path: str, force_full_crawl: bool) -> AsyncGenerator[dict, None]:
+    async def _crawl_directory(
+        self, root_path: str, force_full_crawl: bool
+    ) -> AsyncGenerator[dict, None]:
         """Crawl a single directory recursively."""
         try:
             for root, dirs, files in os.walk(root_path):
@@ -301,10 +308,13 @@ class FileCrawler:
         """Handle file creation event."""
         try:
             photo = Photo.from_file_path(file_path)
-            await self._notify_watch_callbacks("file_created", {
-                "path": file_path,
-                "photo": photo,
-            })
+            await self._notify_watch_callbacks(
+                "file_created",
+                {
+                    "path": file_path,
+                    "photo": photo,
+                },
+            )
         except Exception as e:
             logger.warning(f"Error handling file creation {file_path}: {e}")
 
@@ -312,18 +322,24 @@ class FileCrawler:
         """Handle file modification event."""
         try:
             photo = Photo.from_file_path(file_path)
-            await self._notify_watch_callbacks("file_modified", {
-                "path": file_path,
-                "photo": photo,
-            })
+            await self._notify_watch_callbacks(
+                "file_modified",
+                {
+                    "path": file_path,
+                    "photo": photo,
+                },
+            )
         except Exception as e:
             logger.warning(f"Error handling file modification {file_path}: {e}")
 
     async def handle_file_deleted(self, file_path: str):
         """Handle file deletion event."""
-        await self._notify_watch_callbacks("file_deleted", {
-            "path": file_path,
-        })
+        await self._notify_watch_callbacks(
+            "file_deleted",
+            {
+                "path": file_path,
+            },
+        )
 
     async def _notify_crawl_callbacks(self, event_type: str, data: dict):
         """Notify crawl callbacks of events."""
@@ -354,7 +370,9 @@ class FileCrawler:
             "is_watching": self.is_watching,
             "is_crawling": self.is_crawling,
             "watchers_active": len(self.observers),
-            "last_crawl_result": self.last_crawl_result.to_dict() if self.last_crawl_result else None,
+            "last_crawl_result": (
+                self.last_crawl_result.to_dict() if self.last_crawl_result else None
+            ),
         }
 
 
@@ -365,9 +383,9 @@ class BatchFileCrawler:
         self.batch_size = batch_size
         self.max_workers = max_workers
 
-    async def crawl_in_batches(self, root_paths: list[str],
-                              callback: Callable,
-                              force_full_crawl: bool = False) -> CrawlResult:
+    async def crawl_in_batches(
+        self, root_paths: list[str], callback: Callable, force_full_crawl: bool = False
+    ) -> CrawlResult:
         """Crawl files in batches for memory efficiency."""
         result = CrawlResult()
         start_time = time.time()
@@ -377,14 +395,16 @@ class BatchFileCrawler:
             # Collect all files from all root paths
             all_files = []
             for root_path in root_paths:
-                root_files = [file_data async for file_data in self._collect_files(root_path)]
+                root_files = [
+                    file_data async for file_data in self._collect_files(root_path)
+                ]
                 all_files.extend(root_files)
 
             result.total_files = len(all_files)
 
             # Process in batches
             for i in range(0, len(all_files), self.batch_size):
-                batch = all_files[i:i + self.batch_size]
+                batch = all_files[i : i + self.batch_size]
                 batch_result = await self._process_batch(batch, callback)
 
                 result.new_files += batch_result.new_files
@@ -434,7 +454,9 @@ class BatchFileCrawler:
 
                 await asyncio.sleep(0)
 
-    async def _process_batch(self, batch: list[dict], callback: Callable) -> CrawlResult:
+    async def _process_batch(
+        self, batch: list[dict], callback: Callable
+    ) -> CrawlResult:
         """Process a batch of files."""
         result = CrawlResult()
 
@@ -451,8 +473,7 @@ class BatchFileCrawler:
                 return await task
 
         results = await asyncio.gather(
-            *[process_with_semaphore(task) for task in tasks],
-            return_exceptions=True
+            *[process_with_semaphore(task) for task in tasks], return_exceptions=True
         )
 
         for file_result in results:

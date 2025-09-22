@@ -15,7 +15,7 @@ class TestFaceSearchWorkflow:
         # When: Operator enrolls new person "John Smith"
         enrollment_payload = {
             "name": "John Smith",
-            "sample_file_ids": [1, 2, 3]  # Sample photos
+            "sample_file_ids": [1, 2, 3],  # Sample photos
         }
 
         enrollment_response = client.post("/people", json=enrollment_payload)
@@ -49,10 +49,7 @@ class TestFaceSearchWorkflow:
     def test_face_search_requires_opt_in(self, client: TestClient) -> None:
         """Test that face search requires explicit opt-in (constitutional requirement)."""
         # This validates constitutional privacy compliance
-        enrollment_payload = {
-            "name": "Test Person",
-            "sample_file_ids": [1, 2, 3]
-        }
+        enrollment_payload = {"name": "Test Person", "sample_file_ids": [1, 2, 3]}
 
         # Should fail if face search is not enabled
         response = client.post("/people", json=enrollment_payload)

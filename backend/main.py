@@ -25,8 +25,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(Path.home() / ".photo-search" / "app.log")
-    ]
+        logging.FileHandler(Path.home() / ".photo-search" / "app.log"),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ async def lifespan(_app: FastAPI):
     directories = [
         Path.home() / ".photo-search",
         Path.home() / ".photo-search" / "thumbnails",
-        Path.home() / ".photo-search" / "logs"
+        Path.home() / ".photo-search" / "logs",
     ]
 
     for directory in directories:
@@ -67,7 +67,7 @@ app = FastAPI(
     title="Photo Search API",
     description="Local API for photo search and navigation system",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware for frontend integration
@@ -88,10 +88,7 @@ app.add_middleware(
 async def global_exception_handler(_request, exc):
     """Global exception handler for unhandled errors."""
     logger.error("Unhandled exception: %s", exc)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 # Include API routers
@@ -110,7 +107,7 @@ async def root():
         "version": "1.0.0",
         "description": "Local API for photo search and navigation system",
         "docs_url": "/docs",
-        "health_url": "/health"
+        "health_url": "/health",
     }
 
 
@@ -118,10 +115,4 @@ if __name__ == "__main__":
     import uvicorn
 
     # Run development server
-    uvicorn.run(
-        "main:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True, log_level="info")

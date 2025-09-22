@@ -30,11 +30,15 @@ class Person:
             self.updated_at = self.created_at
 
         # Ensure face_vector is numpy array if provided
-        if self.face_vector is not None and not isinstance(self.face_vector, np.ndarray):
+        if self.face_vector is not None and not isinstance(
+            self.face_vector, np.ndarray
+        ):
             self.face_vector = np.array(self.face_vector, dtype=np.float32)
 
     @classmethod
-    def create_from_face_vectors(cls, name: str, face_vectors: list[np.ndarray]) -> "Person":
+    def create_from_face_vectors(
+        cls, name: str, face_vectors: list[np.ndarray]
+    ) -> "Person":
         """Create Person by averaging multiple face vectors."""
         if not face_vectors:
             msg = "At least one face vector is required"
@@ -65,7 +69,7 @@ class Person:
             sample_count=len(face_vectors),
             created_at=datetime.now().timestamp(),
             updated_at=datetime.now().timestamp(),
-            active=True
+            active=True,
         )
 
     @classmethod
@@ -94,7 +98,9 @@ class Person:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "active": self.active,
-            "face_vector_dimension": len(self.face_vector) if self.face_vector is not None else None,
+            "face_vector_dimension": (
+                len(self.face_vector) if self.face_vector is not None else None
+            ),
         }
 
     def to_db_params(self) -> tuple:
@@ -109,7 +115,7 @@ class Person:
             self.sample_count,
             self.created_at,
             self.updated_at,
-            self.active
+            self.active,
         )
 
     def validate(self) -> list[str]:
@@ -131,8 +137,13 @@ class Person:
             if self.face_vector.dtype != np.float32:
                 errors.append("Face vector must be float32")
 
-            if len(self.face_vector) not in [512, 1024]:  # Common face embedding dimensions
-                errors.append(f"Unexpected face vector dimension: {len(self.face_vector)}")
+            if len(self.face_vector) not in [
+                512,
+                1024,
+            ]:  # Common face embedding dimensions
+                errors.append(
+                    f"Unexpected face vector dimension: {len(self.face_vector)}"
+                )
 
             if np.any(np.isnan(self.face_vector)) or np.any(np.isinf(self.face_vector)):
                 errors.append("Face vector contains invalid values (NaN or Inf)")
@@ -167,7 +178,9 @@ class Person:
         self.sample_count += len(new_face_vectors)
         self.updated_at = datetime.now().timestamp()
 
-    def similarity_to_vector(self, face_vector: np.ndarray, metric: str = "cosine") -> float:
+    def similarity_to_vector(
+        self, face_vector: np.ndarray, metric: str = "cosine"
+    ) -> float:
         """Calculate similarity to a face vector."""
         if self.face_vector is None:
             return 0.0
@@ -239,11 +252,15 @@ class Face:
             self.box_xyxy = [0.0, 0.0, 0.0, 0.0]
 
         # Ensure face_vector is numpy array if provided
-        if self.face_vector is not None and not isinstance(self.face_vector, np.ndarray):
+        if self.face_vector is not None and not isinstance(
+            self.face_vector, np.ndarray
+        ):
             self.face_vector = np.array(self.face_vector, dtype=np.float32)
 
     @classmethod
-    def from_detection_result(cls, file_id: int, detection_result: dict[str, Any]) -> "Face":
+    def from_detection_result(
+        cls, file_id: int, detection_result: dict[str, Any]
+    ) -> "Face":
         """Create Face from face detection result."""
         # Extract bounding box
         box = detection_result.get("bbox", [0, 0, 0, 0])
@@ -267,7 +284,7 @@ class Face:
             box_xyxy=box,
             face_vector=embedding,
             confidence=detection_result.get("confidence", 0.0),
-            verified=False
+            verified=False,
         )
 
     @classmethod
@@ -300,7 +317,9 @@ class Face:
             "box_xyxy": self.box_xyxy,
             "confidence": self.confidence,
             "verified": self.verified,
-            "face_vector_dimension": len(self.face_vector) if self.face_vector is not None else None,
+            "face_vector_dimension": (
+                len(self.face_vector) if self.face_vector is not None else None
+            ),
         }
 
     def to_db_params(self) -> tuple:
@@ -317,7 +336,7 @@ class Face:
             box_json,
             face_vector_blob,
             self.confidence,
-            self.verified
+            self.verified,
         )
 
     def validate(self) -> list[str]:
@@ -413,12 +432,14 @@ class FaceSearchResult:
     def add_match(self, face: Face, similarity: float):
         """Add a face match to results."""
         if similarity >= self.threshold:
-            self.matches.append({
-                "face": face,
-                "similarity": similarity,
-                "file_id": face.file_id,
-                "person_id": face.person_id,
-            })
+            self.matches.append(
+                {
+                    "face": face,
+                    "similarity": similarity,
+                    "file_id": face.file_id,
+                    "person_id": face.person_id,
+                }
+            )
 
     def sort_by_similarity(self):
         """Sort matches by similarity (highest first)."""

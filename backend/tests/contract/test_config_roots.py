@@ -14,13 +14,17 @@ class TestConfigRootsEndpoint:
         # Will fail until implemented (mock returns 404)
         assert response.status_code == 200
 
-    def test_config_roots_endpoint_accepts_valid_payload(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_accepts_valid_payload(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint accepts valid JSON payload."""
         payload = {"roots": ["/valid/path", "/another/valid/path"]}
         response = client.post("/config/roots", json=payload)
         assert response.status_code == 200
 
-    def test_config_roots_endpoint_validates_required_fields(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_validates_required_fields(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint validates required fields."""
         # Missing 'roots' field
         payload = {}
@@ -31,7 +35,9 @@ class TestConfigRootsEndpoint:
         response = client.post("/config/roots")
         assert response.status_code == 422
 
-    def test_config_roots_endpoint_validates_array_type(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_validates_array_type(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint validates roots as array."""
         # roots should be array, not string
         payload = {"roots": "/single/path"}
@@ -43,7 +49,9 @@ class TestConfigRootsEndpoint:
         response = client.post("/config/roots", json=payload)
         assert response.status_code == 422
 
-    def test_config_roots_endpoint_validates_string_elements(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_validates_string_elements(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint validates array elements are strings."""
         # Array elements should be strings
         payload = {"roots": [123, 456]}
@@ -55,14 +63,18 @@ class TestConfigRootsEndpoint:
         response = client.post("/config/roots", json=payload)
         assert response.status_code == 422
 
-    def test_config_roots_endpoint_handles_empty_array(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_handles_empty_array(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint handles empty array."""
         payload = {"roots": []}
         response = client.post("/config/roots", json=payload)
         # Should be valid to clear all roots
         assert response.status_code == 200
 
-    def test_config_roots_endpoint_validates_path_format(self, client: TestClient) -> None:
+    def test_config_roots_endpoint_validates_path_format(
+        self, client: TestClient
+    ) -> None:
         """Test that config/roots endpoint validates path format."""
         # Empty strings should fail
         payload = {"roots": [""]}
@@ -84,6 +96,7 @@ class TestConfigRootsEndpoint:
     def test_config_roots_endpoint_response_time(self, client: TestClient) -> None:
         """Test that config/roots endpoint responds quickly."""
         import time
+
         payload = {"roots": ["/test/path"]}
         start_time = time.time()
         response = client.post("/config/roots", json=payload)

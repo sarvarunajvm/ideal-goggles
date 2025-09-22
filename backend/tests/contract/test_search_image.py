@@ -50,6 +50,7 @@ class TestImageSearchEndpoint:
     def test_image_search_performance_requirement(self, client: TestClient) -> None:
         """Test that image search meets constitutional performance requirement."""
         import time
+
         image_data = b"fake_image_data"
         files = {"file": ("test.jpg", BytesIO(image_data), "image/jpeg")}
 
@@ -58,4 +59,6 @@ class TestImageSearchEndpoint:
         end_time = time.time()
 
         assert response.status_code == 200
-        assert (end_time - start_time) < 5.0  # Constitutional requirement: <5s for image search
+        assert (
+            end_time - start_time
+        ) < 5.0  # Constitutional requirement: <5s for image search

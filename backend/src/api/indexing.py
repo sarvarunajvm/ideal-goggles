@@ -17,37 +17,36 @@ logger = logging.getLogger(__name__)
 
 class IndexStatus(BaseModel):
     """Index status model."""
+
     status: str = Field(description="Current indexing status")
     progress: dict[str, Any] = Field(description="Progress information")
     errors: list[str] = Field(description="List of errors encountered")
     started_at: datetime | None = Field(description="Indexing start time")
-    estimated_completion: datetime | None = Field(description="Estimated completion time")
+    estimated_completion: datetime | None = Field(
+        description="Estimated completion time"
+    )
 
 
 class StartIndexRequest(BaseModel):
     """Request model for starting indexing."""
+
     full: bool = Field(default=False, description="Whether to perform full re-index")
 
 
 # Global indexing state
 _indexing_state = {
     "status": "idle",
-    "progress": {
-        "total_files": 0,
-        "processed_files": 0,
-        "current_phase": "discovery"
-    },
+    "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
     "errors": [],
     "started_at": None,
     "estimated_completion": None,
-    "task": None
+    "task": None,
 }
 
 
 @router.post("/index/start")
 async def start_indexing(
-    request: StartIndexRequest,
-    background_tasks: BackgroundTasks
+    request: StartIndexRequest, background_tasks: BackgroundTasks
 ) -> dict[str, Any]:
     """
     Start indexing process.
@@ -64,8 +63,7 @@ async def start_indexing(
     # Check if indexing is already running
     if _indexing_state["status"] == "indexing":
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Indexing already in progress"
+            status_code=status.HTTP_409_CONFLICT, detail="Indexing already in progress"
         )
 
     try:
@@ -75,12 +73,12 @@ async def start_indexing(
             "progress": {
                 "total_files": 0,
                 "processed_files": 0,
-                "current_phase": "discovery"
+                "current_phase": "discovery",
             },
             "errors": [],
             "started_at": datetime.now(),
             "estimated_completion": None,
-            "task": None
+            "task": None,
         }
 
         # Start indexing in background
@@ -91,7 +89,7 @@ async def start_indexing(
         return {
             "message": "Indexing started successfully",
             "full_reindex": request.full,
-            "started_at": _indexing_state["started_at"].isoformat()
+            "started_at": _indexing_state["started_at"].isoformat(),
         }
 
     except Exception as e:
@@ -100,7 +98,7 @@ async def start_indexing(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start indexing: {e!s}"
+            detail=f"Failed to start indexing: {e!s}",
         )
 
 
@@ -117,7 +115,7 @@ async def get_indexing_status() -> IndexStatus:
         progress=_indexing_state["progress"],
         errors=_indexing_state["errors"],
         started_at=_indexing_state["started_at"],
-        estimated_completion=_indexing_state["estimated_completion"]
+        estimated_completion=_indexing_state["estimated_completion"],
     )
 
 
@@ -134,7 +132,7 @@ async def stop_indexing() -> dict[str, Any]:
     if _indexing_state["status"] != "indexing":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No indexing process is currently running"
+            detail="No indexing process is currently running",
         )
 
     try:
@@ -148,13 +146,13 @@ async def stop_indexing() -> dict[str, Any]:
 
         return {
             "message": "Indexing process stopped",
-            "stopped_at": datetime.now().isoformat()
+            "stopped_at": datetime.now().isoformat(),
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to stop indexing: {e!s}"
+            detail=f"Failed to stop indexing: {e!s}",
         )
 
 
@@ -179,28 +177,35 @@ async def get_indexing_statistics() -> dict[str, Any]:
                 "indexed_photos": _get_indexed_photo_count(db_manager),
                 "photos_with_exif": db_info.get("table_counts", {}).get("exif", 0),
                 "photos_with_ocr": _get_ocr_photo_count(db_manager),
-                "photos_with_embeddings": db_info.get("table_counts", {}).get("embeddings", 0),
+                "photos_with_embeddings": db_info.get("table_counts", {}).get(
+                    "embeddings", 0
+                ),
                 "total_faces": db_info.get("table_counts", {}).get("faces", 0),
                 "enrolled_people": db_info.get("table_counts", {}).get("people", 0),
-                "thumbnails": db_info.get("table_counts", {}).get("thumbnails", 0)
+                "thumbnails": db_info.get("table_counts", {}).get("thumbnails", 0),
             },
             "current_indexing": {
                 "status": _indexing_state["status"],
                 "progress": _indexing_state["progress"],
-                "started_at": _indexing_state["started_at"].isoformat() if _indexing_state["started_at"] else None,
-                "errors_count": len(_indexing_state["errors"])
+                "started_at": (
+                    _indexing_state["started_at"].isoformat()
+                    if _indexing_state["started_at"]
+                    else None
+                ),
+                "errors_count": len(_indexing_state["errors"]),
             },
             "database_info": {
                 "size_mb": db_info.get("database_size_mb", 0),
-                "schema_version": db_info.get("settings", {}).get("schema_version", "unknown")
-            }
+                "schema_version": db_info.get("settings", {}).get(
+                    "schema_version", "unknown"
+                ),
+            },
         }
-
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get indexing statistics: {e!s}"
+            detail=f"Failed to get indexing statistics: {e!s}",
         )
 
 
@@ -256,7 +261,9 @@ async def _run_processing_phases(workers, config, photos_to_process):
     # Phase 3: OCR processing
     _indexing_state["progress"]["current_phase"] = "ocr"
     logger.info("Phase 3: OCR text extraction")
-    ocr_worker = workers["SmartOCRWorker"](languages=config.get("ocr_languages", ["eng"]))
+    ocr_worker = workers["SmartOCRWorker"](
+        languages=config.get("ocr_languages", ["eng"])
+    )
     await ocr_worker.extract_batch(photos_to_process)
 
     # Phase 4: Embedding generation
@@ -332,6 +339,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
             key, value = row[0], row[1]
             if key in ["roots", "ocr_languages"]:
                 import json
+
                 try:
                     config[key] = json.loads(value)
                 except:
@@ -352,11 +360,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         return config
 
     except Exception:
-        return {
-            "roots": [],
-            "ocr_languages": ["eng"],
-            "face_search_enabled": False
-        }
+        return {"roots": [], "ocr_languages": ["eng"], "face_search_enabled": False}
 
 
 def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:
@@ -367,12 +371,15 @@ def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:
     if full_reindex:
         query = "SELECT * FROM photos"
     else:
-        query = "SELECT * FROM photos WHERE indexed_at IS NULL OR modified_ts > indexed_at"
+        query = (
+            "SELECT * FROM photos WHERE indexed_at IS NULL OR modified_ts > indexed_at"
+        )
 
     rows = db_manager.execute_query(query)
 
     # Convert to Photo objects
     from ..models.photo import Photo
+
     photos = []
     for row in rows:
         photo = Photo.from_db_row(row)

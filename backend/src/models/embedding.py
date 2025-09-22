@@ -32,7 +32,12 @@ class Embedding:
                 self.clip_vector = self.clip_vector / norm
 
     @classmethod
-    def from_clip_output(cls, file_id: int, clip_features: np.ndarray | list[float], model_name: str = "clip-vit-b-32") -> "Embedding":
+    def from_clip_output(
+        cls,
+        file_id: int,
+        clip_features: np.ndarray | list[float],
+        model_name: str = "clip-vit-b-32",
+    ) -> "Embedding":
         """Create Embedding from CLIP model output."""
         # Convert to numpy array if needed
         if not isinstance(clip_features, np.ndarray):
@@ -46,7 +51,7 @@ class Embedding:
             file_id=file_id,
             clip_vector=clip_features,
             embedding_model=model_name,
-            processed_at=datetime.now().timestamp()
+            processed_at=datetime.now().timestamp(),
         )
 
     @classmethod
@@ -77,12 +82,7 @@ class Embedding:
     def to_db_params(self) -> tuple:
         """Convert to database parameters for insertion."""
         vector_blob = self._numpy_to_blob(self.clip_vector)
-        return (
-            self.file_id,
-            vector_blob,
-            self.embedding_model,
-            self.processed_at
-        )
+        return (self.file_id, vector_blob, self.embedding_model, self.processed_at)
 
     def validate(self) -> list[str]:
         """Validate embedding data and return list of errors."""
@@ -198,7 +198,9 @@ class Embedding:
         return vector
 
     @staticmethod
-    def batch_cosine_similarity(query_vector: np.ndarray, vectors: list[np.ndarray]) -> np.ndarray:
+    def batch_cosine_similarity(
+        query_vector: np.ndarray, vectors: list[np.ndarray]
+    ) -> np.ndarray:
         """Calculate cosine similarity between query and batch of vectors."""
         if not vectors:
             return np.array([])
@@ -209,9 +211,10 @@ class Embedding:
         # Calculate dot products (cosine similarity for normalized vectors)
         return np.dot(matrix, query_vector)
 
-
     @staticmethod
-    def create_random_embedding(file_id: int, dimension: int = 512, model_name: str = "random") -> "Embedding":
+    def create_random_embedding(
+        file_id: int, dimension: int = 512, model_name: str = "random"
+    ) -> "Embedding":
         """Create random embedding for testing purposes."""
         # Generate random normalized vector
         vector = np.random.randn(dimension).astype(np.float32)
@@ -221,7 +224,7 @@ class Embedding:
             file_id=file_id,
             clip_vector=vector,
             embedding_model=model_name,
-            processed_at=datetime.now().timestamp()
+            processed_at=datetime.now().timestamp(),
         )
 
 

@@ -35,7 +35,9 @@ class TestHealthEndpoint:
         response = client.get("/health")
         assert response.headers["content-type"] == "application/json"
 
-    def test_health_endpoint_no_authentication_required(self, client: TestClient) -> None:
+    def test_health_endpoint_no_authentication_required(
+        self, client: TestClient
+    ) -> None:
         """Test that health endpoint works without authentication."""
         # This endpoint should always be accessible
         response = client.get("/health")
@@ -45,6 +47,7 @@ class TestHealthEndpoint:
     def test_health_endpoint_response_time(self, client: TestClient) -> None:
         """Test that health endpoint responds quickly."""
         import time
+
         start_time = time.time()
         response = client.get("/health")
         end_time = time.time()

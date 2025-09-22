@@ -17,7 +17,9 @@ class OCRResult:
     processed_at: float | None = None
 
     @classmethod
-    def from_tesseract_result(cls, file_id: int, tesseract_data: dict[str, Any], language: str = "eng") -> "OCRResult":
+    def from_tesseract_result(
+        cls, file_id: int, tesseract_data: dict[str, Any], language: str = "eng"
+    ) -> "OCRResult":
         """Create OCRResult from Tesseract OCR output."""
         # Extract text and confidence from tesseract data
         text_parts = []
@@ -30,7 +32,11 @@ class OCRResult:
         else:
             # Detailed data with word-level information
             for i, word_text in enumerate(tesseract_data.get("text", [])):
-                word_conf = tesseract_data.get("conf", [0])[i] if i < len(tesseract_data.get("conf", [])) else 0
+                word_conf = (
+                    tesseract_data.get("conf", [0])[i]
+                    if i < len(tesseract_data.get("conf", []))
+                    else 0
+                )
 
                 # Skip empty or low-confidence words
                 if word_text.strip() and word_conf > 30:
@@ -48,7 +54,7 @@ class OCRResult:
             text=text,
             language=language,
             confidence=confidence / 100.0,  # Convert to 0-1 range
-            processed_at=datetime.now().timestamp()
+            processed_at=datetime.now().timestamp(),
         )
 
     @classmethod
@@ -94,7 +100,9 @@ class OCRResult:
         """Check if OCR data is valid."""
         return len(self.validate()) == 0
 
-    def has_meaningful_text(self, min_length: int = 3, min_confidence: float = 0.5) -> bool:
+    def has_meaningful_text(
+        self, min_length: int = 3, min_confidence: float = 0.5
+    ) -> bool:
         """Check if OCR result contains meaningful text."""
         if self.confidence < min_confidence:
             return False
@@ -147,9 +155,9 @@ class OCRResult:
         # Common date patterns
         date_patterns = [
             r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",  # MM/DD/YYYY or DD/MM/YYYY
-            r"\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b",    # YYYY/MM/DD
-            r"\b\w+\s+\d{1,2},?\s+\d{4}\b",       # Month DD, YYYY
-            r"\b\d{1,2}\s+\w+\s+\d{4}\b",         # DD Month YYYY
+            r"\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b",  # YYYY/MM/DD
+            r"\b\w+\s+\d{1,2},?\s+\d{4}\b",  # Month DD, YYYY
+            r"\b\d{1,2}\s+\w+\s+\d{4}\b",  # DD Month YYYY
         ]
 
         dates = []
@@ -165,10 +173,10 @@ class OCRResult:
 
         # Find various number patterns
         patterns = [
-            r"\b\d+\b",           # Simple numbers
-            r"\b\d+\.\d+\b",      # Decimal numbers
-            r"\b\d+,\d+\b",       # Numbers with commas
-            r"\b\d+[-]\d+\b",     # Number ranges
+            r"\b\d+\b",  # Simple numbers
+            r"\b\d+\.\d+\b",  # Decimal numbers
+            r"\b\d+,\d+\b",  # Numbers with commas
+            r"\b\d+[-]\d+\b",  # Number ranges
         ]
 
         numbers = []
@@ -228,7 +236,7 @@ class OCRResult:
         text = re.sub(r"[,]{2,}", ",", text)
 
         # Normalize quotes
-        text = re.sub(r'[""''`]', '"', text)
+        text = re.sub(r'[""' "`]", '"', text)
 
         return text.strip()
 

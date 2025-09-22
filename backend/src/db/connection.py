@@ -38,14 +38,18 @@ class DatabaseManager:
             latest_version = self._get_latest_migration_version()
 
             if current_version < latest_version:
-                logger.info(f"Upgrading database from version {current_version} to {latest_version}")
+                logger.info(
+                    f"Upgrading database from version {current_version} to {latest_version}"
+                )
                 self._run_migrations(from_version=current_version)
 
     def _get_schema_version(self) -> int:
         """Get current schema version from database."""
         try:
             with self.get_connection() as conn:
-                cursor = conn.execute("SELECT value FROM settings WHERE key = 'schema_version'")
+                cursor = conn.execute(
+                    "SELECT value FROM settings WHERE key = 'schema_version'"
+                )
                 result = cursor.fetchone()
                 return int(result[0]) if result else 0
         except sqlite3.OperationalError:
@@ -107,7 +111,7 @@ class DatabaseManager:
                     # Update schema version
                     conn.execute(
                         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                        ("schema_version", str(version))
+                        ("schema_version", str(version)),
                     )
 
                     logger.info(f"Migration {version} completed successfully")
@@ -118,11 +122,7 @@ class DatabaseManager:
 
     def get_connection(self) -> sqlite3.Connection:
         """Get a database connection with optimal settings."""
-        conn = sqlite3.connect(
-            self.db_path,
-            timeout=30.0,
-            check_same_thread=False
-        )
+        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
 
         # Enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON")
@@ -214,7 +214,14 @@ class DatabaseManager:
 
             # Get table counts
             tables = {}
-            for table in ["photos", "exif", "embeddings", "people", "faces", "thumbnails"]:
+            for table in [
+                "photos",
+                "exif",
+                "embeddings",
+                "people",
+                "faces",
+                "thumbnails",
+            ]:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
                     tables[table] = cursor.fetchone()[0]
@@ -234,7 +241,7 @@ class DatabaseManager:
                 "database_size_bytes": db_size,
                 "database_size_mb": round(db_size / (1024 * 1024), 2),
                 "table_counts": tables,
-                "settings": settings
+                "settings": settings,
             }
 
 

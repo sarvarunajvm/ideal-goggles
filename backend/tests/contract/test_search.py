@@ -58,6 +58,7 @@ class TestSearchEndpoint:
     def test_search_endpoint_performance_requirement(self, client: TestClient) -> None:
         """Test that search endpoint meets constitutional performance requirement."""
         import time
+
         start_time = time.time()
         response = client.get("/search?q=test")
         end_time = time.time()

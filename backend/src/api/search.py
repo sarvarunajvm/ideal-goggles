@@ -16,6 +16,7 @@ router = APIRouter()
 
 class SearchResultItem(BaseModel):
     """Search result item model."""
+
     file_id: int
     path: str = Field(description="Absolute path to photo file")
     folder: str = Field(description="Parent folder path")
@@ -29,6 +30,7 @@ class SearchResultItem(BaseModel):
 
 class SearchResults(BaseModel):
     """Search results model."""
+
     query: str = Field(description="Original search query")
     total_matches: int = Field(description="Total number of matching photos")
     items: list[SearchResultItem] = Field(description="Search result items")
@@ -37,24 +39,34 @@ class SearchResults(BaseModel):
 
 class SemanticSearchRequest(BaseModel):
     """Semantic search request model."""
+
     text: str = Field(description="Natural language description")
-    top_k: int = Field(default=50, ge=1, le=200, description="Maximum number of results")
+    top_k: int = Field(
+        default=50, ge=1, le=200, description="Maximum number of results"
+    )
 
 
 class FaceSearchRequest(BaseModel):
     """Face search request model."""
+
     person_id: int = Field(description="ID of enrolled person")
-    top_k: int = Field(default=50, ge=1, le=200, description="Maximum number of results")
+    top_k: int = Field(
+        default=50, ge=1, le=200, description="Maximum number of results"
+    )
 
 
 @router.get("/search", response_model=SearchResults)
 async def search_photos(
     q: str | None = Query(None, description="Search query text"),
-    from_date: date | None = Query(None, alias="from", description="Start date filter (YYYY-MM-DD)"),
-    to_date: date | None = Query(None, alias="to", description="End date filter (YYYY-MM-DD)"),
+    from_date: date | None = Query(
+        None, alias="from", description="Start date filter (YYYY-MM-DD)"
+    ),
+    to_date: date | None = Query(
+        None, alias="to", description="End date filter (YYYY-MM-DD)"
+    ),
     folder: str | None = Query(None, description="Folder path filter"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of results"),
-    offset: int = Query(0, ge=0, description="Results offset for pagination")
+    offset: int = Query(0, ge=0, description="Results offset for pagination"),
 ) -> SearchResults:
     """
     Search photos by text and filters.
@@ -87,13 +99,13 @@ async def search_photos(
             query=q or "",
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time)
+            took_ms=int(execution_time),
         )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {e!s}"
+            detail=f"Search failed: {e!s}",
         )
 
 
@@ -123,7 +135,7 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
         if query_embedding is None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate text embedding"
+                detail="Failed to generate text embedding",
             )
 
         # Search for similar images
@@ -138,7 +150,7 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
             query=request.text,
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time)
+            took_ms=int(execution_time),
         )
 
     except HTTPException:
@@ -146,14 +158,14 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Semantic search failed: {e!s}"
+            detail=f"Semantic search failed: {e!s}",
         )
 
 
 @router.post("/search/image", response_model=SearchResults)
 async def image_search(
     file: UploadFile = File(..., description="Uploaded image file"),
-    top_k: int = Form(50, ge=1, le=200, description="Maximum number of results")
+    top_k: int = Form(50, ge=1, le=200, description="Maximum number of results"),
 ) -> SearchResults:
     """
     Reverse image search using uploaded photo.
@@ -171,12 +183,13 @@ async def image_search(
         # Validate file type
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid image file"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image file"
             )
 
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=Path(file.filename).suffix
+        ) as temp_file:
             temp_path = temp_file.name
             content = await file.read()
             temp_file.write(content)
@@ -196,7 +209,7 @@ async def image_search(
             if query_embedding_obj is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to process uploaded image"
+                    detail="Failed to process uploaded image",
                 )
 
             db_manager = get_database_manager()
@@ -213,7 +226,7 @@ async def image_search(
                 query=f"Image: {file.filename}",
                 total_matches=len(search_results),
                 items=search_results,
-                took_ms=int(execution_time)
+                took_ms=int(execution_time),
             )
 
         finally:
@@ -226,7 +239,7 @@ async def image_search(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Image search failed: {e!s}"
+            detail=f"Image search failed: {e!s}",
         )
 
 
@@ -253,7 +266,7 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
         if not person_rows:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Person not found or inactive"
+                detail="Person not found or inactive",
             )
 
         # Execute face search
@@ -270,7 +283,7 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
             query=f"Person: {person_name}",
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time)
+            took_ms=int(execution_time),
         )
 
     except HTTPException:
@@ -278,13 +291,18 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Face search failed: {e!s}"
+            detail=f"Face search failed: {e!s}",
         )
 
 
 async def _execute_text_search(
-    db_manager, query: str | None, from_date: date | None, to_date: date | None,
-    folder: str | None, limit: int, offset: int
+    db_manager,
+    query: str | None,
+    from_date: date | None,
+    to_date: date | None,
+    folder: str | None,
+    limit: int,
+    offset: int,
 ) -> list[SearchResultItem]:
     """Execute text-based search with filters."""
     # Build WHERE clause
@@ -298,7 +316,7 @@ async def _execute_text_search(
             "p.filename LIKE ?",
             "p.folder LIKE ?",
             "e.camera_make LIKE ?",
-            "e.camera_model LIKE ?"
+            "e.camera_model LIKE ?",
         ]
 
         # Add OCR search if available
@@ -383,7 +401,7 @@ async def _execute_text_search(
             shot_dt=datetime.fromisoformat(row[5]) if row[5] else None,
             score=row[6],
             badges=badges,
-            snippet=row[7] if row[7] else None
+            snippet=row[7] if row[7] else None,
         )
         results.append(item)
 
@@ -445,7 +463,7 @@ async def _execute_semantic_search(
             shot_dt=datetime.fromisoformat(row[6]) if row[6] else None,
             score=similarity,
             badges=["image"],
-            snippet=None
+            snippet=None,
         )
         results.append(item)
 
@@ -491,7 +509,7 @@ async def _execute_face_search(
             shot_dt=datetime.fromisoformat(row[6]) if row[6] else None,
             score=row[1],  # Use face confidence as score
             badges=["face"],
-            snippet=None
+            snippet=None,
         )
         results.append(item)
 

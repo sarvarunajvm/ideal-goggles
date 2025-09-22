@@ -27,4 +27,10 @@ class TestIndexStatusEndpoint:
             assert "total_files" in progress
             assert "processed_files" in progress
             assert "current_phase" in progress
-            assert progress["current_phase"] in ["discovery", "metadata", "ocr", "embeddings", "faces"]
+            assert progress["current_phase"] in [
+                "discovery",
+                "metadata",
+                "ocr",
+                "embeddings",
+                "faces",
+            ]

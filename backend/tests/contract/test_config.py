@@ -57,6 +57,7 @@ class TestConfigEndpoint:
     def test_config_endpoint_response_time(self, client: TestClient) -> None:
         """Test that config endpoint responds quickly."""
         import time
+
         start_time = time.time()
         response = client.get("/config")
         end_time = time.time()

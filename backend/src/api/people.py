@@ -13,6 +13,7 @@ router = APIRouter()
 
 class PersonResponse(BaseModel):
     """Person response model."""
+
     id: int
     name: str
     sample_count: int = Field(description="Number of sample photos used")
@@ -22,8 +23,11 @@ class PersonResponse(BaseModel):
 
 class CreatePersonRequest(BaseModel):
     """Request model for creating a person."""
+
     name: str = Field(description="Person's display name")
-    sample_file_ids: list[int] = Field(description="Array of photo IDs containing this person")
+    sample_file_ids: list[int] = Field(
+        description="Array of photo IDs containing this person"
+    )
 
     @validator("name")
     def validate_name(self, v):
@@ -50,9 +54,12 @@ class CreatePersonRequest(BaseModel):
 
 class UpdatePersonRequest(BaseModel):
     """Request model for updating a person."""
+
     name: str | None = Field(None, description="Person's display name")
     active: bool | None = Field(None, description="Whether person search is enabled")
-    additional_sample_file_ids: list[int] | None = Field(None, description="Additional sample photos")
+    additional_sample_file_ids: list[int] | None = Field(
+        None, description="Additional sample photos"
+    )
 
     @validator("name")
     def validate_name(self, v):
@@ -95,7 +102,7 @@ async def list_people() -> list[PersonResponse]:
                 name=row[1],
                 sample_count=row[2],
                 created_at=datetime.fromtimestamp(row[3]),
-                active=bool(row[5])
+                active=bool(row[5]),
             )
             people.append(person)
 
@@ -104,7 +111,7 @@ async def list_people() -> list[PersonResponse]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list people: {e!s}"
+            detail=f"Failed to list people: {e!s}",
         )
 
 
@@ -133,8 +140,7 @@ async def get_person(person_id: int) -> PersonResponse:
 
         if not rows:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Person not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
             )
 
         row = rows[0]
@@ -143,7 +149,7 @@ async def get_person(person_id: int) -> PersonResponse:
             name=row[1],
             sample_count=row[2],
             created_at=datetime.fromtimestamp(row[3]),
-            active=bool(row[5])
+            active=bool(row[5]),
         )
 
     except HTTPException:
@@ -151,11 +157,13 @@ async def get_person(person_id: int) -> PersonResponse:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get person: {e!s}"
+            detail=f"Failed to get person: {e!s}",
         )
 
 
-@router.post("/people", response_model=PersonResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/people", response_model=PersonResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_person(request: CreatePersonRequest) -> PersonResponse:
     """
     Enroll a new person for face search.
@@ -180,7 +188,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Person with this name already exists"
+                detail="Person with this name already exists",
             )
 
         # Validate that all sample file IDs exist
@@ -196,18 +204,13 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if len(photo_rows) != len(request.sample_file_ids):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="One or more sample photos not found"
+                detail="One or more sample photos not found",
             )
 
         # Convert to Photo objects
         sample_photos = []
         for row in photo_rows:
-            photo = Photo(
-                id=row[0],
-                path=row[1],
-                filename=row[2],
-                modified_ts=row[3]
-            )
+            photo = Photo(id=row[0], path=row[1], filename=row[2], modified_ts=row[3])
             sample_photos.append(photo)
 
         # Use face worker to enroll person
@@ -216,7 +219,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if not face_worker.is_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Face recognition not available"
+                detail="Face recognition not available",
             )
 
         person = await face_worker.enroll_person(request.name, sample_photos)
@@ -224,7 +227,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if not person:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to enroll person - no suitable faces found in sample photos"
+                detail="Failed to enroll person - no suitable faces found in sample photos",
             )
 
         # Save person to database
@@ -239,7 +242,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if result == 0:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to save person to database"
+                detail="Failed to save person to database",
             )
 
         # Get the created person with ID
@@ -254,21 +257,24 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if not created_rows:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to retrieve created person"
+                detail="Failed to retrieve created person",
             )
 
         row = created_rows[0]
 
         import logging
+
         logger = logging.getLogger(__name__)
-        logger.info(f"Person enrolled: {request.name} with {person.sample_count} samples")
+        logger.info(
+            f"Person enrolled: {request.name} with {person.sample_count} samples"
+        )
 
         return PersonResponse(
             id=row[0],
             name=row[1],
             sample_count=row[2],
             created_at=datetime.fromtimestamp(row[3]),
-            active=bool(row[5])
+            active=bool(row[5]),
         )
 
     except HTTPException:
@@ -276,7 +282,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create person: {e!s}"
+            detail=f"Failed to create person: {e!s}",
         )
 
 
@@ -306,8 +312,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
 
         if not person_rows:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Person not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
             )
 
         # Build update query
@@ -317,12 +322,14 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
         if request.name is not None:
             # Check if new name conflicts with existing person
             name_check_query = "SELECT id FROM people WHERE name = ? AND id != ?"
-            existing = db_manager.execute_query(name_check_query, (request.name, person_id))
+            existing = db_manager.execute_query(
+                name_check_query, (request.name, person_id)
+            )
 
             if existing:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Person with this name already exists"
+                    detail="Person with this name already exists",
                 )
 
             update_fields.append("name = ?")
@@ -347,36 +354,37 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
                 WHERE id IN ({file_ids_str})
             """
 
-            photo_rows = db_manager.execute_query(photos_query, request.additional_sample_file_ids)
+            photo_rows = db_manager.execute_query(
+                photos_query, request.additional_sample_file_ids
+            )
 
             if len(photo_rows) != len(request.additional_sample_file_ids):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="One or more additional sample photos not found"
+                    detail="One or more additional sample photos not found",
                 )
 
             # Convert to Photo objects
             additional_photos = []
             for row in photo_rows:
                 photo = Photo(
-                    id=row[0],
-                    path=row[1],
-                    filename=row[2],
-                    modified_ts=row[3]
+                    id=row[0], path=row[1], filename=row[2], modified_ts=row[3]
                 )
                 additional_photos.append(photo)
 
             # Load existing person
             person_row = person_rows[0]
-            existing_person = Person.from_db_row({
-                "id": person_row[0],
-                "name": person_row[1],
-                "face_vector": person_row[2],
-                "sample_count": person_row[3],
-                "created_at": person_row[4],
-                "updated_at": person_row[5],
-                "active": person_row[6]
-            })
+            existing_person = Person.from_db_row(
+                {
+                    "id": person_row[0],
+                    "name": person_row[1],
+                    "face_vector": person_row[2],
+                    "sample_count": person_row[3],
+                    "created_at": person_row[4],
+                    "updated_at": person_row[5],
+                    "active": person_row[6],
+                }
+            )
 
             # Update enrollment with additional photos
             face_worker = FaceDetectionWorker()
@@ -384,7 +392,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             if not face_worker.is_available():
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Face recognition not available"
+                    detail="Face recognition not available",
                 )
 
             updated_person = await face_worker.update_person_enrollment(
@@ -393,10 +401,12 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
 
             # Update face vector and sample count
             update_fields.extend(["face_vector = ?", "sample_count = ?"])
-            params.extend([
-                Person._numpy_to_blob(updated_person.face_vector),
-                updated_person.sample_count
-            ])
+            params.extend(
+                [
+                    Person._numpy_to_blob(updated_person.face_vector),
+                    updated_person.sample_count,
+                ]
+            )
 
         if update_fields:
             # Add updated_at timestamp
@@ -417,6 +427,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
         row = updated_rows[0]
 
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Person updated: {row[1]} (ID: {person_id})")
 
@@ -425,7 +436,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             name=row[1],
             sample_count=row[3],
             created_at=datetime.fromtimestamp(row[4]),
-            active=bool(row[6])
+            active=bool(row[6]),
         )
 
     except HTTPException:
@@ -433,7 +444,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update person: {e!s}"
+            detail=f"Failed to update person: {e!s}",
         )
 
 
@@ -454,8 +465,7 @@ async def delete_person(person_id: int):
 
         if not person_rows:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Person not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
             )
 
         person_name = person_rows[0][0]
@@ -467,10 +477,11 @@ async def delete_person(person_id: int):
         if result == 0:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to delete person"
+                detail="Failed to delete person",
             )
 
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Person deleted: {person_name} (ID: {person_id})")
 
@@ -479,15 +490,13 @@ async def delete_person(person_id: int):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete person: {e!s}"
+            detail=f"Failed to delete person: {e!s}",
         )
 
 
 @router.get("/people/{person_id}/photos")
 async def get_person_photos(
-    person_id: int,
-    limit: int = 50,
-    offset: int = 0
+    person_id: int, limit: int = 50, offset: int = 0
 ) -> dict[str, Any]:
     """
     Get photos containing a specific person.
@@ -509,8 +518,7 @@ async def get_person_photos(
 
         if not person_rows:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Person not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
             )
 
         # Get photos with faces of this person
@@ -548,7 +556,7 @@ async def get_person_photos(
                 "filename": row[3],
                 "thumb_path": row[4],
                 "shot_dt": row[5],
-                "confidence": row[6]
+                "confidence": row[6],
             }
             photos.append(photo_data)
 
@@ -558,7 +566,7 @@ async def get_person_photos(
             "total_photos": total_count,
             "photos": photos,
             "limit": limit,
-            "offset": offset
+            "offset": offset,
         }
 
     except HTTPException:
@@ -566,5 +574,5 @@ async def get_person_photos(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get person photos: {e!s}"
+            detail=f"Failed to get person photos: {e!s}",
         )

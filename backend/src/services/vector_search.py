@@ -18,7 +18,9 @@ class FAISSVectorSearchService:
 
     def __init__(self, index_path: str | None = None, dimension: int = 512):
         self.dimension = dimension
-        self.index_path = index_path or str(Path.home() / ".photo-search" / "faiss_index.bin")
+        self.index_path = index_path or str(
+            Path.home() / ".photo-search" / "faiss_index.bin"
+        )
         self.metadata_path = self.index_path.replace(".bin", "_metadata.pkl")
 
         # FAISS components
@@ -45,7 +47,9 @@ class FAISSVectorSearchService:
             # Load existing index if available
             if os.path.exists(self.index_path) and os.path.exists(self.metadata_path):
                 self._load_index()
-                logger.info(f"Loaded existing FAISS index with {self.index.ntotal} vectors")
+                logger.info(
+                    f"Loaded existing FAISS index with {self.index.ntotal} vectors"
+                )
             else:
                 # Create new index
                 self._create_new_index()
@@ -126,7 +130,9 @@ class FAISSVectorSearchService:
             try:
                 # Validate vector
                 if vector.shape != (self.dimension,):
-                    logger.error(f"Vector dimension mismatch: expected {self.dimension}, got {vector.shape}")
+                    logger.error(
+                        f"Vector dimension mismatch: expected {self.dimension}, got {vector.shape}"
+                    )
                     return False
 
                 # Ensure vector is normalized for cosine similarity
@@ -155,9 +161,11 @@ class FAISSVectorSearchService:
                     self._save_index()
 
                 # Consider upgrading to IVF if collection is large
-                if (self.index.ntotal > 200000 and
-                    hasattr(self.index, "ntotal") and
-                    not hasattr(self.index, "nlist")):
+                if (
+                    self.index.ntotal > 200000
+                    and hasattr(self.index, "ntotal")
+                    and not hasattr(self.index, "nlist")
+                ):
                     self._upgrade_to_ivf_index()
 
                 return True
@@ -198,8 +206,9 @@ class FAISSVectorSearchService:
                 logger.exception(f"Failed to remove vector for file_id {file_id}: {e}")
                 return False
 
-    def search(self, query_vector: np.ndarray, top_k: int = 50,
-               score_threshold: float = 0.0) -> list[tuple[int, float]]:
+    def search(
+        self, query_vector: np.ndarray, top_k: int = 50, score_threshold: float = 0.0
+    ) -> list[tuple[int, float]]:
         """
         Search for similar vectors.
 
@@ -218,7 +227,9 @@ class FAISSVectorSearchService:
 
                 # Validate and normalize query vector
                 if query_vector.shape != (self.dimension,):
-                    logger.error(f"Query vector dimension mismatch: expected {self.dimension}, got {query_vector.shape}")
+                    logger.error(
+                        f"Query vector dimension mismatch: expected {self.dimension}, got {query_vector.shape}"
+                    )
                     return []
 
                 norm = np.linalg.norm(query_vector)
@@ -234,7 +245,9 @@ class FAISSVectorSearchService:
 
                 # Process results
                 results = []
-                for _i, (similarity, index_pos) in enumerate(zip(similarities[0], indices[0], strict=False)):
+                for _i, (similarity, index_pos) in enumerate(
+                    zip(similarities[0], indices[0], strict=False)
+                ):
                     if index_pos == -1:  # No more results
                         break
 
@@ -258,7 +271,9 @@ class FAISSVectorSearchService:
                 logger.exception(f"Search failed: {e}")
                 return []
 
-    def batch_search(self, query_vectors: np.ndarray, top_k: int = 50) -> list[list[tuple[int, float]]]:
+    def batch_search(
+        self, query_vectors: np.ndarray, top_k: int = 50
+    ) -> list[list[tuple[int, float]]]:
         """
         Batch search for multiple query vectors.
 
@@ -281,14 +296,18 @@ class FAISSVectorSearchService:
 
                 # Perform batch search
                 search_k = min(top_k * 2, self.index.ntotal)
-                similarities, indices = self.index.search(query_vectors.astype(np.float32), search_k)
+                similarities, indices = self.index.search(
+                    query_vectors.astype(np.float32), search_k
+                )
 
                 # Process results
                 all_results = []
                 for query_idx in range(len(query_vectors)):
                     query_results = []
 
-                    for similarity, index_pos in zip(similarities[query_idx], indices[query_idx], strict=False):
+                    for similarity, index_pos in zip(
+                        similarities[query_idx], indices[query_idx], strict=False
+                    ):
                         if index_pos == -1:
                             break
 
@@ -326,7 +345,6 @@ class FAISSVectorSearchService:
 
                 index_pos = self.file_id_to_index[file_id]
                 return self.index.reconstruct(index_pos)
-
 
             except Exception as e:
                 logger.exception(f"Failed to get vector for file_id {file_id}: {e}")
@@ -368,15 +386,19 @@ class FAISSVectorSearchService:
                 if self._should_use_ivf(len(valid_vectors)):
                     # Create IVF index
                     import faiss
+
                     nlist = min(4096, max(100, int(np.sqrt(len(valid_vectors)))))
                     quantizer = faiss.IndexFlatIP(self.dimension)
-                    new_index = faiss.IndexIVFPQ(quantizer, self.dimension, nlist, 64, 8)
+                    new_index = faiss.IndexIVFPQ(
+                        quantizer, self.dimension, nlist, 64, 8
+                    )
                     new_index.train(vectors_array)
                     new_index.add(vectors_array)
                     new_index.nprobe = min(100, nlist // 4)
                 else:
                     # Create flat index
                     import faiss
+
                     new_index = faiss.IndexFlatIP(self.dimension)
                     new_index.add(vectors_array)
 
@@ -425,6 +447,7 @@ class FAISSVectorSearchService:
 
             # Save FAISS index
             import faiss
+
             faiss.write_index(self.index, self.index_path)
 
             # Save metadata
@@ -432,7 +455,7 @@ class FAISSVectorSearchService:
                 "id_to_file_id": self.id_to_file_id,
                 "file_id_to_index": self.file_id_to_index,
                 "dimension": self.dimension,
-                "saved_at": time.time()
+                "saved_at": time.time(),
             }
 
             with open(self.metadata_path, "wb") as f:
@@ -466,7 +489,9 @@ class FAISSVectorSearchService:
 
             # Verify dimension consistency
             if metadata.get("dimension", self.dimension) != self.dimension:
-                logger.warning(f"Dimension mismatch: expected {self.dimension}, got {metadata.get('dimension')}")
+                logger.warning(
+                    f"Dimension mismatch: expected {self.dimension}, got {metadata.get('dimension')}"
+                )
 
             self._index_dirty = False
             self.unsaved_additions = 0
@@ -491,7 +516,7 @@ class FAISSVectorSearchService:
                 "dimension": self.dimension,
                 "index_type": type(self.index).__name__ if self.index else None,
                 "index_dirty": self._index_dirty,
-                "unsaved_additions": self.unsaved_additions
+                "unsaved_additions": self.unsaved_additions,
             }
 
             # Add IVF-specific stats if applicable
@@ -520,7 +545,9 @@ def get_vector_search_service() -> FAISSVectorSearchService:
     return _vector_search_service
 
 
-def initialize_vector_search_service(index_path: str | None = None, dimension: int = 512) -> FAISSVectorSearchService:
+def initialize_vector_search_service(
+    index_path: str | None = None, dimension: int = 512
+) -> FAISSVectorSearchService:
     """Initialize vector search service with custom parameters."""
     global _vector_search_service
     _vector_search_service = FAISSVectorSearchService(index_path, dimension)

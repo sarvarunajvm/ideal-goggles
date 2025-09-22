@@ -61,7 +61,7 @@ def sample_photo_data():
         "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
         "phash": "abc123def456",
         "indexed_at": 1640995200.0,
-        "index_version": 1
+        "index_version": 1,
     }
 
 
@@ -81,10 +81,10 @@ def sample_search_results():
                 "shot_dt": "2022-01-01T12:00:00Z",
                 "score": 0.95,
                 "badges": ["OCR"],
-                "snippet": "test text found in image"
+                "snippet": "test text found in image",
             }
         ],
-        "took_ms": 150
+        "took_ms": 150,
     }
 
 
@@ -97,5 +97,5 @@ def sample_person_data():
         "sample_count": 3,
         "created_at": 1640995200.0,
         "updated_at": 1640995200.0,
-        "active": True
+        "active": True,
     }

@@ -17,8 +17,12 @@ logger = logging.getLogger(__name__)
 class FaceDetectionWorker:
     """Worker for face detection and recognition using InsightFace."""
 
-    def __init__(self, max_workers: int = 2, model_name: str = "buffalo_l",
-                 detection_threshold: float = 0.5):
+    def __init__(
+        self,
+        max_workers: int = 2,
+        model_name: str = "buffalo_l",
+        detection_threshold: float = 0.5,
+    ):
         self.max_workers = max_workers
         self.model_name = model_name
         self.detection_threshold = detection_threshold
@@ -49,7 +53,7 @@ class FaceDetectionWorker:
             # Initialize face analysis app
             self.face_app = FaceAnalysis(
                 name=self.model_name,
-                providers=["CPUExecutionProvider"]  # Use CPU for stability
+                providers=["CPUExecutionProvider"],  # Use CPU for stability
             )
             self.face_app.prepare(ctx_id=0, det_size=(640, 640))
 
@@ -74,9 +78,7 @@ class FaceDetectionWorker:
             # Run face detection in thread pool
             loop = asyncio.get_event_loop()
             detections = await loop.run_in_executor(
-                self.executor,
-                self._detect_faces_sync,
-                photo.path
+                self.executor, self._detect_faces_sync, photo.path
             )
 
             processing_time = time.time() - start_time
@@ -129,12 +131,16 @@ class FaceDetectionWorker:
 
                 # Filter by confidence threshold
                 if confidence >= self.detection_threshold:
-                    detections.append({
-                        "bbox": bbox,
-                        "embedding": embedding,
-                        "confidence": confidence,
-                        "landmarks": face.kps.tolist() if hasattr(face, "kps") else None,
-                    })
+                    detections.append(
+                        {
+                            "bbox": bbox,
+                            "embedding": embedding,
+                            "confidence": confidence,
+                            "landmarks": (
+                                face.kps.tolist() if hasattr(face, "kps") else None
+                            ),
+                        }
+                    )
 
             return detections
 
@@ -142,8 +148,9 @@ class FaceDetectionWorker:
             logger.debug(f"InsightFace detection failed for {file_path}: {e}")
             return []
 
-    async def recognize_faces(self, faces: list[Face], people: list[Person],
-                            similarity_threshold: float = 0.6) -> list[dict[str, Any]]:
+    async def recognize_faces(
+        self, faces: list[Face], people: list[Person], similarity_threshold: float = 0.6
+    ) -> list[dict[str, Any]]:
         """Recognize faces against enrolled people."""
         if not faces or not people:
             return []
@@ -203,17 +210,23 @@ class FaceDetectionWorker:
                 logger.info(f"Face detection progress: {i + 1}/{len(photos)}")
 
         total_faces = sum(len(face_list) for face_list in results)
-        logger.info(f"Face detection completed: {total_faces} faces detected across {len(photos)} photos")
+        logger.info(
+            f"Face detection completed: {total_faces} faces detected across {len(photos)} photos"
+        )
 
         return results
 
-    async def enroll_person(self, name: str, sample_photos: list[Photo]) -> Person | None:
+    async def enroll_person(
+        self, name: str, sample_photos: list[Photo]
+    ) -> Person | None:
         """Enroll a new person using sample photos."""
         if not sample_photos:
             msg = "At least one sample photo is required"
             raise ValueError(msg)
 
-        logger.info(f"Enrolling person '{name}' with {len(sample_photos)} sample photos")
+        logger.info(
+            f"Enrolling person '{name}' with {len(sample_photos)} sample photos"
+        )
 
         # Detect faces in all sample photos
         all_face_vectors = []
@@ -243,12 +256,18 @@ class FaceDetectionWorker:
         # Create person with averaged face vector
         person = Person.create_from_face_vectors(name, all_face_vectors)
 
-        logger.info(f"Successfully enrolled person '{name}' with {len(all_face_vectors)} face samples")
+        logger.info(
+            f"Successfully enrolled person '{name}' with {len(all_face_vectors)} face samples"
+        )
         return person
 
-    async def update_person_enrollment(self, person: Person, additional_photos: list[Photo]) -> Person:
+    async def update_person_enrollment(
+        self, person: Person, additional_photos: list[Photo]
+    ) -> Person:
         """Update person enrollment with additional sample photos."""
-        logger.info(f"Updating enrollment for '{person.name}' with {len(additional_photos)} additional photos")
+        logger.info(
+            f"Updating enrollment for '{person.name}' with {len(additional_photos)} additional photos"
+        )
 
         # Detect faces in additional photos
         new_face_vectors = []
@@ -263,24 +282,35 @@ class FaceDetectionWorker:
 
         if new_face_vectors:
             person.update_face_vector(new_face_vectors)
-            logger.info(f"Updated '{person.name}' with {len(new_face_vectors)} new face samples")
+            logger.info(
+                f"Updated '{person.name}' with {len(new_face_vectors)} new face samples"
+            )
 
         return person
 
     def get_statistics(self) -> dict[str, Any]:
         """Get face processing statistics."""
-        avg_time_per_photo = (self.stats["processing_time"] / self.stats["photos_processed"]
-                             if self.stats["photos_processed"] > 0 else 0)
+        avg_time_per_photo = (
+            self.stats["processing_time"] / self.stats["photos_processed"]
+            if self.stats["photos_processed"] > 0
+            else 0
+        )
 
         return {
             "photos_processed": self.stats["photos_processed"],
             "faces_detected": self.stats["faces_detected"],
             "faces_recognized": self.stats["faces_recognized"],
             "failed_detections": self.stats["failed_detections"],
-            "average_faces_per_photo": (self.stats["faces_detected"] / self.stats["photos_processed"]
-                                       if self.stats["photos_processed"] > 0 else 0),
-            "recognition_rate": (self.stats["faces_recognized"] / self.stats["faces_detected"]
-                               if self.stats["faces_detected"] > 0 else 0),
+            "average_faces_per_photo": (
+                self.stats["faces_detected"] / self.stats["photos_processed"]
+                if self.stats["photos_processed"] > 0
+                else 0
+            ),
+            "recognition_rate": (
+                self.stats["faces_recognized"] / self.stats["faces_detected"]
+                if self.stats["faces_detected"] > 0
+                else 0
+            ),
             "average_processing_time": avg_time_per_photo,
             "total_processing_time": self.stats["processing_time"],
             "model_name": self.model_name,
@@ -313,8 +343,9 @@ class FaceSearchEngine:
     def __init__(self, similarity_threshold: float = 0.6):
         self.similarity_threshold = similarity_threshold
 
-    async def search_by_person(self, target_person: Person, all_faces: list[Face],
-                              top_k: int = 50) -> list[dict[str, Any]]:
+    async def search_by_person(
+        self, target_person: Person, all_faces: list[Face], top_k: int = 50
+    ) -> list[dict[str, Any]]:
         """Search for photos containing a specific person."""
         if not target_person.face_vector or not all_faces:
             return []
@@ -328,21 +359,24 @@ class FaceSearchEngine:
             similarity = face.similarity_to_person(target_person)
 
             if similarity >= self.similarity_threshold:
-                matches.append({
-                    "face": face,
-                    "file_id": face.file_id,
-                    "similarity": similarity,
-                    "confidence": face.confidence,
-                    "person_id": target_person.id,
-                })
+                matches.append(
+                    {
+                        "face": face,
+                        "file_id": face.file_id,
+                        "similarity": similarity,
+                        "confidence": face.confidence,
+                        "person_id": target_person.id,
+                    }
+                )
 
         # Sort by similarity (highest first)
         matches.sort(key=lambda x: x["similarity"], reverse=True)
 
         return matches[:top_k]
 
-    async def search_by_face_image(self, query_face_vector: np.ndarray, all_faces: list[Face],
-                                  top_k: int = 50) -> list[dict[str, Any]]:
+    async def search_by_face_image(
+        self, query_face_vector: np.ndarray, all_faces: list[Face], top_k: int = 50
+    ) -> list[dict[str, Any]]:
         """Search for similar faces using a query face vector."""
         if query_face_vector is None or not all_faces:
             return []
@@ -357,21 +391,24 @@ class FaceSearchEngine:
             similarity = float(np.dot(face.face_vector, query_face_vector))
 
             if similarity >= self.similarity_threshold:
-                matches.append({
-                    "face": face,
-                    "file_id": face.file_id,
-                    "similarity": similarity,
-                    "confidence": face.confidence,
-                    "person_id": face.person_id,
-                })
+                matches.append(
+                    {
+                        "face": face,
+                        "file_id": face.file_id,
+                        "similarity": similarity,
+                        "confidence": face.confidence,
+                        "person_id": face.person_id,
+                    }
+                )
 
         # Sort by similarity (highest first)
         matches.sort(key=lambda x: x["similarity"], reverse=True)
 
         return matches[:top_k]
 
-    async def find_duplicate_faces(self, faces: list[Face],
-                                  duplicate_threshold: float = 0.95) -> list[list[Face]]:
+    async def find_duplicate_faces(
+        self, faces: list[Face], duplicate_threshold: float = 0.95
+    ) -> list[list[Face]]:
         """Find groups of very similar faces (potential duplicates)."""
         if not faces:
             return []
@@ -386,7 +423,7 @@ class FaceSearchEngine:
             group = [face1]
             processed.add(i)
 
-            for j, face2 in enumerate(faces[i+1:], i+1):
+            for j, face2 in enumerate(faces[i + 1 :], i + 1):
                 if j in processed or face2.face_vector is None:
                     continue
 
@@ -401,8 +438,9 @@ class FaceSearchEngine:
 
         return duplicate_groups
 
-    async def cluster_unknown_faces(self, unknown_faces: list[Face],
-                                   cluster_threshold: float = 0.7) -> list[list[Face]]:
+    async def cluster_unknown_faces(
+        self, unknown_faces: list[Face], cluster_threshold: float = 0.7
+    ) -> list[list[Face]]:
         """Cluster unknown faces into potential person groups."""
         if not unknown_faces:
             return []
@@ -418,7 +456,7 @@ class FaceSearchEngine:
             cluster = [face1]
             processed.add(i)
 
-            for j, face2 in enumerate(unknown_faces[i+1:], i+1):
+            for j, face2 in enumerate(unknown_faces[i + 1 :], i + 1):
                 if j in processed or face2.face_vector is None:
                     continue
 
@@ -509,7 +547,9 @@ class FaceQualityAnalyzer:
         return "F"
 
     @staticmethod
-    def analyze_enrollment_quality(person: Person, sample_faces: list[Face]) -> dict[str, Any]:
+    def analyze_enrollment_quality(
+        person: Person, sample_faces: list[Face]
+    ) -> dict[str, Any]:
         """Analyze quality of person enrollment."""
         if not sample_faces:
             return {
@@ -518,10 +558,16 @@ class FaceQualityAnalyzer:
             }
 
         # Analyze individual face qualities
-        face_qualities = [FaceQualityAnalyzer.analyze_face_quality(face) for face in sample_faces]
+        face_qualities = [
+            FaceQualityAnalyzer.analyze_face_quality(face) for face in sample_faces
+        ]
 
-        avg_quality = sum(fq["quality_score"] for fq in face_qualities) / len(face_qualities)
-        high_quality_faces = sum(1 for fq in face_qualities if fq["quality_score"] >= 0.7)
+        avg_quality = sum(fq["quality_score"] for fq in face_qualities) / len(
+            face_qualities
+        )
+        high_quality_faces = sum(
+            1 for fq in face_qualities if fq["quality_score"] >= 0.7
+        )
 
         recommendations = []
 
@@ -531,10 +577,14 @@ class FaceQualityAnalyzer:
 
         # Check quality distribution
         if high_quality_faces < len(sample_faces) * 0.6:
-            recommendations.append("Improve sample photo quality (better lighting, larger faces)")
+            recommendations.append(
+                "Improve sample photo quality (better lighting, larger faces)"
+            )
 
         # Check diversity (if we had pose/angle information)
-        recommendations.append("Ensure sample photos show different angles and expressions")
+        recommendations.append(
+            "Ensure sample photos show different angles and expressions"
+        )
 
         enrollment_quality = min(1.0, avg_quality * (1.0 + len(sample_faces) * 0.1))
 

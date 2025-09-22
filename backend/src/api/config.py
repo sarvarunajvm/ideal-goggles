@@ -14,6 +14,7 @@ router = APIRouter()
 
 class ConfigurationResponse(BaseModel):
     """Configuration response model."""
+
     roots: list[str] = Field(description="Configured root folders")
     ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
@@ -22,6 +23,7 @@ class ConfigurationResponse(BaseModel):
 
 class UpdateRootsRequest(BaseModel):
     """Request model for updating root folders."""
+
     roots: list[str] = Field(description="Array of root folder paths")
 
     @validator("roots")
@@ -45,16 +47,35 @@ class UpdateRootsRequest(BaseModel):
 
 class UpdateConfigRequest(BaseModel):
     """Request model for updating configuration."""
+
     ocr_languages: list[str] | None = Field(None, description="OCR languages to enable")
-    face_search_enabled: bool | None = Field(None, description="Enable/disable face search")
-    thumbnail_size: int | None = Field(None, ge=128, le=1024, description="Thumbnail size")
-    thumbnail_quality: int | None = Field(None, ge=50, le=100, description="Thumbnail quality")
+    face_search_enabled: bool | None = Field(
+        None, description="Enable/disable face search"
+    )
+    thumbnail_size: int | None = Field(
+        None, ge=128, le=1024, description="Thumbnail size"
+    )
+    thumbnail_quality: int | None = Field(
+        None, ge=50, le=100, description="Thumbnail quality"
+    )
 
     @validator("ocr_languages")
     def validate_ocr_languages(self, v):
         """Validate OCR language codes."""
         if v is not None:
-            valid_languages = ["eng", "fra", "deu", "spa", "ita", "por", "rus", "chi_sim", "chi_tra", "jpn", "kor"]
+            valid_languages = [
+                "eng",
+                "fra",
+                "deu",
+                "spa",
+                "ita",
+                "por",
+                "rus",
+                "chi_sim",
+                "chi_tra",
+                "jpn",
+                "kor",
+            ]
             for lang in v:
                 if lang not in valid_languages:
                     msg = f"Unsupported OCR language: {lang}"
@@ -80,13 +101,13 @@ async def get_configuration() -> ConfigurationResponse:
             roots=config_data.get("roots", []),
             ocr_languages=config_data.get("ocr_languages", ["eng"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
-            index_version=config_data.get("index_version", "1")
+            index_version=config_data.get("index_version", "1"),
         )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve configuration: {e!s}"
+            detail=f"Failed to retrieve configuration: {e!s}",
         )
 
 
@@ -115,24 +136,22 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
 
         # Log the configuration change
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Root folders updated: {absolute_roots}")
 
         return {
             "message": "Root folders updated successfully",
             "roots": absolute_roots,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update root folders: {e!s}"
+            detail=f"Failed to update root folders: {e!s}",
         )
 
 
@@ -158,7 +177,9 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
 
         # Update face search setting if provided
         if request.face_search_enabled is not None:
-            _update_config_in_db(db_manager, "face_search_enabled", request.face_search_enabled)
+            _update_config_in_db(
+                db_manager, "face_search_enabled", request.face_search_enabled
+            )
             updated_fields.append("face_search_enabled")
 
         # Update thumbnail settings if provided
@@ -167,19 +188,22 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
             updated_fields.append("thumbnail_size")
 
         if request.thumbnail_quality is not None:
-            _update_config_in_db(db_manager, "thumbnail_quality", request.thumbnail_quality)
+            _update_config_in_db(
+                db_manager, "thumbnail_quality", request.thumbnail_quality
+            )
             updated_fields.append("thumbnail_quality")
 
         if not updated_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No configuration fields provided for update"
+                detail="No configuration fields provided for update",
             )
 
         # Get updated configuration
         updated_config = _get_config_from_db(db_manager)
 
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Configuration updated: {updated_fields}")
 
@@ -187,7 +211,7 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
             "message": "Configuration updated successfully",
             "updated_fields": updated_fields,
             "configuration": updated_config,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
 
     except HTTPException:
@@ -195,7 +219,7 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update configuration: {e!s}"
+            detail=f"Failed to update configuration: {e!s}",
         )
 
 
@@ -215,12 +239,21 @@ async def get_default_configuration() -> dict[str, Any]:
         "thumbnail_quality": 85,
         "index_version": "1",
         "supported_ocr_languages": [
-            "eng", "fra", "deu", "spa", "ita", "por", "rus",
-            "chi_sim", "chi_tra", "jpn", "kor"
+            "eng",
+            "fra",
+            "deu",
+            "spa",
+            "ita",
+            "por",
+            "rus",
+            "chi_sim",
+            "chi_tra",
+            "jpn",
+            "kor",
         ],
         "supported_image_formats": [".jpg", ".jpeg", ".png", ".tiff", ".tif"],
         "max_thumbnail_size": 1024,
-        "min_thumbnail_size": 128
+        "min_thumbnail_size": 128,
     }
 
 
@@ -245,7 +278,7 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
         if root_index < 0 or root_index >= len(current_roots):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Root folder index {root_index} not found"
+                detail=f"Root folder index {root_index} not found",
             )
 
         # Remove the specified root
@@ -253,6 +286,7 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
         _update_config_in_db(db_manager, "roots", current_roots)
 
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Root folder removed: {removed_root}")
 
@@ -260,7 +294,7 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
             "message": "Root folder removed successfully",
             "removed_root": removed_root,
             "remaining_roots": current_roots,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
 
     except HTTPException:
@@ -268,7 +302,7 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to remove root folder: {e!s}"
+            detail=f"Failed to remove root folder: {e!s}",
         )
 
 
@@ -297,19 +331,20 @@ async def reset_configuration() -> dict[str, Any]:
             _update_config_in_db(db_manager, key, value)
 
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info("Configuration reset to defaults")
 
         return {
             "message": "Configuration reset to defaults",
             "configuration": default_config,
-            "reset_at": datetime.now().isoformat()
+            "reset_at": datetime.now().isoformat(),
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset configuration: {e!s}"
+            detail=f"Failed to reset configuration: {e!s}",
         )
 
 
@@ -317,6 +352,7 @@ def _parse_json_setting(key: str, value: str) -> Any:
     """Parse JSON setting with fallbacks."""
     try:
         import json
+
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
         return {"roots": [], "ocr_languages": ["eng"]}.get(key, [])
@@ -354,7 +390,7 @@ def _get_config_defaults() -> dict[str, Any]:
         "face_search_enabled": False,
         "thumbnail_size": 512,
         "thumbnail_quality": 85,
-        "index_version": "1"
+        "index_version": "1",
     }
 
 
@@ -381,6 +417,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
 
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.exception(f"Failed to get configuration from database: {e}")
 
@@ -391,7 +428,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
             "face_search_enabled": False,
             "thumbnail_size": 512,
             "thumbnail_quality": 85,
-            "index_version": "1"
+            "index_version": "1",
         }
 
 

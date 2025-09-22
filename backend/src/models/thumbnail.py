@@ -26,8 +26,14 @@ class Thumbnail:
         self.format = self.format.lower()
 
     @classmethod
-    def create_for_photo(cls, file_id: int, original_width: int, original_height: int,
-                        max_size: int = 512, img_format: str = "webp") -> "Thumbnail":
+    def create_for_photo(
+        cls,
+        file_id: int,
+        original_width: int,
+        original_height: int,
+        max_size: int = 512,
+        img_format: str = "webp",
+    ) -> "Thumbnail":
         """Create thumbnail specification for a photo."""
         # Calculate thumbnail dimensions while preserving aspect ratio
         thumb_width, thumb_height = cls._calculate_thumbnail_size(
@@ -43,7 +49,7 @@ class Thumbnail:
             width=thumb_width,
             height=thumb_height,
             format=img_format,
-            generated_at=datetime.now().timestamp()
+            generated_at=datetime.now().timestamp(),
         )
 
     @classmethod
@@ -77,7 +83,7 @@ class Thumbnail:
             self.width,
             self.height,
             self.format,
-            self.generated_at
+            self.generated_at,
         )
 
     def validate(self) -> list[str]:
@@ -142,7 +148,9 @@ class Thumbnail:
         aspect_ratio = self.get_aspect_ratio()
         return abs(aspect_ratio - 1.0) <= tolerance
 
-    def needs_regeneration(self, original_modified_time: float, cache_root: str) -> bool:
+    def needs_regeneration(
+        self, original_modified_time: float, cache_root: str
+    ) -> bool:
         """Check if thumbnail needs regeneration."""
         # Check if thumbnail is older than original file
         if self.generated_at < original_modified_time:
@@ -182,7 +190,9 @@ class Thumbnail:
         return display_width, display_height
 
     @staticmethod
-    def _calculate_thumbnail_size(original_width: int, original_height: int, max_size: int) -> tuple[int, int]:
+    def _calculate_thumbnail_size(
+        original_width: int, original_height: int, max_size: int
+    ) -> tuple[int, int]:
         """Calculate thumbnail dimensions preserving aspect ratio."""
         if original_width <= 0 or original_height <= 0:
             return max_size, max_size
@@ -298,7 +308,9 @@ class ThumbnailCache:
         removed_count = 0
 
         # Walk directories from deepest to shallowest
-        for dir_path in sorted(self.cache_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        for dir_path in sorted(
+            self.cache_root.rglob("*"), key=lambda p: len(p.parts), reverse=True
+        ):
             if dir_path.is_dir() and not any(dir_path.iterdir()):
                 try:
                     dir_path.rmdir()

@@ -58,7 +58,9 @@ class TestTextSearchWorkflow:
         # Should find photos with filename containing "IMG_1234"
         for item in data["items"]:
             filename_match = "IMG_1234" in item["filename"]
-            has_filename_badge = any(badge in ["filename", "EXIF"] for badge in item["badges"])
+            has_filename_badge = any(
+                badge in ["filename", "EXIF"] for badge in item["badges"]
+            )
             if filename_match:
                 assert has_filename_badge
 
@@ -74,7 +76,9 @@ class TestTextSearchWorkflow:
             if "2023/weddings" in item["folder"]:
                 assert any(badge in ["folder", "EXIF"] for badge in item["badges"])
 
-    def test_text_search_performance_constitutional_requirement(self, client: TestClient) -> None:
+    def test_text_search_performance_constitutional_requirement(
+        self, client: TestClient
+    ) -> None:
         """Test that text search meets constitutional performance requirement."""
         import time
 

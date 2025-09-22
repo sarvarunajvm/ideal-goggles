@@ -28,7 +28,9 @@ class EXIFData:
         instance = cls(file_id=file_id)
 
         # Extract datetime
-        datetime_original = exif_dict.get("DateTime") or exif_dict.get("DateTimeOriginal")
+        datetime_original = exif_dict.get("DateTime") or exif_dict.get(
+            "DateTimeOriginal"
+        )
         if datetime_original:
             try:
                 # Parse EXIF datetime format: "YYYY:MM:DD HH:MM:SS"
@@ -40,15 +42,23 @@ class EXIFData:
         # Extract camera information
         instance.camera_make = cls._clean_string(exif_dict.get("Make"))
         instance.camera_model = cls._clean_string(exif_dict.get("Model"))
-        instance.lens = cls._clean_string(exif_dict.get("LensModel") or exif_dict.get("LensSpecification"))
+        instance.lens = cls._clean_string(
+            exif_dict.get("LensModel") or exif_dict.get("LensSpecification")
+        )
 
         # Extract exposure settings
-        instance.iso = cls._safe_int(exif_dict.get("ISOSpeedRatings") or exif_dict.get("ISO"))
-        instance.aperture = cls._safe_float(exif_dict.get("FNumber") or exif_dict.get("ApertureValue"))
+        instance.iso = cls._safe_int(
+            exif_dict.get("ISOSpeedRatings") or exif_dict.get("ISO")
+        )
+        instance.aperture = cls._safe_float(
+            exif_dict.get("FNumber") or exif_dict.get("ApertureValue")
+        )
         instance.focal_length = cls._safe_float(exif_dict.get("FocalLength"))
 
         # Extract shutter speed
-        shutter_speed = exif_dict.get("ExposureTime") or exif_dict.get("ShutterSpeedValue")
+        shutter_speed = exif_dict.get("ExposureTime") or exif_dict.get(
+            "ShutterSpeedValue"
+        )
         if shutter_speed:
             instance.shutter_speed = cls._format_shutter_speed(shutter_speed)
 
@@ -118,7 +128,9 @@ class EXIFData:
         if self.aperture is not None and (self.aperture <= 0 or self.aperture > 64):
             errors.append("Aperture value out of valid range")
 
-        if self.focal_length is not None and (self.focal_length <= 0 or self.focal_length > 2000):
+        if self.focal_length is not None and (
+            self.focal_length <= 0 or self.focal_length > 2000
+        ):
             errors.append("Focal length out of valid range")
 
         if self.gps_lat is not None and not (-90 <= self.gps_lat <= 90):
@@ -225,7 +237,9 @@ class EXIFData:
             return str(value)
 
     @staticmethod
-    def _parse_gps_coordinates(gps_info: dict[str, Any]) -> tuple[float | None, float | None]:
+    def _parse_gps_coordinates(
+        gps_info: dict[str, Any],
+    ) -> tuple[float | None, float | None]:
         """Parse GPS coordinates from EXIF GPS info."""
         try:
             # Extract latitude
@@ -233,7 +247,11 @@ class EXIFData:
             lat_data = gps_info.get("GPSLatitude", [])
 
             if lat_data and len(lat_data) >= 3:
-                lat = float(lat_data[0]) + float(lat_data[1])/60 + float(lat_data[2])/3600
+                lat = (
+                    float(lat_data[0])
+                    + float(lat_data[1]) / 60
+                    + float(lat_data[2]) / 3600
+                )
                 if lat_ref.upper() == "S":
                     lat = -lat
             else:
@@ -244,7 +262,11 @@ class EXIFData:
             lon_data = gps_info.get("GPSLongitude", [])
 
             if lon_data and len(lon_data) >= 3:
-                lon = float(lon_data[0]) + float(lon_data[1])/60 + float(lon_data[2])/3600
+                lon = (
+                    float(lon_data[0])
+                    + float(lon_data[1]) / 60
+                    + float(lon_data[2]) / 3600
+                )
                 if lon_ref.upper() == "W":
                     lon = -lon
             else:
@@ -287,7 +309,9 @@ class EXIFFilter:
         self.params.extend([min_iso, max_iso])
         return self
 
-    def by_aperture_range(self, min_aperture: float, max_aperture: float) -> "EXIFFilter":
+    def by_aperture_range(
+        self, min_aperture: float, max_aperture: float
+    ) -> "EXIFFilter":
         """Filter by aperture range."""
         self.conditions.append("aperture BETWEEN ? AND ?")
         self.params.extend([min_aperture, max_aperture])
@@ -304,7 +328,9 @@ class EXIFFilter:
         self.conditions.append("gps_lat IS NOT NULL AND gps_lon IS NOT NULL")
         return self
 
-    def in_location_box(self, lat1: float, lon1: float, lat2: float, lon2: float) -> "EXIFFilter":
+    def in_location_box(
+        self, lat1: float, lon1: float, lat2: float, lon2: float
+    ) -> "EXIFFilter":
         """Filter by GPS bounding box."""
         min_lat, max_lat = min(lat1, lat2), max(lat1, lat2)
         min_lon, max_lon = min(lon1, lon2), max(lon1, lon2)

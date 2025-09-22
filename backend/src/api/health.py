@@ -27,7 +27,7 @@ async def health_check() -> dict[str, Any]:
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
             "version": "1.0.0",
-            "service": "photo-search-api"
+            "service": "photo-search-api",
         }
 
         # Add system information
@@ -49,10 +49,7 @@ async def health_check() -> dict[str, Any]:
         return health_data
 
     except Exception as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Health check failed: {e!s}"
-        )
+        raise HTTPException(status_code=503, detail=f"Health check failed: {e!s}")
 
 
 def _get_system_info() -> dict[str, Any]:
@@ -71,18 +68,15 @@ def _get_system_info() -> dict[str, Any]:
             "memory": {
                 "total_gb": round(memory.total / (1024**3), 2),
                 "available_gb": round(memory.available / (1024**3), 2),
-                "used_percent": memory.percent
+                "used_percent": memory.percent,
             },
             "disk": {
                 "total_gb": round(disk.total / (1024**3), 2),
                 "free_gb": round(disk.free / (1024**3), 2),
-                "used_percent": round((disk.used / disk.total) * 100, 1)
+                "used_percent": round((disk.used / disk.total) * 100, 1),
             },
-            "cpu": {
-                "usage_percent": cpu_percent,
-                "cores": psutil.cpu_count()
-            },
-            "platform": os.name
+            "cpu": {"usage_percent": cpu_percent, "cores": psutil.cpu_count()},
+            "platform": os.name,
         }
     except Exception as e:
         return {"error": f"Could not retrieve system info: {e!s}"}
@@ -104,19 +98,15 @@ async def _check_database_health() -> dict[str, Any]:
             return {
                 "healthy": True,
                 "database_size_mb": db_info.get("database_size_mb", 0),
-                "schema_version": db_info.get("settings", {}).get("schema_version", "unknown"),
-                "tables": db_info.get("table_counts", {})
+                "schema_version": db_info.get("settings", {}).get(
+                    "schema_version", "unknown"
+                ),
+                "tables": db_info.get("table_counts", {}),
             }
-        return {
-            "healthy": False,
-            "error": "Database query test failed"
-        }
+        return {"healthy": False, "error": "Database query test failed"}
 
     except Exception as e:
-        return {
-            "healthy": False,
-            "error": f"Database connection failed: {e!s}"
-        }
+        return {"healthy": False, "error": f"Database connection failed: {e!s}"}
 
 
 def _check_dependencies() -> dict[str, Any]:
@@ -126,114 +116,92 @@ def _check_dependencies() -> dict[str, Any]:
     # Check PIL/Pillow
     try:
         import PIL
-        dependencies["PIL"] = {
-            "available": True,
-            "version": PIL.__version__
-        }
+
+        dependencies["PIL"] = {"available": True, "version": PIL.__version__}
     except ImportError:
-        dependencies["PIL"] = {
-            "available": False,
-            "error": "PIL/Pillow not available"
-        }
+        dependencies["PIL"] = {"available": False, "error": "PIL/Pillow not available"}
 
     # Check numpy
     try:
         import numpy as np
-        dependencies["numpy"] = {
-            "available": True,
-            "version": np.__version__
-        }
+
+        dependencies["numpy"] = {"available": True, "version": np.__version__}
     except ImportError:
-        dependencies["numpy"] = {
-            "available": False,
-            "error": "NumPy not available"
-        }
+        dependencies["numpy"] = {"available": False, "error": "NumPy not available"}
 
     # Check CLIP (optional)
     try:
         import clip
-        dependencies["clip"] = {
-            "available": True,
-            "version": "available"
-        }
+
+        dependencies["clip"] = {"available": True, "version": "available"}
     except ImportError:
-        dependencies["clip"] = {
-            "available": False,
-            "error": "CLIP not available"
-        }
+        dependencies["clip"] = {"available": False, "error": "CLIP not available"}
 
     # Check Tesseract (optional)
     try:
         import subprocess
+
         result = subprocess.run(
             ["tesseract", "--version"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         if result.returncode == 0:
             version = result.stdout.split("\n")[0]
-            dependencies["tesseract"] = {
-                "available": True,
-                "version": version
-            }
+            dependencies["tesseract"] = {"available": True, "version": version}
         else:
             dependencies["tesseract"] = {
                 "available": False,
-                "error": "Tesseract command failed"
+                "error": "Tesseract command failed",
             }
     except Exception:
         dependencies["tesseract"] = {
             "available": False,
-            "error": "Tesseract not available"
+            "error": "Tesseract not available",
         }
 
     # Check InsightFace (optional)
     try:
         import insightface
-        dependencies["insightface"] = {
-            "available": True,
-            "version": "available"
-        }
+
+        dependencies["insightface"] = {"available": True, "version": "available"}
     except ImportError:
         dependencies["insightface"] = {
             "available": False,
-            "error": "InsightFace not available"
+            "error": "InsightFace not available",
         }
 
     # Check watchdog
     try:
         import watchdog
+
         try:
             version = watchdog.__version__
         except AttributeError:
             version = "available"
-        dependencies["watchdog"] = {
-            "available": True,
-            "version": version
-        }
+        dependencies["watchdog"] = {"available": True, "version": version}
     except ImportError:
         dependencies["watchdog"] = {
             "available": False,
-            "error": "Watchdog not available"
+            "error": "Watchdog not available",
         }
 
     # Determine if all critical dependencies are available
     critical_deps = ["PIL", "numpy"]
     all_critical_available = all(
-        dependencies.get(dep, {}).get("available", False)
-        for dep in critical_deps
+        dependencies.get(dep, {}).get("available", False) for dep in critical_deps
     )
 
     all_available = all(
-        dep_info.get("available", False)
-        for dep_info in dependencies.values()
+        dep_info.get("available", False) for dep_info in dependencies.values()
     )
 
     return {
         "dependencies": dependencies,
         "all_available": all_available,
-        "critical_available": all_critical_available
+        "critical_available": all_critical_available,
     }
 
 
@@ -255,15 +223,13 @@ async def detailed_health_check() -> dict[str, Any]:
             "diagnostics": {
                 "uptime": _get_uptime(),
                 "environment": _get_environment_info(),
-                "performance": await _get_performance_metrics()
-            }
+                "performance": await _get_performance_metrics(),
+            },
         }
-
 
     except Exception as e:
         raise HTTPException(
-            status_code=503,
-            detail=f"Detailed health check failed: {e!s}"
+            status_code=503, detail=f"Detailed health check failed: {e!s}"
         )
 
 
@@ -271,6 +237,7 @@ def _get_uptime() -> dict[str, Any]:
     """Get system uptime information."""
     try:
         import time
+
         boot_time = psutil.boot_time()
         current_time = time.time()
         uptime_seconds = current_time - boot_time
@@ -278,7 +245,7 @@ def _get_uptime() -> dict[str, Any]:
         return {
             "system_uptime_seconds": int(uptime_seconds),
             "system_uptime_hours": round(uptime_seconds / 3600, 1),
-            "boot_time": datetime.fromtimestamp(boot_time).isoformat()
+            "boot_time": datetime.fromtimestamp(boot_time).isoformat(),
         }
     except Exception as e:
         return {"error": f"Could not get uptime: {e!s}"}
@@ -293,7 +260,7 @@ def _get_environment_info() -> dict[str, Any]:
             "PATH": os.environ.get("PATH", ""),
             "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
             "HOME": os.environ.get("HOME", ""),
-        }
+        },
     }
 
 
@@ -311,11 +278,21 @@ async def _get_performance_metrics() -> dict[str, Any]:
 
         return {
             "database_query_time_ms": round(db_query_time * 1000, 2),
-            "memory_available_mb": round(psutil.virtual_memory().available / (1024**2), 2),
+            "memory_available_mb": round(
+                psutil.virtual_memory().available / (1024**2), 2
+            ),
             "disk_io": {
-                "read_bytes": psutil.disk_io_counters().read_bytes if psutil.disk_io_counters() else 0,
-                "write_bytes": psutil.disk_io_counters().write_bytes if psutil.disk_io_counters() else 0
-            }
+                "read_bytes": (
+                    psutil.disk_io_counters().read_bytes
+                    if psutil.disk_io_counters()
+                    else 0
+                ),
+                "write_bytes": (
+                    psutil.disk_io_counters().write_bytes
+                    if psutil.disk_io_counters()
+                    else 0
+                ),
+            },
         }
     except Exception as e:
         return {"error": f"Could not get performance metrics: {e!s}"}
@@ -334,25 +311,22 @@ async def readiness_check() -> dict[str, Any]:
         db_health = await _check_database_health()
         deps_health = _check_dependencies()
 
-        is_ready = (
-            db_health["healthy"] and
-            deps_health["critical_available"]
-        )
+        is_ready = db_health["healthy"] and deps_health["critical_available"]
 
         return {
             "ready": is_ready,
             "timestamp": datetime.now().isoformat(),
             "checks": {
                 "database": db_health["healthy"],
-                "critical_dependencies": deps_health["critical_available"]
-            }
+                "critical_dependencies": deps_health["critical_available"],
+            },
         }
 
     except Exception as e:
         return {
             "ready": False,
             "timestamp": datetime.now().isoformat(),
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -367,5 +341,5 @@ async def liveness_check() -> dict[str, Any]:
     return {
         "alive": True,
         "timestamp": datetime.now().isoformat(),
-        "service": "photo-search-api"
+        "service": "photo-search-api",
     }

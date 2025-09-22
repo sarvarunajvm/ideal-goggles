@@ -28,7 +28,9 @@ class TestReverseImageSearchWorkflow:
         data = response.json()
         assert "items" in data
         assert "took_ms" in data
-        assert data["took_ms"] < 5000  # Constitutional requirement: <5s for image search
+        assert (
+            data["took_ms"] < 5000
+        )  # Constitutional requirement: <5s for image search
 
         # Verify results have Photo-Match badges
         for item in data["items"]:
@@ -62,7 +64,9 @@ class TestReverseImageSearchWorkflow:
         result = response.json()
         assert len(result["items"]) <= 10
 
-    def test_reverse_image_search_supports_multiple_formats(self, client: TestClient) -> None:
+    def test_reverse_image_search_supports_multiple_formats(
+        self, client: TestClient
+    ) -> None:
         """Test reverse image search accepts multiple image formats."""
         formats = [
             ("test.jpg", "image/jpeg"),
@@ -76,9 +80,14 @@ class TestReverseImageSearchWorkflow:
 
             response = client.post("/search/image", files=files)
             # Should accept all supported formats
-            assert response.status_code in [200, 400]  # 400 for unsupported formats is OK
+            assert response.status_code in [
+                200,
+                400,
+            ]  # 400 for unsupported formats is OK
 
-    def test_reverse_image_search_rejects_invalid_files(self, client: TestClient) -> None:
+    def test_reverse_image_search_rejects_invalid_files(
+        self, client: TestClient
+    ) -> None:
         """Test reverse image search rejects non-image files."""
         # Text file should be rejected
         text_data = b"This is not an image"
@@ -94,7 +103,9 @@ class TestReverseImageSearchWorkflow:
         response = client.post("/search/image", files=files)
         assert response.status_code == 400
 
-    def test_reverse_image_search_performance_requirement(self, client: TestClient) -> None:
+    def test_reverse_image_search_performance_requirement(
+        self, client: TestClient
+    ) -> None:
         """Test reverse image search meets constitutional performance requirement."""
         import time
 

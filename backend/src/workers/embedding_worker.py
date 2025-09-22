@@ -62,22 +62,20 @@ class CLIPEmbeddingWorker:
             # Run embedding generation in thread pool
             loop = asyncio.get_event_loop()
             embedding_vector = await loop.run_in_executor(
-                self.executor,
-                self._generate_embedding_sync,
-                photo.path
+                self.executor, self._generate_embedding_sync, photo.path
             )
 
             processing_time = time.time() - start_time
 
             if embedding_vector is not None:
                 embedding = Embedding.from_clip_output(
-                    photo.id,
-                    embedding_vector,
-                    self.model_name
+                    photo.id, embedding_vector, self.model_name
                 )
 
                 self.stats.add_embedding(embedding, processing_time)
-                logger.debug(f"Generated embedding for {photo.path} (dim: {len(embedding_vector)})")
+                logger.debug(
+                    f"Generated embedding for {photo.path} (dim: {len(embedding_vector)})"
+                )
                 return embedding
             return None
 
@@ -105,7 +103,9 @@ class CLIPEmbeddingWorker:
                 image_features = self.model.encode_image(image_tensor)
 
                 # Normalize features
-                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                image_features = image_features / image_features.norm(
+                    dim=-1, keepdim=True
+                )
 
                 # Convert to numpy
                 embedding = image_features.cpu().numpy().flatten()
@@ -121,9 +121,7 @@ class CLIPEmbeddingWorker:
         try:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
-                self.executor,
-                self._generate_text_embedding_sync,
-                text
+                self.executor, self._generate_text_embedding_sync, text
             )
 
         except Exception as e:
@@ -155,7 +153,9 @@ class CLIPEmbeddingWorker:
             logger.debug(f"Text embedding generation failed: {e}")
             return None
 
-    async def generate_batch(self, photos: list[Photo], batch_size: int = 8) -> list[Embedding | None]:
+    async def generate_batch(
+        self, photos: list[Photo], batch_size: int = 8
+    ) -> list[Embedding | None]:
         """Generate embeddings for multiple photos in batches."""
         if not photos:
             return []
@@ -166,7 +166,7 @@ class CLIPEmbeddingWorker:
 
         # Process in batches to manage memory
         for i in range(0, len(photos), batch_size):
-            batch = photos[i:i + batch_size]
+            batch = photos[i : i + batch_size]
 
             # Create tasks for concurrent processing
             tasks = [self.generate_embedding(photo) for photo in batch]
@@ -183,24 +183,30 @@ class CLIPEmbeddingWorker:
                     results.append(result)
 
             # Log progress
-            logger.info(f"Embedding progress: {min(i + batch_size, len(photos))}/{len(photos)}")
+            logger.info(
+                f"Embedding progress: {min(i + batch_size, len(photos))}/{len(photos)}"
+            )
 
             # Small delay between batches to prevent overload
             await asyncio.sleep(0.1)
 
         successful_count = len([r for r in results if r])
-        logger.info(f"Embedding generation completed: {successful_count}/{len(photos)} successful")
+        logger.info(
+            f"Embedding generation completed: {successful_count}/{len(photos)} successful"
+        )
 
         return results
 
     def get_statistics(self) -> dict[str, Any]:
         """Get embedding generation statistics."""
         stats_dict = self.stats.to_dict()
-        stats_dict.update({
-            "model_name": self.model_name,
-            "device": str(self.device),
-            "max_workers": self.max_workers,
-        })
+        stats_dict.update(
+            {
+                "model_name": self.model_name,
+                "device": str(self.device),
+                "max_workers": self.max_workers,
+            }
+        )
         return stats_dict
 
     def reset_statistics(self):
@@ -214,6 +220,7 @@ class CLIPEmbeddingWorker:
         # Clear CUDA cache if using GPU
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except ImportError:
@@ -223,14 +230,21 @@ class CLIPEmbeddingWorker:
 class OptimizedCLIPWorker(CLIPEmbeddingWorker):
     """Optimized CLIP worker with batched processing and caching."""
 
-    def __init__(self, max_workers: int = 2, model_name: str = "ViT-B/32",
-                 enable_batch_processing: bool = True, cache_size: int = 1000):
+    def __init__(
+        self,
+        max_workers: int = 2,
+        model_name: str = "ViT-B/32",
+        enable_batch_processing: bool = True,
+        cache_size: int = 1000,
+    ):
         super().__init__(max_workers, model_name)
         self.enable_batch_processing = enable_batch_processing
         self.cache_size = cache_size
         self.embedding_cache = {}
 
-    async def generate_batch_optimized(self, photos: list[Photo], batch_size: int = 16) -> list[Embedding | None]:
+    async def generate_batch_optimized(
+        self, photos: list[Photo], batch_size: int = 16
+    ) -> list[Embedding | None]:
         """Optimized batch processing with actual batching in GPU."""
         if not photos or not self.enable_batch_processing:
             return await self.generate_batch(photos, batch_size)
@@ -241,7 +255,7 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
 
         # Process in GPU batches
         for i in range(0, len(photos), batch_size):
-            batch_photos = photos[i:i + batch_size]
+            batch_photos = photos[i : i + batch_size]
 
             # Check cache first
             cached_results = []
@@ -272,37 +286,45 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
             for idx, embedding in zip(uncached_indices, batch_embeddings, strict=False):
                 batch_results[idx] = embedding
                 if embedding:
-                    cache_key = f"{batch_photos[idx].path}:{batch_photos[idx].modified_ts}"
+                    cache_key = (
+                        f"{batch_photos[idx].path}:{batch_photos[idx].modified_ts}"
+                    )
                     self._update_cache(cache_key, embedding)
 
             results.extend(batch_results)
 
             # Log progress
-            logger.info(f"Optimized embedding progress: {min(i + batch_size, len(photos))}/{len(photos)}")
+            logger.info(
+                f"Optimized embedding progress: {min(i + batch_size, len(photos))}/{len(photos)}"
+            )
 
         successful_count = len([r for r in results if r])
-        logger.info(f"Optimized embedding completed: {successful_count}/{len(photos)} successful")
+        logger.info(
+            f"Optimized embedding completed: {successful_count}/{len(photos)} successful"
+        )
 
         return results
 
-    async def _process_batch_on_gpu(self, photos: list[Photo]) -> list[Embedding | None]:
+    async def _process_batch_on_gpu(
+        self, photos: list[Photo]
+    ) -> list[Embedding | None]:
         """Process a batch of photos on GPU simultaneously."""
         try:
             loop = asyncio.get_event_loop()
             embeddings = await loop.run_in_executor(
                 self.executor,
                 self._generate_batch_embeddings_sync,
-                [photo.path for photo in photos]
+                [photo.path for photo in photos],
             )
 
             # Convert to Embedding objects
             results = []
-            for _i, (photo, embedding_vector) in enumerate(zip(photos, embeddings, strict=False)):
+            for _i, (photo, embedding_vector) in enumerate(
+                zip(photos, embeddings, strict=False)
+            ):
                 if embedding_vector is not None:
                     embedding = Embedding.from_clip_output(
-                        photo.id,
-                        embedding_vector,
-                        self.model_name
+                        photo.id, embedding_vector, self.model_name
                     )
                     self.stats.add_embedding(embedding)
                     results.append(embedding)
@@ -316,7 +338,9 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
             # Fallback to individual processing
             return [await self.generate_embedding(photo) for photo in photos]
 
-    def _generate_batch_embeddings_sync(self, file_paths: list[str]) -> list[np.ndarray | None]:
+    def _generate_batch_embeddings_sync(
+        self, file_paths: list[str]
+    ) -> list[np.ndarray | None]:
         """Generate embeddings for a batch of images on GPU."""
         try:
             import torch
@@ -350,7 +374,9 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
                 batch_features = self.model.encode_image(batch_tensor)
 
                 # Normalize features
-                batch_features = batch_features / batch_features.norm(dim=-1, keepdim=True)
+                batch_features = batch_features / batch_features.norm(
+                    dim=-1, keepdim=True
+                )
 
                 # Convert to numpy
                 batch_embeddings = batch_features.cpu().numpy()
@@ -413,18 +439,19 @@ class EmbeddingValidator:
 
         if stats["std"] < 0.1:
             validation_result["warnings"] = validation_result.get("warnings", [])
-            validation_result["warnings"].append("Low standard deviation may indicate poor feature extraction")
+            validation_result["warnings"].append(
+                "Low standard deviation may indicate poor feature extraction"
+            )
 
         return validation_result
 
     @staticmethod
-    def compare_embeddings(embedding1: Embedding, embedding2: Embedding) -> dict[str, Any]:
+    def compare_embeddings(
+        embedding1: Embedding, embedding2: Embedding
+    ) -> dict[str, Any]:
         """Compare two embeddings for consistency."""
         if embedding1.embedding_model != embedding2.embedding_model:
-            return {
-                "comparable": False,
-                "reason": "Different embedding models"
-            }
+            return {"comparable": False, "reason": "Different embedding models"}
 
         similarity = embedding1.cosine_similarity(embedding2)
         distance = embedding1.euclidean_distance(embedding2)

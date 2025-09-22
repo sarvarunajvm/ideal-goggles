@@ -36,9 +36,7 @@ class EXIFExtractor:
             # Run EXIF extraction in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             exif_dict = await loop.run_in_executor(
-                self.executor,
-                self._extract_exif_sync,
-                photo.path
+                self.executor, self._extract_exif_sync, photo.path
             )
 
             if exif_dict:
@@ -111,21 +109,29 @@ class EXIFExtractor:
             if (i + 1) % 100 == 0:
                 logger.info(f"EXIF extraction progress: {i + 1}/{len(photos)}")
 
-        logger.info(f"EXIF extraction completed: {len([r for r in results if r])} successful")
+        logger.info(
+            f"EXIF extraction completed: {len([r for r in results if r])} successful"
+        )
 
         return results
 
     def get_statistics(self) -> dict[str, Any]:
         """Get extraction statistics."""
-        avg_time = (self.stats["total_time"] / self.stats["processed"]
-                   if self.stats["processed"] > 0 else 0)
+        avg_time = (
+            self.stats["total_time"] / self.stats["processed"]
+            if self.stats["processed"] > 0
+            else 0
+        )
 
         return {
             "processed": self.stats["processed"],
             "successful": self.stats["successful"],
             "failed": self.stats["failed"],
-            "success_rate": (self.stats["successful"] / self.stats["processed"]
-                           if self.stats["processed"] > 0 else 0),
+            "success_rate": (
+                self.stats["successful"] / self.stats["processed"]
+                if self.stats["processed"] > 0
+                else 0
+            ),
             "average_processing_time": avg_time,
             "total_processing_time": self.stats["total_time"],
         }
@@ -156,6 +162,7 @@ class AdvancedEXIFExtractor(EXIFExtractor):
         if use_exifread:
             try:
                 import exifread
+
                 self.exifread = exifread
                 logger.info("Using exifread for enhanced EXIF extraction")
             except ImportError:
@@ -231,19 +238,21 @@ class EXIFValidator:
 
         # Calculate completeness score (0-1)
         total_fields = 11  # Total possible EXIF fields
-        filled_fields = sum([
-            1 if exif_data.shot_dt else 0,
-            1 if exif_data.camera_make else 0,
-            1 if exif_data.camera_model else 0,
-            1 if exif_data.lens else 0,
-            1 if exif_data.iso else 0,
-            1 if exif_data.aperture else 0,
-            1 if exif_data.shutter_speed else 0,
-            1 if exif_data.focal_length else 0,
-            1 if exif_data.gps_lat else 0,
-            1 if exif_data.gps_lon else 0,
-            1 if exif_data.orientation else 0,
-        ])
+        filled_fields = sum(
+            [
+                1 if exif_data.shot_dt else 0,
+                1 if exif_data.camera_make else 0,
+                1 if exif_data.camera_model else 0,
+                1 if exif_data.lens else 0,
+                1 if exif_data.iso else 0,
+                1 if exif_data.aperture else 0,
+                1 if exif_data.shutter_speed else 0,
+                1 if exif_data.focal_length else 0,
+                1 if exif_data.gps_lat else 0,
+                1 if exif_data.gps_lon else 0,
+                1 if exif_data.orientation else 0,
+            ]
+        )
 
         validation_result["completeness_score"] = filled_fields / total_fields
 
@@ -333,7 +342,9 @@ class EXIFExtractionPipeline:
 
             results.append(result)
 
-        logger.info(f"EXIF pipeline completed: {self.pipeline_stats['extraction_successful']}/{len(photos)} successful")
+        logger.info(
+            f"EXIF pipeline completed: {self.pipeline_stats['extraction_successful']}/{len(photos)} successful"
+        )
 
         return results
 

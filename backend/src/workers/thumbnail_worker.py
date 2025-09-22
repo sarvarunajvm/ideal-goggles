@@ -19,8 +19,14 @@ logger = logging.getLogger(__name__)
 class ThumbnailGenerator:
     """Worker for generating thumbnail images."""
 
-    def __init__(self, cache_root: str, max_workers: int = 4,
-                 max_size: int = 512, img_format: str = "webp", quality: int = 85):
+    def __init__(
+        self,
+        cache_root: str,
+        max_workers: int = 4,
+        max_size: int = 512,
+        img_format: str = "webp",
+        quality: int = 85,
+    ):
         self.cache_root = Path(cache_root)
         self.max_workers = max_workers
         self.max_size = max_size
@@ -55,7 +61,9 @@ class ThumbnailGenerator:
                     test_img.save(f.name, "WEBP")
                 logger.info("WebP support confirmed")
 
-            logger.info(f"PIL available for thumbnail generation (format: {self.format})")
+            logger.info(
+                f"PIL available for thumbnail generation (format: {self.format})"
+            )
 
         except ImportError:
             msg = "PIL not available for thumbnail generation"
@@ -68,7 +76,9 @@ class ThumbnailGenerator:
                 msg = f"PIL format support issue: {e}"
                 raise RuntimeError(msg)
 
-    async def generate_thumbnail(self, photo: Photo, force_regenerate: bool = False) -> Thumbnail | None:
+    async def generate_thumbnail(
+        self, photo: Photo, force_regenerate: bool = False
+    ) -> Thumbnail | None:
         """Generate thumbnail for a photo."""
         start_time = time.time()
 
@@ -76,7 +86,9 @@ class ThumbnailGenerator:
             # Check if thumbnail already exists and is up-to-date
             existing_thumbnail = await self._check_existing_thumbnail(photo)
             if existing_thumbnail and not force_regenerate:
-                if not existing_thumbnail.needs_regeneration(photo.modified_ts, str(self.cache_root)):
+                if not existing_thumbnail.needs_regeneration(
+                    photo.modified_ts, str(self.cache_root)
+                ):
                     self.stats["cache_hits"] += 1
                     logger.debug(f"Using cached thumbnail for {photo.path}")
                     return existing_thumbnail
@@ -84,9 +96,7 @@ class ThumbnailGenerator:
             # Generate new thumbnail
             loop = asyncio.get_event_loop()
             thumbnail = await loop.run_in_executor(
-                self.executor,
-                self._generate_thumbnail_sync,
-                photo
+                self.executor, self._generate_thumbnail_sync, photo
             )
 
             processing_time = time.time() - start_time
@@ -94,7 +104,9 @@ class ThumbnailGenerator:
             if thumbnail:
                 self.stats["generated"] += 1
                 self.stats["total_time"] += processing_time
-                logger.debug(f"Generated thumbnail for {photo.path} ({processing_time:.2f}s)")
+                logger.debug(
+                    f"Generated thumbnail for {photo.path} ({processing_time:.2f}s)"
+                )
                 return thumbnail
             self.stats["failed"] += 1
             return None
@@ -156,7 +168,9 @@ class ThumbnailGenerator:
             logger.debug(f"PIL thumbnail generation failed for {photo.path}: {e}")
             return None
 
-    def _calculate_thumbnail_size(self, width: int, height: int, max_size: int) -> tuple[int, int]:
+    def _calculate_thumbnail_size(
+        self, width: int, height: int, max_size: int
+    ) -> tuple[int, int]:
         """Calculate thumbnail dimensions preserving aspect ratio."""
         if width <= 0 or height <= 0:
             return max_size, max_size
@@ -213,8 +227,9 @@ class ThumbnailGenerator:
 
         return None
 
-    async def generate_batch(self, photos: list[Photo],
-                           force_regenerate: bool = False) -> list[Thumbnail | None]:
+    async def generate_batch(
+        self, photos: list[Photo], force_regenerate: bool = False
+    ) -> list[Thumbnail | None]:
         """Generate thumbnails for multiple photos."""
         if not photos:
             return []
@@ -235,15 +250,20 @@ class ThumbnailGenerator:
                 logger.info(f"Thumbnail generation progress: {i + 1}/{len(photos)}")
 
         successful_count = len([r for r in results if r])
-        logger.info(f"Thumbnail generation completed: {successful_count}/{len(photos)} successful")
+        logger.info(
+            f"Thumbnail generation completed: {successful_count}/{len(photos)} successful"
+        )
 
         return results
 
     def get_statistics(self) -> dict[str, Any]:
         """Get thumbnail generation statistics."""
         total_processed = self.stats["generated"] + self.stats["failed"]
-        avg_time = (self.stats["total_time"] / self.stats["generated"]
-                   if self.stats["generated"] > 0 else 0)
+        avg_time = (
+            self.stats["total_time"] / self.stats["generated"]
+            if self.stats["generated"] > 0
+            else 0
+        )
 
         return {
             "generated": self.stats["generated"],
@@ -251,8 +271,9 @@ class ThumbnailGenerator:
             "skipped": self.stats["skipped"],
             "cache_hits": self.stats["cache_hits"],
             "total_processed": total_processed,
-            "success_rate": (self.stats["generated"] / total_processed
-                           if total_processed > 0 else 0),
+            "success_rate": (
+                self.stats["generated"] / total_processed if total_processed > 0 else 0
+            ),
             "average_generation_time": avg_time,
             "total_generation_time": self.stats["total_time"],
             "cache_root": str(self.cache_root),
@@ -279,8 +300,13 @@ class ThumbnailGenerator:
 class SmartThumbnailGenerator(ThumbnailGenerator):
     """Smart thumbnail generator with adaptive quality and multiple sizes."""
 
-    def __init__(self, cache_root: str, max_workers: int = 4,
-                 sizes: list[int] | None = None, adaptive_quality: bool = True):
+    def __init__(
+        self,
+        cache_root: str,
+        max_workers: int = 4,
+        sizes: list[int] | None = None,
+        adaptive_quality: bool = True,
+    ):
         # Default sizes for different use cases
         self.sizes = sizes or [128, 256, 512]
         self.adaptive_quality = adaptive_quality
@@ -288,7 +314,9 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
         # Use largest size as max_size for base class
         super().__init__(cache_root, max_workers, max(self.sizes))
 
-    async def generate_multi_size_thumbnails(self, photo: Photo) -> list[Thumbnail | None]:
+    async def generate_multi_size_thumbnails(
+        self, photo: Photo
+    ) -> list[Thumbnail | None]:
         """Generate thumbnails in multiple sizes."""
         thumbnails = []
 
@@ -400,7 +428,6 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
             enhancer = ImageEnhance.Sharpness(img)
             return enhancer.enhance(1.02)
 
-
         except Exception:
             # If enhancement fails, return original
             return img
@@ -432,9 +459,7 @@ class ThumbnailCacheManager:
         """Remove thumbnails for files that no longer exist."""
         loop = asyncio.get_event_loop()
         removed_count = await loop.run_in_executor(
-            None,
-            self.cache.cleanup_orphaned_thumbnails,
-            valid_file_ids
+            None, self.cache.cleanup_orphaned_thumbnails, valid_file_ids
         )
 
         logger.info(f"Removed {removed_count} orphaned thumbnails")
@@ -444,8 +469,7 @@ class ThumbnailCacheManager:
         """Remove empty directories from cache."""
         loop = asyncio.get_event_loop()
         removed_count = await loop.run_in_executor(
-            None,
-            self.cache.cleanup_empty_directories
+            None, self.cache.cleanup_empty_directories
         )
 
         logger.info(f"Removed {removed_count} empty directories")
@@ -454,11 +478,7 @@ class ThumbnailCacheManager:
     async def get_cache_statistics(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            self.cache.get_cache_stats
-        )
-
+        return await loop.run_in_executor(None, self.cache.get_cache_stats)
 
     async def validate_cache_integrity(self, sample_size: int = 100) -> dict[str, Any]:
         """Validate cache integrity by checking a sample of files."""

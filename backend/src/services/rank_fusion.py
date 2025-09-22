@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class SearchType(Enum):
     """Types of search results that can be fused."""
+
     TEXT = "text"
     SEMANTIC = "semantic"
     IMAGE = "image"
@@ -20,6 +21,7 @@ class SearchType(Enum):
 @dataclass
 class SearchResult:
     """Individual search result with score and metadata."""
+
     file_id: int
     score: float
     search_type: SearchType
@@ -30,6 +32,7 @@ class SearchResult:
 @dataclass
 class FusionWeights:
     """Weights for different search types in fusion."""
+
     text: float = 1.0
     semantic: float = 0.8
     image: float = 0.9
@@ -49,7 +52,7 @@ class RankFusionService:
         weights: FusionWeights | None = None,
         method: str = "rrf",  # Reciprocal Rank Fusion
         k: float = 60.0,  # RRF parameter
-        top_k: int = 50
+        top_k: int = 50,
     ) -> list[SearchResult]:
         """
         Fuse multiple sets of search results into a single ranked list.
@@ -92,7 +95,7 @@ class RankFusionService:
         result_sets: dict[SearchType, list[SearchResult]],
         weights: FusionWeights,
         k: float,
-        top_k: int
+        top_k: int,
     ) -> list[SearchResult]:
         """
         Reciprocal Rank Fusion (RRF) algorithm.
@@ -132,9 +135,7 @@ class RankFusionService:
 
         # Sort by fused score and create result objects
         sorted_file_ids = sorted(
-            fused_scores.keys(),
-            key=lambda fid: fused_scores[fid],
-            reverse=True
+            fused_scores.keys(), key=lambda fid: fused_scores[fid], reverse=True
         )
 
         fused_results = []
@@ -144,7 +145,7 @@ class RankFusionService:
                 score=fused_scores[file_id],
                 search_type=SearchType.TEXT,  # Default type for fused results
                 metadata=result_metadata[file_id],
-                rank=rank
+                rank=rank,
             )
             fused_results.append(result)
 
@@ -154,7 +155,7 @@ class RankFusionService:
         self,
         result_sets: dict[SearchType, list[SearchResult]],
         weights: FusionWeights,
-        top_k: int
+        top_k: int,
     ) -> list[SearchResult]:
         """
         Weighted sum fusion using normalized scores.
@@ -177,12 +178,14 @@ class RankFusionService:
                 else:
                     normalized_score = 1.0
 
-                normalized_results.append(SearchResult(
-                    file_id=result.file_id,
-                    score=normalized_score,
-                    search_type=result.search_type,
-                    metadata=result.metadata
-                ))
+                normalized_results.append(
+                    SearchResult(
+                        file_id=result.file_id,
+                        score=normalized_score,
+                        search_type=result.search_type,
+                        metadata=result.metadata,
+                    )
+                )
 
             normalized_sets[search_type] = normalized_results
 
@@ -215,9 +218,7 @@ class RankFusionService:
 
         # Sort and create results
         sorted_file_ids = sorted(
-            weighted_scores.keys(),
-            key=lambda fid: weighted_scores[fid],
-            reverse=True
+            weighted_scores.keys(), key=lambda fid: weighted_scores[fid], reverse=True
         )
 
         fused_results = []
@@ -227,7 +228,7 @@ class RankFusionService:
                 score=weighted_scores[file_id],
                 search_type=SearchType.TEXT,
                 metadata=result_metadata[file_id],
-                rank=rank
+                rank=rank,
             )
             fused_results.append(result)
 
@@ -237,7 +238,7 @@ class RankFusionService:
         self,
         result_sets: dict[SearchType, list[SearchResult]],
         weights: FusionWeights,
-        top_k: int
+        top_k: int,
     ) -> list[SearchResult]:
         """
         Borda count fusion using rank positions.
@@ -273,9 +274,7 @@ class RankFusionService:
 
         # Sort and create results
         sorted_file_ids = sorted(
-            borda_scores.keys(),
-            key=lambda fid: borda_scores[fid],
-            reverse=True
+            borda_scores.keys(), key=lambda fid: borda_scores[fid], reverse=True
         )
 
         fused_results = []
@@ -285,20 +284,22 @@ class RankFusionService:
                 score=borda_scores[file_id],
                 search_type=SearchType.TEXT,
                 metadata=result_metadata[file_id],
-                rank=rank
+                rank=rank,
             )
             fused_results.append(result)
 
         return fused_results
 
-    def _get_weight_for_type(self, search_type: SearchType, weights: FusionWeights) -> float:
+    def _get_weight_for_type(
+        self, search_type: SearchType, weights: FusionWeights
+    ) -> float:
         """Get weight for a specific search type."""
         weight_map = {
             SearchType.TEXT: weights.text,
             SearchType.SEMANTIC: weights.semantic,
             SearchType.IMAGE: weights.image,
             SearchType.FACE: weights.face,
-            SearchType.METADATA: weights.metadata
+            SearchType.METADATA: weights.metadata,
         }
         return weight_map.get(search_type, 1.0)
 
@@ -306,7 +307,7 @@ class RankFusionService:
         self,
         result_sets: dict[SearchType, list[SearchResult]],
         fused_results: list[SearchResult],
-        top_k: int = 20
+        top_k: int = 20,
     ) -> dict[str, Any]:
         """
         Analyze the quality of fusion results.
@@ -325,7 +326,7 @@ class RankFusionService:
                 "total_unique_results": 0,
                 "fusion_coverage": {},
                 "rank_correlation": {},
-                "diversity_score": 0.0
+                "diversity_score": 0.0,
             }
 
             # Calculate total unique results
@@ -342,7 +343,9 @@ class RankFusionService:
                     continue
 
                 top_original_ids = {result.file_id for result in results[:top_k]}
-                coverage = len(top_fused_ids.intersection(top_original_ids)) / len(top_original_ids)
+                coverage = len(top_fused_ids.intersection(top_original_ids)) / len(
+                    top_original_ids
+                )
                 analysis["fusion_coverage"][search_type.value] = round(coverage, 3)
 
             # Calculate diversity: how many different search types contributed to top results
@@ -352,17 +355,21 @@ class RankFusionService:
                     if f"{search_type.value}_score" in result.metadata:
                         contributing_types.add(search_type)
 
-            analysis["diversity_score"] = len(contributing_types) / len(result_sets) if result_sets else 0
+            analysis["diversity_score"] = (
+                len(contributing_types) / len(result_sets) if result_sets else 0
+            )
 
             # Calculate rank correlation (simplified)
             if len(result_sets) >= 2:
                 type_pairs = list(result_sets.keys())[:2]
                 correlation = self._calculate_rank_correlation(
                     result_sets[type_pairs[0]][:top_k],
-                    result_sets[type_pairs[1]][:top_k]
+                    result_sets[type_pairs[1]][:top_k],
                 )
                 analysis["rank_correlation"] = {
-                    f"{type_pairs[0].value}_vs_{type_pairs[1].value}": round(correlation, 3)
+                    f"{type_pairs[0].value}_vs_{type_pairs[1].value}": round(
+                        correlation, 3
+                    )
                 }
 
             return analysis
@@ -371,7 +378,9 @@ class RankFusionService:
             logger.exception(f"Fusion quality analysis failed: {e}")
             return {}
 
-    def _calculate_rank_correlation(self, results1: list[SearchResult], results2: list[SearchResult]) -> float:
+    def _calculate_rank_correlation(
+        self, results1: list[SearchResult], results2: list[SearchResult]
+    ) -> float:
         """Calculate rank correlation between two result sets."""
         try:
             # Create rank mappings
@@ -396,14 +405,11 @@ class RankFusionService:
             # Spearman's correlation coefficient
             return 1 - (6 * sum_diff_squared) / (n * (n * n - 1))
 
-
         except Exception:
             return 0.0
 
     def get_fusion_recommendations(
-        self,
-        query_type: str,
-        user_preferences: dict[str, float] | None = None
+        self, query_type: str, user_preferences: dict[str, float] | None = None
     ) -> tuple[FusionWeights, str]:
         """
         Get recommended fusion weights and method based on query type and user preferences.
@@ -417,13 +423,23 @@ class RankFusionService:
         """
         # Default recommendations based on query type
         weight_recommendations = {
-            "text": FusionWeights(text=1.0, semantic=0.6, image=0.3, face=0.2, metadata=0.8),
-            "image": FusionWeights(text=0.4, semantic=0.9, image=1.0, face=0.3, metadata=0.5),
-            "person": FusionWeights(text=0.3, semantic=0.5, image=0.6, face=1.0, metadata=0.4),
-            "mixed": FusionWeights(text=0.8, semantic=0.8, image=0.8, face=0.6, metadata=0.6)
+            "text": FusionWeights(
+                text=1.0, semantic=0.6, image=0.3, face=0.2, metadata=0.8
+            ),
+            "image": FusionWeights(
+                text=0.4, semantic=0.9, image=1.0, face=0.3, metadata=0.5
+            ),
+            "person": FusionWeights(
+                text=0.3, semantic=0.5, image=0.6, face=1.0, metadata=0.4
+            ),
+            "mixed": FusionWeights(
+                text=0.8, semantic=0.8, image=0.8, face=0.6, metadata=0.6
+            ),
         }
 
-        recommended_weights = weight_recommendations.get(query_type, self.default_weights)
+        recommended_weights = weight_recommendations.get(
+            query_type, self.default_weights
+        )
 
         # Apply user preferences if provided
         if user_preferences:
@@ -432,7 +448,7 @@ class RankFusionService:
                 semantic=user_preferences.get("semantic", recommended_weights.semantic),
                 image=user_preferences.get("image", recommended_weights.image),
                 face=user_preferences.get("face", recommended_weights.face),
-                metadata=user_preferences.get("metadata", recommended_weights.metadata)
+                metadata=user_preferences.get("metadata", recommended_weights.metadata),
             )
 
         # Method recommendations
@@ -440,7 +456,7 @@ class RankFusionService:
             "text": "weighted_sum",
             "image": "rrf",
             "person": "rrf",
-            "mixed": "rrf"
+            "mixed": "rrf",
         }
 
         recommended_method = method_recommendations.get(query_type, "rrf")
@@ -461,15 +477,9 @@ def get_rank_fusion_service() -> RankFusionService:
 
 
 def create_search_result(
-    file_id: int,
-    score: float,
-    search_type: SearchType,
-    **metadata
+    file_id: int, score: float, search_type: SearchType, **metadata
 ) -> SearchResult:
     """Helper function to create SearchResult objects."""
     return SearchResult(
-        file_id=file_id,
-        score=score,
-        search_type=search_type,
-        metadata=metadata
+        file_id=file_id, score=score, search_type=search_type, metadata=metadata
     )
