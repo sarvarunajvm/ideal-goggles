@@ -2,6 +2,8 @@
  * Search-related types and enums
  */
 
+import type { SearchResultItem } from './api'
+
 export type SearchMode = 'text' | 'semantic' | 'image' | 'face'
 
 export type MatchType = 'filename' | 'folder' | 'ocr' | 'exif' | 'face' | 'image'
@@ -22,7 +24,7 @@ export interface SearchFilter {
 export interface SearchOptions {
   mode: SearchMode
   query?: string
-  imageFile?: File
+  imageFile?: Blob | ArrayBuffer | Uint8Array
   personId?: number
   filters?: SearchFilter
   limit?: number
@@ -39,5 +41,3 @@ export interface SearchState {
   selectedItems: number[]
 }
 
-// Re-export from api types
-export type { SearchResultItem } from './api'

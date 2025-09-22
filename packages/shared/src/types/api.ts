@@ -62,7 +62,7 @@ export interface SemanticSearchRequest {
 }
 
 export interface ImageSearchRequest {
-  file: File
+  file: Blob | ArrayBuffer | Uint8Array
   top_k?: number
 }
 
