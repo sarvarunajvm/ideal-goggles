@@ -1,9 +1,8 @@
 """EXIF metadata model for photo search system."""
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
 from datetime import datetime
-import json
+from typing import Any
 
 
 @dataclass
@@ -11,25 +10,25 @@ class EXIFData:
     """EXIF metadata extracted from image files."""
 
     file_id: int
-    shot_dt: Optional[str] = None
-    camera_make: Optional[str] = None
-    camera_model: Optional[str] = None
-    lens: Optional[str] = None
-    iso: Optional[int] = None
-    aperture: Optional[float] = None
-    shutter_speed: Optional[str] = None
-    focal_length: Optional[float] = None
-    gps_lat: Optional[float] = None
-    gps_lon: Optional[float] = None
-    orientation: Optional[int] = None
+    shot_dt: str | None = None
+    camera_make: str | None = None
+    camera_model: str | None = None
+    lens: str | None = None
+    iso: int | None = None
+    aperture: float | None = None
+    shutter_speed: str | None = None
+    focal_length: float | None = None
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+    orientation: int | None = None
 
     @classmethod
-    def from_exif_dict(cls, file_id: int, exif_dict: Dict[str, Any]) -> "EXIFData":
+    def from_exif_dict(cls, file_id: int, exif_dict: dict[str, Any]) -> "EXIFData":
         """Create EXIFData from raw EXIF dictionary."""
         instance = cls(file_id=file_id)
 
         # Extract datetime
-        datetime_original = exif_dict.get('DateTime') or exif_dict.get('DateTimeOriginal')
+        datetime_original = exif_dict.get("DateTime") or exif_dict.get("DateTimeOriginal")
         if datetime_original:
             try:
                 # Parse EXIF datetime format: "YYYY:MM:DD HH:MM:SS"
@@ -39,29 +38,29 @@ class EXIFData:
                 pass
 
         # Extract camera information
-        instance.camera_make = cls._clean_string(exif_dict.get('Make'))
-        instance.camera_model = cls._clean_string(exif_dict.get('Model'))
-        instance.lens = cls._clean_string(exif_dict.get('LensModel') or exif_dict.get('LensSpecification'))
+        instance.camera_make = cls._clean_string(exif_dict.get("Make"))
+        instance.camera_model = cls._clean_string(exif_dict.get("Model"))
+        instance.lens = cls._clean_string(exif_dict.get("LensModel") or exif_dict.get("LensSpecification"))
 
         # Extract exposure settings
-        instance.iso = cls._safe_int(exif_dict.get('ISOSpeedRatings') or exif_dict.get('ISO'))
-        instance.aperture = cls._safe_float(exif_dict.get('FNumber') or exif_dict.get('ApertureValue'))
-        instance.focal_length = cls._safe_float(exif_dict.get('FocalLength'))
+        instance.iso = cls._safe_int(exif_dict.get("ISOSpeedRatings") or exif_dict.get("ISO"))
+        instance.aperture = cls._safe_float(exif_dict.get("FNumber") or exif_dict.get("ApertureValue"))
+        instance.focal_length = cls._safe_float(exif_dict.get("FocalLength"))
 
         # Extract shutter speed
-        shutter_speed = exif_dict.get('ExposureTime') or exif_dict.get('ShutterSpeedValue')
+        shutter_speed = exif_dict.get("ExposureTime") or exif_dict.get("ShutterSpeedValue")
         if shutter_speed:
             instance.shutter_speed = cls._format_shutter_speed(shutter_speed)
 
         # Extract GPS coordinates
-        gps_info = exif_dict.get('GPSInfo', {})
+        gps_info = exif_dict.get("GPSInfo", {})
         if gps_info:
             lat, lon = cls._parse_gps_coordinates(gps_info)
             instance.gps_lat = lat
             instance.gps_lon = lon
 
         # Extract orientation
-        instance.orientation = cls._safe_int(exif_dict.get('Orientation'))
+        instance.orientation = cls._safe_int(exif_dict.get("Orientation"))
 
         return instance
 
@@ -69,38 +68,38 @@ class EXIFData:
     def from_db_row(cls, row) -> "EXIFData":
         """Create EXIFData from database row."""
         return cls(
-            file_id=row['file_id'],
-            shot_dt=row['shot_dt'],
-            camera_make=row['camera_make'],
-            camera_model=row['camera_model'],
-            lens=row['lens'],
-            iso=row['iso'],
-            aperture=row['aperture'],
-            shutter_speed=row['shutter_speed'],
-            focal_length=row['focal_length'],
-            gps_lat=row['gps_lat'],
-            gps_lon=row['gps_lon'],
-            orientation=row['orientation'],
+            file_id=row["file_id"],
+            shot_dt=row["shot_dt"],
+            camera_make=row["camera_make"],
+            camera_model=row["camera_model"],
+            lens=row["lens"],
+            iso=row["iso"],
+            aperture=row["aperture"],
+            shutter_speed=row["shutter_speed"],
+            focal_length=row["focal_length"],
+            gps_lat=row["gps_lat"],
+            gps_lon=row["gps_lon"],
+            orientation=row["orientation"],
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'file_id': self.file_id,
-            'shot_dt': self.shot_dt,
-            'camera_make': self.camera_make,
-            'camera_model': self.camera_model,
-            'lens': self.lens,
-            'iso': self.iso,
-            'aperture': self.aperture,
-            'shutter_speed': self.shutter_speed,
-            'focal_length': self.focal_length,
-            'gps_lat': self.gps_lat,
-            'gps_lon': self.gps_lon,
-            'orientation': self.orientation,
+            "file_id": self.file_id,
+            "shot_dt": self.shot_dt,
+            "camera_make": self.camera_make,
+            "camera_model": self.camera_model,
+            "lens": self.lens,
+            "iso": self.iso,
+            "aperture": self.aperture,
+            "shutter_speed": self.shutter_speed,
+            "focal_length": self.focal_length,
+            "gps_lat": self.gps_lat,
+            "gps_lon": self.gps_lon,
+            "orientation": self.orientation,
         }
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate EXIF data and return list of errors."""
         errors = []
 
@@ -184,7 +183,7 @@ class EXIFData:
         return f"{self.gps_lat:.6f}, {self.gps_lon:.6f}"
 
     @staticmethod
-    def _clean_string(value: Any) -> Optional[str]:
+    def _clean_string(value: Any) -> str | None:
         """Clean and validate string values."""
         if value is None:
             return None
@@ -193,7 +192,7 @@ class EXIFData:
         return cleaned if cleaned else None
 
     @staticmethod
-    def _safe_int(value: Any) -> Optional[int]:
+    def _safe_int(value: Any) -> int | None:
         """Safely convert value to integer."""
         if value is None:
             return None
@@ -204,7 +203,7 @@ class EXIFData:
             return None
 
     @staticmethod
-    def _safe_float(value: Any) -> Optional[float]:
+    def _safe_float(value: Any) -> float | None:
         """Safely convert value to float."""
         if value is None:
             return None
@@ -221,33 +220,32 @@ class EXIFData:
             speed = float(value)
             if speed >= 1:
                 return f"{speed:.1f}s"
-            else:
-                return f"1/{int(1/speed)}"
+            return f"1/{int(1/speed)}"
         except (ValueError, TypeError, ZeroDivisionError):
             return str(value)
 
     @staticmethod
-    def _parse_gps_coordinates(gps_info: Dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
+    def _parse_gps_coordinates(gps_info: dict[str, Any]) -> tuple[float | None, float | None]:
         """Parse GPS coordinates from EXIF GPS info."""
         try:
             # Extract latitude
-            lat_ref = gps_info.get('GPSLatitudeRef', '')
-            lat_data = gps_info.get('GPSLatitude', [])
+            lat_ref = gps_info.get("GPSLatitudeRef", "")
+            lat_data = gps_info.get("GPSLatitude", [])
 
             if lat_data and len(lat_data) >= 3:
                 lat = float(lat_data[0]) + float(lat_data[1])/60 + float(lat_data[2])/3600
-                if lat_ref.upper() == 'S':
+                if lat_ref.upper() == "S":
                     lat = -lat
             else:
                 lat = None
 
             # Extract longitude
-            lon_ref = gps_info.get('GPSLongitudeRef', '')
-            lon_data = gps_info.get('GPSLongitude', [])
+            lon_ref = gps_info.get("GPSLongitudeRef", "")
+            lon_data = gps_info.get("GPSLongitude", [])
 
             if lon_data and len(lon_data) >= 3:
                 lon = float(lon_data[0]) + float(lon_data[1])/60 + float(lon_data[2])/3600
-                if lon_ref.upper() == 'W':
+                if lon_ref.upper() == "W":
                     lon = -lon
             else:
                 lon = None

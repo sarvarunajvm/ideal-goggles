@@ -1,6 +1,5 @@
 """Integration test for text search workflow."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

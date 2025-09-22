@@ -1,11 +1,12 @@
 """Health check endpoint for photo search API."""
 
-from fastapi import APIRouter, HTTPException
-from datetime import datetime
-from typing import Dict, Any
-import psutil
 import os
+from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+import psutil
+from fastapi import APIRouter, HTTPException
 
 from ..db.connection import get_database_manager
 
@@ -13,7 +14,7 @@ router = APIRouter()
 
 
 @router.get("/health")
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> dict[str, Any]:
     """
     Health check endpoint.
 
@@ -50,18 +51,18 @@ async def health_check() -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Health check failed: {str(e)}"
+            detail=f"Health check failed: {e!s}"
         )
 
 
-def _get_system_info() -> Dict[str, Any]:
+def _get_system_info() -> dict[str, Any]:
     """Get system resource information."""
     try:
         # Memory information
         memory = psutil.virtual_memory()
 
         # Disk information
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
 
         # CPU information
         cpu_percent = psutil.cpu_percent(interval=1)
@@ -84,10 +85,10 @@ def _get_system_info() -> Dict[str, Any]:
             "platform": os.name
         }
     except Exception as e:
-        return {"error": f"Could not retrieve system info: {str(e)}"}
+        return {"error": f"Could not retrieve system info: {e!s}"}
 
 
-async def _check_database_health() -> Dict[str, Any]:
+async def _check_database_health() -> dict[str, Any]:
     """Check database connectivity and basic operations."""
     try:
         db_manager = get_database_manager()
@@ -106,20 +107,19 @@ async def _check_database_health() -> Dict[str, Any]:
                 "schema_version": db_info.get("settings", {}).get("schema_version", "unknown"),
                 "tables": db_info.get("table_counts", {})
             }
-        else:
-            return {
-                "healthy": False,
-                "error": "Database query test failed"
-            }
+        return {
+            "healthy": False,
+            "error": "Database query test failed"
+        }
 
     except Exception as e:
         return {
             "healthy": False,
-            "error": f"Database connection failed: {str(e)}"
+            "error": f"Database connection failed: {e!s}"
         }
 
 
-def _check_dependencies() -> Dict[str, Any]:
+def _check_dependencies() -> dict[str, Any]:
     """Check availability of required dependencies."""
     dependencies = {}
 
@@ -166,13 +166,13 @@ def _check_dependencies() -> Dict[str, Any]:
     try:
         import subprocess
         result = subprocess.run(
-            ['tesseract', '--version'],
-            capture_output=True,
+            ["tesseract", "--version"],
+            check=False, capture_output=True,
             text=True,
             timeout=5
         )
         if result.returncode == 0:
-            version = result.stdout.split('\n')[0]
+            version = result.stdout.split("\n")[0]
             dependencies["tesseract"] = {
                 "available": True,
                 "version": version
@@ -238,7 +238,7 @@ def _check_dependencies() -> Dict[str, Any]:
 
 
 @router.get("/health/detailed")
-async def detailed_health_check() -> Dict[str, Any]:
+async def detailed_health_check() -> dict[str, Any]:
     """
     Detailed health check with comprehensive system information.
 
@@ -250,7 +250,7 @@ async def detailed_health_check() -> Dict[str, Any]:
         basic_health = await health_check()
 
         # Add more detailed information
-        detailed_info = {
+        return {
             **basic_health,
             "diagnostics": {
                 "uptime": _get_uptime(),
@@ -259,16 +259,15 @@ async def detailed_health_check() -> Dict[str, Any]:
             }
         }
 
-        return detailed_info
 
     except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Detailed health check failed: {str(e)}"
+            detail=f"Detailed health check failed: {e!s}"
         )
 
 
-def _get_uptime() -> Dict[str, Any]:
+def _get_uptime() -> dict[str, Any]:
     """Get system uptime information."""
     try:
         import time
@@ -282,10 +281,10 @@ def _get_uptime() -> Dict[str, Any]:
             "boot_time": datetime.fromtimestamp(boot_time).isoformat()
         }
     except Exception as e:
-        return {"error": f"Could not get uptime: {str(e)}"}
+        return {"error": f"Could not get uptime: {e!s}"}
 
 
-def _get_environment_info() -> Dict[str, Any]:
+def _get_environment_info() -> dict[str, Any]:
     """Get environment information."""
     return {
         "python_version": os.sys.version,
@@ -298,7 +297,7 @@ def _get_environment_info() -> Dict[str, Any]:
     }
 
 
-async def _get_performance_metrics() -> Dict[str, Any]:
+async def _get_performance_metrics() -> dict[str, Any]:
     """Get performance metrics."""
     try:
         # Database performance test
@@ -319,11 +318,11 @@ async def _get_performance_metrics() -> Dict[str, Any]:
             }
         }
     except Exception as e:
-        return {"error": f"Could not get performance metrics: {str(e)}"}
+        return {"error": f"Could not get performance metrics: {e!s}"}
 
 
 @router.get("/health/ready")
-async def readiness_check() -> Dict[str, Any]:
+async def readiness_check() -> dict[str, Any]:
     """
     Readiness check to determine if service is ready to handle requests.
 
@@ -358,7 +357,7 @@ async def readiness_check() -> Dict[str, Any]:
 
 
 @router.get("/health/live")
-async def liveness_check() -> Dict[str, Any]:
+async def liveness_check() -> dict[str, Any]:
     """
     Liveness check to determine if service is alive.
 

@@ -1,13 +1,14 @@
 """FAISS vector search service for semantic and image similarity search."""
 
 import logging
-import numpy as np
-import pickle
 import os
-from typing import List, Tuple, Dict, Any, Optional
-from pathlib import Path
+import pickle
 import threading
 import time
+from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,10 @@ logger = logging.getLogger(__name__)
 class FAISSVectorSearchService:
     """FAISS-based vector search service for efficient similarity search."""
 
-    def __init__(self, index_path: str = None, dimension: int = 512):
+    def __init__(self, index_path: str | None = None, dimension: int = 512):
         self.dimension = dimension
-        self.index_path = index_path or str(Path.home() / '.photo-search' / 'faiss_index.bin')
-        self.metadata_path = self.index_path.replace('.bin', '_metadata.pkl')
+        self.index_path = index_path or str(Path.home() / ".photo-search" / "faiss_index.bin")
+        self.metadata_path = self.index_path.replace(".bin", "_metadata.pkl")
 
         # FAISS components
         self.index = None
@@ -51,7 +52,8 @@ class FAISSVectorSearchService:
                 logger.info(f"Created new FAISS index (dimension: {self.dimension})")
 
         except ImportError:
-            raise RuntimeError("FAISS not available. Install with: pip install faiss-cpu")
+            msg = "FAISS not available. Install with: pip install faiss-cpu"
+            raise RuntimeError(msg)
 
     def _create_new_index(self):
         """Create a new FAISS index."""
@@ -107,7 +109,7 @@ class FAISSVectorSearchService:
             logger.info(f"Upgraded to IVF index with {nlist} clusters")
 
         except Exception as e:
-            logger.error(f"Failed to upgrade to IVF index: {e}")
+            logger.exception(f"Failed to upgrade to IVF index: {e}")
 
     def add_vector(self, file_id: int, vector: np.ndarray) -> bool:
         """
@@ -154,14 +156,14 @@ class FAISSVectorSearchService:
 
                 # Consider upgrading to IVF if collection is large
                 if (self.index.ntotal > 200000 and
-                    hasattr(self.index, 'ntotal') and
-                    not hasattr(self.index, 'nlist')):
+                    hasattr(self.index, "ntotal") and
+                    not hasattr(self.index, "nlist")):
                     self._upgrade_to_ivf_index()
 
                 return True
 
             except Exception as e:
-                logger.error(f"Failed to add vector for file_id {file_id}: {e}")
+                logger.exception(f"Failed to add vector for file_id {file_id}: {e}")
                 return False
 
     def remove_vector(self, file_id: int) -> bool:
@@ -193,11 +195,11 @@ class FAISSVectorSearchService:
                 return True
 
             except Exception as e:
-                logger.error(f"Failed to remove vector for file_id {file_id}: {e}")
+                logger.exception(f"Failed to remove vector for file_id {file_id}: {e}")
                 return False
 
     def search(self, query_vector: np.ndarray, top_k: int = 50,
-               score_threshold: float = 0.0) -> List[Tuple[int, float]]:
+               score_threshold: float = 0.0) -> list[tuple[int, float]]:
         """
         Search for similar vectors.
 
@@ -232,7 +234,7 @@ class FAISSVectorSearchService:
 
                 # Process results
                 results = []
-                for i, (similarity, index_pos) in enumerate(zip(similarities[0], indices[0])):
+                for _i, (similarity, index_pos) in enumerate(zip(similarities[0], indices[0], strict=False)):
                     if index_pos == -1:  # No more results
                         break
 
@@ -253,10 +255,10 @@ class FAISSVectorSearchService:
                 return results
 
             except Exception as e:
-                logger.error(f"Search failed: {e}")
+                logger.exception(f"Search failed: {e}")
                 return []
 
-    def batch_search(self, query_vectors: np.ndarray, top_k: int = 50) -> List[List[Tuple[int, float]]]:
+    def batch_search(self, query_vectors: np.ndarray, top_k: int = 50) -> list[list[tuple[int, float]]]:
         """
         Batch search for multiple query vectors.
 
@@ -286,7 +288,7 @@ class FAISSVectorSearchService:
                 for query_idx in range(len(query_vectors)):
                     query_results = []
 
-                    for similarity, index_pos in zip(similarities[query_idx], indices[query_idx]):
+                    for similarity, index_pos in zip(similarities[query_idx], indices[query_idx], strict=False):
                         if index_pos == -1:
                             break
 
@@ -304,10 +306,10 @@ class FAISSVectorSearchService:
                 return all_results
 
             except Exception as e:
-                logger.error(f"Batch search failed: {e}")
+                logger.exception(f"Batch search failed: {e}")
                 return [[] for _ in range(len(query_vectors))]
 
-    def get_vector(self, file_id: int) -> Optional[np.ndarray]:
+    def get_vector(self, file_id: int) -> np.ndarray | None:
         """
         Get the stored vector for a file_id.
 
@@ -323,12 +325,11 @@ class FAISSVectorSearchService:
                     return None
 
                 index_pos = self.file_id_to_index[file_id]
-                vector = self.index.reconstruct(index_pos)
+                return self.index.reconstruct(index_pos)
 
-                return vector
 
             except Exception as e:
-                logger.error(f"Failed to get vector for file_id {file_id}: {e}")
+                logger.exception(f"Failed to get vector for file_id {file_id}: {e}")
                 return None
 
     def rebuild_index(self) -> bool:
@@ -400,7 +401,7 @@ class FAISSVectorSearchService:
                 return True
 
             except Exception as e:
-                logger.error(f"Failed to rebuild index: {e}")
+                logger.exception(f"Failed to rebuild index: {e}")
                 return False
 
     def save_index(self) -> bool:
@@ -428,13 +429,13 @@ class FAISSVectorSearchService:
 
             # Save metadata
             metadata = {
-                'id_to_file_id': self.id_to_file_id,
-                'file_id_to_index': self.file_id_to_index,
-                'dimension': self.dimension,
-                'saved_at': time.time()
+                "id_to_file_id": self.id_to_file_id,
+                "file_id_to_index": self.file_id_to_index,
+                "dimension": self.dimension,
+                "saved_at": time.time()
             }
 
-            with open(self.metadata_path, 'wb') as f:
+            with open(self.metadata_path, "wb") as f:
                 pickle.dump(metadata, f)
 
             self._index_dirty = False
@@ -445,7 +446,7 @@ class FAISSVectorSearchService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to save index: {e}")
+            logger.exception(f"Failed to save index: {e}")
             return False
 
     def _load_index(self) -> bool:
@@ -457,14 +458,14 @@ class FAISSVectorSearchService:
             self.index = faiss.read_index(self.index_path)
 
             # Load metadata
-            with open(self.metadata_path, 'rb') as f:
+            with open(self.metadata_path, "rb") as f:
                 metadata = pickle.load(f)
 
-            self.id_to_file_id = metadata['id_to_file_id']
-            self.file_id_to_index = metadata['file_id_to_index']
+            self.id_to_file_id = metadata["id_to_file_id"]
+            self.file_id_to_index = metadata["file_id_to_index"]
 
             # Verify dimension consistency
-            if metadata.get('dimension', self.dimension) != self.dimension:
+            if metadata.get("dimension", self.dimension) != self.dimension:
                 logger.warning(f"Dimension mismatch: expected {self.dimension}, got {metadata.get('dimension')}")
 
             self._index_dirty = False
@@ -473,10 +474,10 @@ class FAISSVectorSearchService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to load index: {e}")
+            logger.exception(f"Failed to load index: {e}")
             return False
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get index statistics."""
         with self._lock:
             total_vectors = self.index.ntotal if self.index else 0
@@ -484,19 +485,19 @@ class FAISSVectorSearchService:
             deleted_vectors = total_vectors - valid_vectors
 
             stats = {
-                'total_vectors': total_vectors,
-                'valid_vectors': valid_vectors,
-                'deleted_vectors': deleted_vectors,
-                'dimension': self.dimension,
-                'index_type': type(self.index).__name__ if self.index else None,
-                'index_dirty': self._index_dirty,
-                'unsaved_additions': self.unsaved_additions
+                "total_vectors": total_vectors,
+                "valid_vectors": valid_vectors,
+                "deleted_vectors": deleted_vectors,
+                "dimension": self.dimension,
+                "index_type": type(self.index).__name__ if self.index else None,
+                "index_dirty": self._index_dirty,
+                "unsaved_additions": self.unsaved_additions
             }
 
             # Add IVF-specific stats if applicable
-            if hasattr(self.index, 'nlist'):
-                stats['nlist'] = self.index.nlist
-                stats['nprobe'] = getattr(self.index, 'nprobe', None)
+            if hasattr(self.index, "nlist"):
+                stats["nlist"] = self.index.nlist
+                stats["nprobe"] = getattr(self.index, "nprobe", None)
 
             return stats
 
@@ -508,7 +509,7 @@ class FAISSVectorSearchService:
 
 
 # Global instance
-_vector_search_service: Optional[FAISSVectorSearchService] = None
+_vector_search_service: FAISSVectorSearchService | None = None
 
 
 def get_vector_search_service() -> FAISSVectorSearchService:
@@ -519,7 +520,7 @@ def get_vector_search_service() -> FAISSVectorSearchService:
     return _vector_search_service
 
 
-def initialize_vector_search_service(index_path: str = None, dimension: int = 512) -> FAISSVectorSearchService:
+def initialize_vector_search_service(index_path: str | None = None, dimension: int = 512) -> FAISSVectorSearchService:
     """Initialize vector search service with custom parameters."""
     global _vector_search_service
     _vector_search_service = FAISSVectorSearchService(index_path, dimension)

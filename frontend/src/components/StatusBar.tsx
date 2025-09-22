@@ -9,7 +9,7 @@ export default function StatusBar() {
     // Check health and index status every 5 seconds
     const checkStatus = async () => {
       try {
-        const [health, index] = await Promise.all([
+        const [, index] = await Promise.all([
           apiService.getHealth(),
           apiService.getIndexStatus(),
         ]);

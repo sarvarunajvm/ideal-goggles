@@ -2,9 +2,9 @@
 
 import logging
 import re
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, date
 import sqlite3
+from datetime import date, datetime
+from typing import Any
 
 from ..db.connection import get_database_manager
 
@@ -20,12 +20,12 @@ class TextSearchService:
     def search_photos(
         self,
         query: str,
-        folders: Optional[List[str]] = None,
-        date_range: Optional[Tuple[date, date]] = None,
-        file_types: Optional[List[str]] = None,
+        folders: list[str] | None = None,
+        date_range: tuple[date, date] | None = None,
+        file_types: list[str] | None = None,
         limit: int = 50,
         offset: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search photos using text query with optional filters.
 
@@ -65,25 +65,25 @@ class TextSearchService:
             total_count = count_result[0][0] if count_result else 0
 
             return {
-                'results': processed_results,
-                'total_count': total_count,
-                'query': query,
-                'processed_query': processed_query,
-                'search_time_ms': round(search_time * 1000, 2),
-                'limit': limit,
-                'offset': offset
+                "results": processed_results,
+                "total_count": total_count,
+                "query": query,
+                "processed_query": processed_query,
+                "search_time_ms": round(search_time * 1000, 2),
+                "limit": limit,
+                "offset": offset
             }
 
         except Exception as e:
-            logger.error(f"Text search failed: {e}")
+            logger.exception(f"Text search failed: {e}")
             return {
-                'results': [],
-                'total_count': 0,
-                'query': query,
-                'error': str(e),
-                'search_time_ms': 0,
-                'limit': limit,
-                'offset': offset
+                "results": [],
+                "total_count": 0,
+                "query": query,
+                "error": str(e),
+                "search_time_ms": 0,
+                "limit": limit,
+                "offset": offset
             }
 
     def _process_search_query(self, query: str) -> str:
@@ -100,7 +100,7 @@ class TextSearchService:
             return ""
 
         # Remove special characters that might break FTS5
-        cleaned = re.sub(r'[^\w\s\-\'".]', ' ', query)
+        cleaned = re.sub(r'[^\w\s\-\'".]', " ", query)
 
         # Split into words and process
         words = cleaned.split()
@@ -118,19 +118,18 @@ class TextSearchService:
                 processed_words.append(word)
 
         # Join with AND operator for FTS5
-        processed_query = " AND ".join(processed_words)
+        return " AND ".join(processed_words)
 
-        return processed_query
 
     def _build_search_query(
         self,
         processed_query: str,
-        folders: Optional[List[str]],
-        date_range: Optional[Tuple[date, date]],
-        file_types: Optional[List[str]],
+        folders: list[str] | None,
+        date_range: tuple[date, date] | None,
+        file_types: list[str] | None,
         limit: int,
         offset: int
-    ) -> Tuple[str, List[Any]]:
+    ) -> tuple[str, list[Any]]:
         """Build the complete search SQL query."""
         params = []
 
@@ -243,10 +242,10 @@ class TextSearchService:
     def _build_count_query(
         self,
         processed_query: str,
-        folders: Optional[List[str]],
-        date_range: Optional[Tuple[date, date]],
-        file_types: Optional[List[str]]
-    ) -> Tuple[str, List[Any]]:
+        folders: list[str] | None,
+        date_range: tuple[date, date] | None,
+        file_types: list[str] | None
+    ) -> tuple[str, list[Any]]:
         """Build count query for pagination."""
         params = []
 
@@ -315,7 +314,7 @@ class TextSearchService:
 
         return full_query, params
 
-    def _process_search_results(self, results: List[sqlite3.Row], original_query: str) -> List[Dict[str, Any]]:
+    def _process_search_results(self, results: list[sqlite3.Row], original_query: str) -> list[dict[str, Any]]:
         """Process raw search results into formatted output."""
         processed_results = []
 
@@ -359,22 +358,22 @@ class TextSearchService:
                 snippet = self._generate_snippet(row[12], original_query)
 
             result_item = {
-                'file_id': row[0],
-                'path': row[1],
-                'folder': row[2],
-                'filename': row[3],
-                'size': row[4],
-                'created_ts': row[5],
-                'modified_ts': row[6],
-                'sha1': row[7],
-                'thumb_path': row[8],
-                'shot_dt': row[9],
-                'camera_make': row[10],
-                'camera_model': row[11],
-                'relevance_score': round(relevance_score, 3),
-                'match_types': match_types,
-                'snippet': snippet,
-                'ocr_confidence': row[13] if row[13] else None
+                "file_id": row[0],
+                "path": row[1],
+                "folder": row[2],
+                "filename": row[3],
+                "size": row[4],
+                "created_ts": row[5],
+                "modified_ts": row[6],
+                "sha1": row[7],
+                "thumb_path": row[8],
+                "shot_dt": row[9],
+                "camera_make": row[10],
+                "camera_model": row[11],
+                "relevance_score": round(relevance_score, 3),
+                "match_types": match_types,
+                "snippet": snippet,
+                "ocr_confidence": row[13] if row[13] else None
             }
 
             processed_results.append(result_item)
@@ -392,13 +391,11 @@ class TextSearchService:
         # Find the first occurrence of any query word
         query_words = query_lower.split()
         best_pos = -1
-        best_word = ""
 
         for word in query_words:
             pos = text_lower.find(word)
             if pos != -1 and (best_pos == -1 or pos < best_pos):
                 best_pos = pos
-                best_word = word
 
         if best_pos == -1:
             # No match found, return beginning of text
@@ -422,7 +419,7 @@ class TextSearchService:
 
         return snippet
 
-    def get_search_suggestions(self, partial_query: str, limit: int = 10) -> List[str]:
+    def get_search_suggestions(self, partial_query: str, limit: int = 10) -> list[str]:
         """
         Get search suggestions based on partial query.
 
@@ -477,10 +474,10 @@ class TextSearchService:
             return suggestions[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get search suggestions: {e}")
+            logger.exception(f"Failed to get search suggestions: {e}")
             return []
 
-    def get_popular_searches(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_popular_searches(self, limit: int = 10) -> list[dict[str, Any]]:
         """
         Get popular search terms based on frequency.
 
@@ -509,9 +506,9 @@ class TextSearchService:
             popular_searches = []
             for row in camera_results:
                 popular_searches.append({
-                    'term': row[0],
-                    'type': 'camera_model',
-                    'count': row[1]
+                    "term": row[0],
+                    "type": "camera_model",
+                    "count": row[1]
                 })
 
             # Get most common file extensions
@@ -527,18 +524,18 @@ class TextSearchService:
 
             for row in ext_results:
                 popular_searches.append({
-                    'term': row[0],
-                    'type': 'file_extension',
-                    'count': row[1]
+                    "term": row[0],
+                    "type": "file_extension",
+                    "count": row[1]
                 })
 
             return popular_searches[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get popular searches: {e}")
+            logger.exception(f"Failed to get popular searches: {e}")
             return []
 
-    def get_search_statistics(self) -> Dict[str, Any]:
+    def get_search_statistics(self) -> dict[str, Any]:
         """Get text search statistics."""
         try:
             # Get total searchable content
@@ -558,23 +555,23 @@ class TextSearchService:
             if results:
                 row = results[0]
                 return {
-                    'total_photos': row[0],
-                    'photos_with_ocr': row[1],
-                    'photos_with_exif': row[2],
-                    'avg_ocr_length': round(row[3], 2) if row[3] else 0,
-                    'ocr_coverage': round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0,
-                    'exif_coverage': round((row[2] / row[0]) * 100, 2) if row[0] > 0 else 0
+                    "total_photos": row[0],
+                    "photos_with_ocr": row[1],
+                    "photos_with_exif": row[2],
+                    "avg_ocr_length": round(row[3], 2) if row[3] else 0,
+                    "ocr_coverage": round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0,
+                    "exif_coverage": round((row[2] / row[0]) * 100, 2) if row[0] > 0 else 0
                 }
 
             return {}
 
         except Exception as e:
-            logger.error(f"Failed to get search statistics: {e}")
+            logger.exception(f"Failed to get search statistics: {e}")
             return {}
 
 
 # Global instance
-_text_search_service: Optional[TextSearchService] = None
+_text_search_service: TextSearchService | None = None
 
 
 def get_text_search_service() -> TextSearchService:

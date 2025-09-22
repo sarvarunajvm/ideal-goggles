@@ -1,16 +1,16 @@
 """EXIF extractor worker for photo metadata extraction."""
 
-import logging
 import asyncio
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
+from typing import Any
 
-from ..models.photo import Photo
+from PIL import Image
+from PIL.ExifTags import GPSTAGS, TAGS
+
 from ..models.exif import EXIFData
+from ..models.photo import Photo
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,13 @@ class EXIFExtractor:
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.stats = {
-            'processed': 0,
-            'successful': 0,
-            'failed': 0,
-            'total_time': 0.0,
+            "processed": 0,
+            "successful": 0,
+            "failed": 0,
+            "total_time": 0.0,
         }
 
-    async def extract_exif(self, photo: Photo) -> Optional[EXIFData]:
+    async def extract_exif(self, photo: Photo) -> EXIFData | None:
         """Extract EXIF data from a photo file."""
         start_time = time.time()
 
@@ -43,23 +43,22 @@ class EXIFExtractor:
 
             if exif_dict:
                 exif_data = EXIFData.from_exif_dict(photo.id, exif_dict)
-                self.stats['successful'] += 1
+                self.stats["successful"] += 1
                 return exif_data
-            else:
-                logger.debug(f"No EXIF data found in {photo.path}")
-                return None
+            logger.debug(f"No EXIF data found in {photo.path}")
+            return None
 
         except Exception as e:
             logger.warning(f"Failed to extract EXIF from {photo.path}: {e}")
-            self.stats['failed'] += 1
+            self.stats["failed"] += 1
             return None
 
         finally:
             processing_time = time.time() - start_time
-            self.stats['processed'] += 1
-            self.stats['total_time'] += processing_time
+            self.stats["processed"] += 1
+            self.stats["total_time"] += processing_time
 
-    def _extract_exif_sync(self, file_path: str) -> Optional[Dict[str, Any]]:
+    def _extract_exif_sync(self, file_path: str) -> dict[str, Any] | None:
         """Synchronously extract EXIF data using PIL."""
         try:
             with Image.open(file_path) as img:
@@ -76,15 +75,15 @@ class EXIFExtractor:
                     decoded_exif[tag_name] = value
 
                 # Handle GPS data specially
-                if 'GPSInfo' in decoded_exif:
-                    gps_data = decoded_exif['GPSInfo']
+                if "GPSInfo" in decoded_exif:
+                    gps_data = decoded_exif["GPSInfo"]
                     decoded_gps = {}
 
                     for gps_tag_id, gps_value in gps_data.items():
                         gps_tag_name = GPSTAGS.get(gps_tag_id, gps_tag_id)
                         decoded_gps[gps_tag_name] = gps_value
 
-                    decoded_exif['GPSInfo'] = decoded_gps
+                    decoded_exif["GPSInfo"] = decoded_gps
 
                 return decoded_exif
 
@@ -92,7 +91,7 @@ class EXIFExtractor:
             logger.debug(f"PIL EXIF extraction failed for {file_path}: {e}")
             return None
 
-    async def extract_batch(self, photos: List[Photo]) -> List[Optional[EXIFData]]:
+    async def extract_batch(self, photos: list[Photo]) -> list[EXIFData | None]:
         """Extract EXIF data from multiple photos concurrently."""
         if not photos:
             return []
@@ -116,28 +115,28 @@ class EXIFExtractor:
 
         return results
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get extraction statistics."""
-        avg_time = (self.stats['total_time'] / self.stats['processed']
-                   if self.stats['processed'] > 0 else 0)
+        avg_time = (self.stats["total_time"] / self.stats["processed"]
+                   if self.stats["processed"] > 0 else 0)
 
         return {
-            'processed': self.stats['processed'],
-            'successful': self.stats['successful'],
-            'failed': self.stats['failed'],
-            'success_rate': (self.stats['successful'] / self.stats['processed']
-                           if self.stats['processed'] > 0 else 0),
-            'average_processing_time': avg_time,
-            'total_processing_time': self.stats['total_time'],
+            "processed": self.stats["processed"],
+            "successful": self.stats["successful"],
+            "failed": self.stats["failed"],
+            "success_rate": (self.stats["successful"] / self.stats["processed"]
+                           if self.stats["processed"] > 0 else 0),
+            "average_processing_time": avg_time,
+            "total_processing_time": self.stats["total_time"],
         }
 
     def reset_statistics(self):
         """Reset extraction statistics."""
         self.stats = {
-            'processed': 0,
-            'successful': 0,
-            'failed': 0,
-            'total_time': 0.0,
+            "processed": 0,
+            "successful": 0,
+            "failed": 0,
+            "total_time": 0.0,
         }
 
     def shutdown(self):
@@ -162,7 +161,7 @@ class AdvancedEXIFExtractor(EXIFExtractor):
             except ImportError:
                 logger.warning("exifread not available, falling back to PIL")
 
-    def _extract_exif_sync(self, file_path: str) -> Optional[Dict[str, Any]]:
+    def _extract_exif_sync(self, file_path: str) -> dict[str, Any] | None:
         """Enhanced EXIF extraction with multiple sources."""
         # Try PIL first
         pil_exif = super()._extract_exif_sync(file_path)
@@ -176,10 +175,10 @@ class AdvancedEXIFExtractor(EXIFExtractor):
 
         return pil_exif
 
-    def _extract_with_exifread(self, file_path: str) -> Optional[Dict[str, Any]]:
+    def _extract_with_exifread(self, file_path: str) -> dict[str, Any] | None:
         """Extract EXIF using exifread library."""
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 tags = self.exifread.process_file(f, details=False)
 
             if not tags:
@@ -191,21 +190,21 @@ class AdvancedEXIFExtractor(EXIFExtractor):
 
             for tag_name, tag_value in tags.items():
                 # Skip thumbnail data
-                if 'thumbnail' in tag_name.lower():
+                if "thumbnail" in tag_name.lower():
                     continue
 
                 # Handle GPS tags separately
-                if tag_name.startswith('GPS'):
-                    gps_key = tag_name.replace('GPS ', '')
+                if tag_name.startswith("GPS"):
+                    gps_key = tag_name.replace("GPS ", "")
                     gps_data[gps_key] = str(tag_value)
                 else:
                     # Convert tag name to PIL-compatible format
-                    clean_tag = tag_name.replace('EXIF ', '').replace('Image ', '')
+                    clean_tag = tag_name.replace("EXIF ", "").replace("Image ", "")
                     decoded_exif[clean_tag] = str(tag_value)
 
             # Add GPS data if present
             if gps_data:
-                decoded_exif['GPSInfo'] = gps_data
+                decoded_exif["GPSInfo"] = gps_data
 
             return decoded_exif
 
@@ -218,16 +217,16 @@ class EXIFValidator:
     """Validator for EXIF data quality and completeness."""
 
     @staticmethod
-    def validate_exif_data(exif_data: EXIFData) -> Dict[str, Any]:
+    def validate_exif_data(exif_data: EXIFData) -> dict[str, Any]:
         """Validate EXIF data and return quality metrics."""
         validation_result = {
-            'is_valid': exif_data.is_valid(),
-            'errors': exif_data.validate(),
-            'completeness_score': 0.0,
-            'quality_score': 0.0,
-            'has_camera_info': exif_data.has_camera_info(),
-            'has_exposure_info': exif_data.has_exposure_info(),
-            'has_location': exif_data.has_location(),
+            "is_valid": exif_data.is_valid(),
+            "errors": exif_data.validate(),
+            "completeness_score": 0.0,
+            "quality_score": 0.0,
+            "has_camera_info": exif_data.has_camera_info(),
+            "has_exposure_info": exif_data.has_exposure_info(),
+            "has_location": exif_data.has_location(),
         }
 
         # Calculate completeness score (0-1)
@@ -246,7 +245,7 @@ class EXIFValidator:
             1 if exif_data.orientation else 0,
         ])
 
-        validation_result['completeness_score'] = filled_fields / total_fields
+        validation_result["completeness_score"] = filled_fields / total_fields
 
         # Calculate quality score based on usefulness for photography
         quality_score = 0.0
@@ -259,12 +258,12 @@ class EXIFValidator:
         if exif_data.has_location():
             quality_score += 0.2  # GPS location is valuable
 
-        validation_result['quality_score'] = quality_score
+        validation_result["quality_score"] = quality_score
 
         return validation_result
 
     @staticmethod
-    def suggest_improvements(exif_data: EXIFData) -> List[str]:
+    def suggest_improvements(exif_data: EXIFData) -> list[str]:
         """Suggest improvements for EXIF data quality."""
         suggestions = []
 
@@ -292,13 +291,13 @@ class EXIFExtractionPipeline:
         self.validate_results = validate_results
 
         self.pipeline_stats = {
-            'total_processed': 0,
-            'extraction_successful': 0,
-            'validation_passed': 0,
-            'high_quality_results': 0,
+            "total_processed": 0,
+            "extraction_successful": 0,
+            "validation_passed": 0,
+            "high_quality_results": 0,
         }
 
-    async def process_photos(self, photos: List[Photo]) -> List[Dict[str, Any]]:
+    async def process_photos(self, photos: list[Photo]) -> list[dict[str, Any]]:
         """Process photos through the complete EXIF pipeline."""
         logger.info(f"Starting EXIF pipeline for {len(photos)} photos")
 
@@ -307,30 +306,30 @@ class EXIFExtractionPipeline:
         # Extract EXIF data
         exif_results = await self.extractor.extract_batch(photos)
 
-        for photo, exif_data in zip(photos, exif_results):
+        for photo, exif_data in zip(photos, exif_results, strict=False):
             result = {
-                'photo_id': photo.id,
-                'photo_path': photo.path,
-                'exif_data': exif_data,
-                'extraction_successful': exif_data is not None,
-                'validation_result': None,
+                "photo_id": photo.id,
+                "photo_path": photo.path,
+                "exif_data": exif_data,
+                "extraction_successful": exif_data is not None,
+                "validation_result": None,
             }
 
-            self.pipeline_stats['total_processed'] += 1
+            self.pipeline_stats["total_processed"] += 1
 
             if exif_data:
-                self.pipeline_stats['extraction_successful'] += 1
+                self.pipeline_stats["extraction_successful"] += 1
 
                 # Validate if requested
                 if self.validate_results and self.validator:
                     validation_result = self.validator.validate_exif_data(exif_data)
-                    result['validation_result'] = validation_result
+                    result["validation_result"] = validation_result
 
-                    if validation_result['is_valid']:
-                        self.pipeline_stats['validation_passed'] += 1
+                    if validation_result["is_valid"]:
+                        self.pipeline_stats["validation_passed"] += 1
 
-                    if validation_result['quality_score'] >= 0.7:
-                        self.pipeline_stats['high_quality_results'] += 1
+                    if validation_result["quality_score"] >= 0.7:
+                        self.pipeline_stats["high_quality_results"] += 1
 
             results.append(result)
 
@@ -338,20 +337,20 @@ class EXIFExtractionPipeline:
 
         return results
 
-    def get_pipeline_statistics(self) -> Dict[str, Any]:
+    def get_pipeline_statistics(self) -> dict[str, Any]:
         """Get pipeline processing statistics."""
         stats = self.pipeline_stats.copy()
         stats.update(self.extractor.get_statistics())
 
-        if stats['total_processed'] > 0:
-            stats['extraction_success_rate'] = (
-                stats['extraction_successful'] / stats['total_processed']
+        if stats["total_processed"] > 0:
+            stats["extraction_success_rate"] = (
+                stats["extraction_successful"] / stats["total_processed"]
             )
-            stats['validation_success_rate'] = (
-                stats['validation_passed'] / stats['total_processed']
+            stats["validation_success_rate"] = (
+                stats["validation_passed"] / stats["total_processed"]
             )
-            stats['high_quality_rate'] = (
-                stats['high_quality_results'] / stats['total_processed']
+            stats["high_quality_rate"] = (
+                stats["high_quality_results"] / stats["total_processed"]
             )
 
         return stats
@@ -360,10 +359,10 @@ class EXIFExtractionPipeline:
         """Reset all pipeline statistics."""
         self.extractor.reset_statistics()
         self.pipeline_stats = {
-            'total_processed': 0,
-            'extraction_successful': 0,
-            'validation_passed': 0,
-            'high_quality_results': 0,
+            "total_processed": 0,
+            "extraction_successful": 0,
+            "validation_passed": 0,
+            "high_quality_results": 0,
         }
 
     def shutdown(self):

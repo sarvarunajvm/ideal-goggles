@@ -1,10 +1,11 @@
 """Configuration endpoints for photo search API."""
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field, validator
 
 from ..db.connection import get_database_manager
 
@@ -13,47 +14,51 @@ router = APIRouter()
 
 class ConfigurationResponse(BaseModel):
     """Configuration response model."""
-    roots: List[str] = Field(description="Configured root folders")
-    ocr_languages: List[str] = Field(description="Enabled OCR languages")
+    roots: list[str] = Field(description="Configured root folders")
+    ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
     index_version: str = Field(description="Current index version")
 
 
 class UpdateRootsRequest(BaseModel):
     """Request model for updating root folders."""
-    roots: List[str] = Field(description="Array of root folder paths")
+    roots: list[str] = Field(description="Array of root folder paths")
 
-    @validator('roots')
-    def validate_roots(cls, v):
+    @validator("roots")
+    def validate_roots(self, v):
         """Validate root folder paths."""
         if not v:
-            raise ValueError("At least one root folder is required")
+            msg = "At least one root folder is required"
+            raise ValueError(msg)
 
         for root_path in v:
             path = Path(root_path)
             if not path.exists():
-                raise ValueError(f"Path does not exist: {root_path}")
+                msg = f"Path does not exist: {root_path}"
+                raise ValueError(msg)
             if not path.is_dir():
-                raise ValueError(f"Path is not a directory: {root_path}")
+                msg = f"Path is not a directory: {root_path}"
+                raise ValueError(msg)
 
         return v
 
 
 class UpdateConfigRequest(BaseModel):
     """Request model for updating configuration."""
-    ocr_languages: Optional[List[str]] = Field(None, description="OCR languages to enable")
-    face_search_enabled: Optional[bool] = Field(None, description="Enable/disable face search")
-    thumbnail_size: Optional[int] = Field(None, ge=128, le=1024, description="Thumbnail size")
-    thumbnail_quality: Optional[int] = Field(None, ge=50, le=100, description="Thumbnail quality")
+    ocr_languages: list[str] | None = Field(None, description="OCR languages to enable")
+    face_search_enabled: bool | None = Field(None, description="Enable/disable face search")
+    thumbnail_size: int | None = Field(None, ge=128, le=1024, description="Thumbnail size")
+    thumbnail_quality: int | None = Field(None, ge=50, le=100, description="Thumbnail quality")
 
-    @validator('ocr_languages')
-    def validate_ocr_languages(cls, v):
+    @validator("ocr_languages")
+    def validate_ocr_languages(self, v):
         """Validate OCR language codes."""
         if v is not None:
-            valid_languages = ['eng', 'fra', 'deu', 'spa', 'ita', 'por', 'rus', 'chi_sim', 'chi_tra', 'jpn', 'kor']
+            valid_languages = ["eng", "fra", "deu", "spa", "ita", "por", "rus", "chi_sim", "chi_tra", "jpn", "kor"]
             for lang in v:
                 if lang not in valid_languages:
-                    raise ValueError(f"Unsupported OCR language: {lang}")
+                    msg = f"Unsupported OCR language: {lang}"
+                    raise ValueError(msg)
         return v
 
 
@@ -81,12 +86,12 @@ async def get_configuration() -> ConfigurationResponse:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve configuration: {str(e)}"
+            detail=f"Failed to retrieve configuration: {e!s}"
         )
 
 
 @router.post("/config/roots")
-async def update_root_folders(request: UpdateRootsRequest) -> Dict[str, Any]:
+async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
     """
     Update root folders for indexing.
 
@@ -127,12 +132,12 @@ async def update_root_folders(request: UpdateRootsRequest) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update root folders: {str(e)}"
+            detail=f"Failed to update root folders: {e!s}"
         )
 
 
 @router.put("/config")
-async def update_configuration(request: UpdateConfigRequest) -> Dict[str, Any]:
+async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
     """
     Update system configuration.
 
@@ -190,12 +195,12 @@ async def update_configuration(request: UpdateConfigRequest) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update configuration: {str(e)}"
+            detail=f"Failed to update configuration: {e!s}"
         )
 
 
 @router.get("/config/defaults")
-async def get_default_configuration() -> Dict[str, Any]:
+async def get_default_configuration() -> dict[str, Any]:
     """
     Get default configuration values.
 
@@ -220,7 +225,7 @@ async def get_default_configuration() -> Dict[str, Any]:
 
 
 @router.delete("/config/roots/{root_index}")
-async def remove_root_folder(root_index: int) -> Dict[str, Any]:
+async def remove_root_folder(root_index: int) -> dict[str, Any]:
     """
     Remove a root folder by index.
 
@@ -263,12 +268,12 @@ async def remove_root_folder(root_index: int) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to remove root folder: {str(e)}"
+            detail=f"Failed to remove root folder: {e!s}"
         )
 
 
 @router.post("/config/reset")
-async def reset_configuration() -> Dict[str, Any]:
+async def reset_configuration() -> dict[str, Any]:
     """
     Reset configuration to defaults.
 
@@ -304,11 +309,11 @@ async def reset_configuration() -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset configuration: {str(e)}"
+            detail=f"Failed to reset configuration: {e!s}"
         )
 
 
-def _get_config_from_db(db_manager) -> Dict[str, Any]:
+def _get_config_from_db(db_manager) -> dict[str, Any]:
     """Get configuration settings from database."""
     try:
         # Query all settings
@@ -362,7 +367,7 @@ def _get_config_from_db(db_manager) -> Dict[str, Any]:
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to get configuration from database: {e}")
+        logger.exception(f"Failed to get configuration from database: {e}")
 
         # Return defaults on error
         return {

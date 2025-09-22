@@ -1,6 +1,5 @@
 """Contract test for POST /people endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

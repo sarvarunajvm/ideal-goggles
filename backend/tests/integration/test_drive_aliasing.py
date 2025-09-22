@@ -1,6 +1,5 @@
 """Integration test for drive aliasing and path resolution."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -32,10 +31,8 @@ class TestDriveAliasingWorkflow:
         """Test drive alias configuration for stable path resolution."""
         # This will test the drive aliasing functionality
         # to ensure photos remain accessible when drive letters change
-        pass
 
     def test_offline_drive_handling(self, client: TestClient) -> None:
         """Test graceful handling of disconnected drives."""
         # From quickstart.md edge case: "What if storage drives are disconnected?"
         # Should show offline status indicators, continue with available photos
-        pass

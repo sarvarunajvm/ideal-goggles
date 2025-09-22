@@ -1,9 +1,9 @@
 """OCR text model for photo search system."""
 
-from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
-from datetime import datetime
 import re
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -14,30 +14,30 @@ class OCRResult:
     text: str
     language: str = "eng"
     confidence: float = 0.0
-    processed_at: Optional[float] = None
+    processed_at: float | None = None
 
     @classmethod
-    def from_tesseract_result(cls, file_id: int, tesseract_data: Dict[str, Any], language: str = "eng") -> "OCRResult":
+    def from_tesseract_result(cls, file_id: int, tesseract_data: dict[str, Any], language: str = "eng") -> "OCRResult":
         """Create OCRResult from Tesseract OCR output."""
         # Extract text and confidence from tesseract data
         text_parts = []
         confidences = []
 
-        if 'text' in tesseract_data:
+        if "text" in tesseract_data:
             # Simple text extraction
-            text = str(tesseract_data['text']).strip()
-            confidence = tesseract_data.get('conf', 0)
+            text = str(tesseract_data["text"]).strip()
+            confidence = tesseract_data.get("conf", 0)
         else:
             # Detailed data with word-level information
-            for i, word_text in enumerate(tesseract_data.get('text', [])):
-                word_conf = tesseract_data.get('conf', [0])[i] if i < len(tesseract_data.get('conf', [])) else 0
+            for i, word_text in enumerate(tesseract_data.get("text", [])):
+                word_conf = tesseract_data.get("conf", [0])[i] if i < len(tesseract_data.get("conf", [])) else 0
 
                 # Skip empty or low-confidence words
                 if word_text.strip() and word_conf > 30:
                     text_parts.append(word_text.strip())
                     confidences.append(word_conf)
 
-            text = ' '.join(text_parts)
+            text = " ".join(text_parts)
             confidence = sum(confidences) / len(confidences) if confidences else 0
 
         # Clean up the text
@@ -55,24 +55,24 @@ class OCRResult:
     def from_db_row(cls, row) -> "OCRResult":
         """Create OCRResult from database row."""
         return cls(
-            file_id=row['file_id'],
-            text=row['text'],
-            language=row['language'],
-            confidence=row['confidence'],
-            processed_at=row['processed_at'],
+            file_id=row["file_id"],
+            text=row["text"],
+            language=row["language"],
+            confidence=row["confidence"],
+            processed_at=row["processed_at"],
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'file_id': self.file_id,
-            'text': self.text,
-            'language': self.language,
-            'confidence': self.confidence,
-            'processed_at': self.processed_at,
+            "file_id": self.file_id,
+            "text": self.text,
+            "language": self.language,
+            "confidence": self.confidence,
+            "processed_at": self.processed_at,
         }
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate OCR data and return list of errors."""
         errors = []
 
@@ -85,7 +85,7 @@ class OCRResult:
         if not (0.0 <= self.confidence <= 1.0):
             errors.append("Confidence must be between 0.0 and 1.0")
 
-        if self.language and not re.match(r'^[a-z]{2,3}$', self.language):
+        if self.language and not re.match(r"^[a-z]{2,3}$", self.language):
             errors.append("Language must be a valid language code")
 
         return errors
@@ -114,21 +114,20 @@ class OCRResult:
         """Get confidence grade as letter."""
         if self.confidence >= 0.9:
             return "A"
-        elif self.confidence >= 0.7:
+        if self.confidence >= 0.7:
             return "B"
-        elif self.confidence >= 0.5:
+        if self.confidence >= 0.5:
             return "C"
-        elif self.confidence >= 0.3:
+        if self.confidence >= 0.3:
             return "D"
-        else:
-            return "F"
+        return "F"
 
-    def extract_keywords(self, min_length: int = 3) -> List[str]:
+    def extract_keywords(self, min_length: int = 3) -> list[str]:
         """Extract keywords from OCR text."""
         text = self.get_cleaned_text().lower()
 
         # Split into words and filter
-        words = re.findall(r'\b[a-zA-Z]+\b', text)
+        words = re.findall(r"\b[a-zA-Z]+\b", text)
         keywords = [word for word in words if len(word) >= min_length]
 
         # Remove duplicates while preserving order
@@ -141,16 +140,16 @@ class OCRResult:
 
         return unique_keywords
 
-    def find_dates(self) -> List[str]:
+    def find_dates(self) -> list[str]:
         """Extract date patterns from OCR text."""
         text = self.get_cleaned_text()
 
         # Common date patterns
         date_patterns = [
-            r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b',  # MM/DD/YYYY or DD/MM/YYYY
-            r'\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b',    # YYYY/MM/DD
-            r'\b\w+\s+\d{1,2},?\s+\d{4}\b',       # Month DD, YYYY
-            r'\b\d{1,2}\s+\w+\s+\d{4}\b',         # DD Month YYYY
+            r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b",  # MM/DD/YYYY or DD/MM/YYYY
+            r"\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b",    # YYYY/MM/DD
+            r"\b\w+\s+\d{1,2},?\s+\d{4}\b",       # Month DD, YYYY
+            r"\b\d{1,2}\s+\w+\s+\d{4}\b",         # DD Month YYYY
         ]
 
         dates = []
@@ -160,16 +159,16 @@ class OCRResult:
 
         return list(set(dates))  # Remove duplicates
 
-    def find_numbers(self) -> List[str]:
+    def find_numbers(self) -> list[str]:
         """Extract number patterns from OCR text."""
         text = self.get_cleaned_text()
 
         # Find various number patterns
         patterns = [
-            r'\b\d+\b',           # Simple numbers
-            r'\b\d+\.\d+\b',      # Decimal numbers
-            r'\b\d+,\d+\b',       # Numbers with commas
-            r'\b\d+[-]\d+\b',     # Number ranges
+            r"\b\d+\b",           # Simple numbers
+            r"\b\d+\.\d+\b",      # Decimal numbers
+            r"\b\d+,\d+\b",       # Numbers with commas
+            r"\b\d+[-]\d+\b",     # Number ranges
         ]
 
         numbers = []
@@ -216,17 +215,17 @@ class OCRResult:
             return ""
 
         # Remove excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         # Remove common OCR artifacts
-        text = re.sub(r'[^\w\s\-.,!?;:\'"()[\]{}]', '', text)
+        text = re.sub(r'[^\w\s\-.,!?;:\'"()[\]{}]', "", text)
 
         # Remove isolated single characters (likely OCR errors)
-        text = re.sub(r'\b[a-zA-Z]\b', '', text)
+        text = re.sub(r"\b[a-zA-Z]\b", "", text)
 
         # Clean up multiple punctuation
-        text = re.sub(r'[.]{2,}', '...', text)
-        text = re.sub(r'[,]{2,}', ',', text)
+        text = re.sub(r"[.]{2,}", "...", text)
+        text = re.sub(r"[,]{2,}", ",", text)
 
         # Normalize quotes
         text = re.sub(r'[""''`]', '"', text)
@@ -283,12 +282,12 @@ class OCRStats:
     def to_dict(self) -> dict:
         """Convert statistics to dictionary."""
         return {
-            'total_files': self.total_files,
-            'processed_files': self.processed_files,
-            'failed_files': self.failed_files,
-            'average_confidence': round(self.get_average_confidence(), 3),
-            'average_words_per_file': round(self.get_average_words_per_file(), 1),
-            'success_rate': round(self.get_success_rate(), 3),
-            'languages': self.languages,
-            'total_words': self.total_words,
+            "total_files": self.total_files,
+            "processed_files": self.processed_files,
+            "failed_files": self.failed_files,
+            "average_confidence": round(self.get_average_confidence(), 3),
+            "average_words_per_file": round(self.get_average_words_per_file(), 1),
+            "success_rate": round(self.get_success_rate(), 3),
+            "languages": self.languages,
+            "total_words": self.total_words,
         }

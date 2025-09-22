@@ -1,6 +1,5 @@
 """Contract test for GET /index/status endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

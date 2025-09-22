@@ -1,11 +1,10 @@
 """Database connection and session management for photo search system."""
 
-import sqlite3
 import logging
-from pathlib import Path
-from typing import Optional, Generator
+import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
-import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +12,13 @@ logger = logging.getLogger(__name__)
 class DatabaseManager:
     """Manages SQLite database connections and migrations."""
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str | None = None):
         """Initialize database manager with optional custom path."""
         if db_path is None:
             # Default to user data directory
-            data_dir = Path.home() / '.photo-search'
+            data_dir = Path.home() / ".photo-search"
             data_dir.mkdir(exist_ok=True)
-            db_path = data_dir / 'photos.db'
+            db_path = data_dir / "photos.db"
 
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -55,11 +54,11 @@ class DatabaseManager:
 
     def _get_latest_migration_version(self) -> int:
         """Get the latest migration version available."""
-        migrations_dir = Path(__file__).parent / 'migrations'
+        migrations_dir = Path(__file__).parent / "migrations"
         if not migrations_dir.exists():
             return 1
 
-        migration_files = list(migrations_dir.glob('*.sql'))
+        migration_files = list(migrations_dir.glob("*.sql"))
         if not migration_files:
             return 1
 
@@ -67,7 +66,7 @@ class DatabaseManager:
         versions = []
         for file in migration_files:
             try:
-                version = int(file.stem.split('_')[0])
+                version = int(file.stem.split("_")[0])
                 versions.append(version)
             except (ValueError, IndexError):
                 continue
@@ -76,7 +75,7 @@ class DatabaseManager:
 
     def _run_migrations(self, from_version: int = 0):
         """Run database migrations from specified version."""
-        migrations_dir = Path(__file__).parent / 'migrations'
+        migrations_dir = Path(__file__).parent / "migrations"
 
         if not migrations_dir.exists():
             logger.error(f"Migrations directory not found: {migrations_dir}")
@@ -84,9 +83,9 @@ class DatabaseManager:
 
         # Find and sort migration files
         migration_files = []
-        for file in migrations_dir.glob('*.sql'):
+        for file in migrations_dir.glob("*.sql"):
             try:
-                version = int(file.stem.split('_')[0])
+                version = int(file.stem.split("_")[0])
                 if version > from_version:
                     migration_files.append((version, file))
             except (ValueError, IndexError):
@@ -99,7 +98,7 @@ class DatabaseManager:
             for version, file_path in migration_files:
                 logger.info(f"Running migration {version}: {file_path.name}")
                 try:
-                    with open(file_path, 'r') as f:
+                    with open(file_path) as f:
                         migration_sql = f.read()
 
                     # Execute migration
@@ -108,13 +107,13 @@ class DatabaseManager:
                     # Update schema version
                     conn.execute(
                         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                        ('schema_version', str(version))
+                        ("schema_version", str(version))
                     )
 
                     logger.info(f"Migration {version} completed successfully")
 
                 except Exception as e:
-                    logger.error(f"Migration {version} failed: {e}")
+                    logger.exception(f"Migration {version} failed: {e}")
                     raise
 
     def get_connection(self) -> sqlite3.Connection:
@@ -215,7 +214,7 @@ class DatabaseManager:
 
             # Get table counts
             tables = {}
-            for table in ['photos', 'exif', 'embeddings', 'people', 'faces', 'thumbnails']:
+            for table in ["photos", "exif", "embeddings", "people", "faces", "thumbnails"]:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
                     tables[table] = cursor.fetchone()[0]
@@ -231,19 +230,19 @@ class DatabaseManager:
                 pass
 
             return {
-                'database_path': str(self.db_path),
-                'database_size_bytes': db_size,
-                'database_size_mb': round(db_size / (1024 * 1024), 2),
-                'table_counts': tables,
-                'settings': settings
+                "database_path": str(self.db_path),
+                "database_size_bytes": db_size,
+                "database_size_mb": round(db_size / (1024 * 1024), 2),
+                "table_counts": tables,
+                "settings": settings
             }
 
 
 # Global database manager instance
-_db_manager: Optional[DatabaseManager] = None
+_db_manager: DatabaseManager | None = None
 
 
-def get_database_manager(db_path: str = None) -> DatabaseManager:
+def get_database_manager(db_path: str | None = None) -> DatabaseManager:
     """Get or create the global database manager instance."""
     global _db_manager
     if _db_manager is None:
@@ -251,7 +250,7 @@ def get_database_manager(db_path: str = None) -> DatabaseManager:
     return _db_manager
 
 
-def init_database(db_path: str = None) -> DatabaseManager:
+def init_database(db_path: str | None = None) -> DatabaseManager:
     """Initialize database with custom path."""
     global _db_manager
     _db_manager = DatabaseManager(db_path)

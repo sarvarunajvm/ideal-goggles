@@ -1,8 +1,8 @@
 """Integration test for reverse image search workflow."""
 
-import pytest
-from fastapi.testclient import TestClient
 from io import BytesIO
+
+from fastapi.testclient import TestClient
 
 
 class TestReverseImageSearchWorkflow:

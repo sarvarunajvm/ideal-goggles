@@ -1,6 +1,5 @@
 """Contract test for DELETE /people/{id} endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

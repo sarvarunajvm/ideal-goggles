@@ -1,11 +1,12 @@
 """Indexing control endpoints for photo search API."""
 
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 import asyncio
 import logging
+from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from pydantic import BaseModel, Field
 
 from ..db.connection import get_database_manager
 
@@ -16,10 +17,10 @@ logger = logging.getLogger(__name__)
 class IndexStatus(BaseModel):
     """Index status model."""
     status: str = Field(description="Current indexing status")
-    progress: Dict[str, Any] = Field(description="Progress information")
-    errors: List[str] = Field(description="List of errors encountered")
-    started_at: Optional[datetime] = Field(description="Indexing start time")
-    estimated_completion: Optional[datetime] = Field(description="Estimated completion time")
+    progress: dict[str, Any] = Field(description="Progress information")
+    errors: list[str] = Field(description="List of errors encountered")
+    started_at: datetime | None = Field(description="Indexing start time")
+    estimated_completion: datetime | None = Field(description="Estimated completion time")
 
 
 class StartIndexRequest(BaseModel):
@@ -46,7 +47,7 @@ _indexing_state = {
 async def start_indexing(
     request: StartIndexRequest,
     background_tasks: BackgroundTasks
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Start indexing process.
 
@@ -98,7 +99,7 @@ async def start_indexing(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start indexing: {str(e)}"
+            detail=f"Failed to start indexing: {e!s}"
         )
 
 
@@ -120,7 +121,7 @@ async def get_indexing_status() -> IndexStatus:
 
 
 @router.post("/index/stop")
-async def stop_indexing() -> Dict[str, Any]:
+async def stop_indexing() -> dict[str, Any]:
     """
     Stop current indexing process.
 
@@ -152,12 +153,12 @@ async def stop_indexing() -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to stop indexing: {str(e)}"
+            detail=f"Failed to stop indexing: {e!s}"
         )
 
 
 @router.get("/index/stats")
-async def get_indexing_statistics() -> Dict[str, Any]:
+async def get_indexing_statistics() -> dict[str, Any]:
     """
     Get indexing statistics.
 
@@ -171,7 +172,7 @@ async def get_indexing_statistics() -> Dict[str, Any]:
         db_info = db_manager.get_database_info()
 
         # Get processing statistics
-        stats = {
+        return {
             "database": {
                 "total_photos": db_info.get("table_counts", {}).get("photos", 0),
                 "indexed_photos": _get_indexed_photo_count(db_manager),
@@ -194,12 +195,11 @@ async def get_indexing_statistics() -> Dict[str, Any]:
             }
         }
 
-        return stats
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get indexing statistics: {str(e)}"
+            detail=f"Failed to get indexing statistics: {e!s}"
         )
 
 
@@ -212,11 +212,11 @@ async def _run_indexing_process(full_reindex: bool):
 
         # Import workers
         from ..workers.crawler import FileCrawler
-        from ..workers.exif_extractor import EXIFExtractionPipeline
-        from ..workers.ocr_worker import SmartOCRWorker
         from ..workers.embedding_worker import OptimizedCLIPWorker
-        from ..workers.thumbnail_worker import SmartThumbnailGenerator
+        from ..workers.exif_extractor import EXIFExtractionPipeline
         from ..workers.face_worker import FaceDetectionWorker
+        from ..workers.ocr_worker import SmartOCRWorker
+        from ..workers.thumbnail_worker import SmartThumbnailGenerator
 
         # Get configuration
         db_manager = get_database_manager()
@@ -271,7 +271,7 @@ async def _run_indexing_process(full_reindex: bool):
         logger.info("Phase 5: Thumbnail generation")
 
         thumbnail_generator = SmartThumbnailGenerator(
-            cache_root=str(Path.home() / '.photo-search' / 'thumbnails')
+            cache_root=str(Path.home() / ".photo-search" / "thumbnails")
         )
         await thumbnail_generator.generate_batch(photos_to_process)
 
@@ -299,10 +299,10 @@ async def _run_indexing_process(full_reindex: bool):
     except Exception as e:
         _indexing_state["status"] = "error"
         _indexing_state["errors"].append(str(e))
-        logger.error(f"Indexing process failed: {e}")
+        logger.exception(f"Indexing process failed: {e}")
 
 
-def _get_config_from_db(db_manager) -> Dict[str, Any]:
+def _get_config_from_db(db_manager) -> dict[str, Any]:
     """Get configuration from database."""
     try:
         settings_query = "SELECT key, value FROM settings"
@@ -340,7 +340,7 @@ def _get_config_from_db(db_manager) -> Dict[str, Any]:
         }
 
 
-def _get_photos_for_processing(db_manager, full_reindex: bool) -> List:
+def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:
     """Get photos that need processing."""
     # This is a simplified implementation
     # In a real system, you'd return actual Photo objects

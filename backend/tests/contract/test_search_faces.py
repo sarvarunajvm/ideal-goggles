@@ -1,6 +1,5 @@
 """Contract test for POST /search/faces endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

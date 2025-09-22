@@ -1,8 +1,9 @@
 """Pytest configuration and shared fixtures."""
 
+from unittest.mock import Mock
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock
 
 # Note: These fixtures use mocks since implementation doesn't exist yet
 # They will be updated to use real implementations once T026-T047 are complete
@@ -12,7 +13,7 @@ from unittest.mock import Mock
 def client() -> TestClient:
     """Create a test client for the FastAPI application."""
     # Mock client since main app doesn't have endpoints implemented yet
-    mock_app = Mock()
+    Mock()
     mock_client = Mock(spec=TestClient)
 
     # Configure mock responses for contract tests to FAIL

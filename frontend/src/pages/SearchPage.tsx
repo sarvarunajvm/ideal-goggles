@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { apiService, SearchResult, SearchResponse } from '../services/api';
+import { useState } from 'react';
+import { apiService, SearchResponse } from '../services/api';
 import SearchBar from '../components/SearchBar';
 import SearchResults from '../components/SearchResults';
 import SearchFilters from '../components/SearchFilters';

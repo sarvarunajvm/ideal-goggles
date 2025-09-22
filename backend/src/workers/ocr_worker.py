@@ -1,17 +1,18 @@
 """OCR worker with Tesseract integration for text extraction from images."""
 
-import logging
 import asyncio
+import contextlib
+import logging
 import os
-import time
-from typing import Optional, List, Dict, Any, Set
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
-import tempfile
 import subprocess
+import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any
 
-from ..models.photo import Photo
 from ..models.ocr import OCRResult, OCRStats
+from ..models.photo import Photo
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,10 @@ logger = logging.getLogger(__name__)
 class TesseractOCRWorker:
     """OCR worker using Tesseract for text extraction."""
 
-    def __init__(self, max_workers: int = 2, languages: List[str] = None):
+    def __init__(self, max_workers: int = 2, languages: list[str] | None = None):
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.languages = languages or ['eng']
+        self.languages = languages or ["eng"]
         self.stats = OCRStats()
 
         # Validate Tesseract installation
@@ -33,27 +34,28 @@ class TesseractOCRWorker:
         try:
             # Check if tesseract is available
             result = subprocess.run(
-                ['tesseract', '--version'],
-                capture_output=True,
+                ["tesseract", "--version"],
+                check=False, capture_output=True,
                 text=True,
                 timeout=10
             )
 
             if result.returncode != 0:
-                raise RuntimeError("Tesseract not found or not working")
+                msg = "Tesseract not found or not working"
+                raise RuntimeError(msg)
 
             logger.info(f"Tesseract version: {result.stdout.split()[1]}")
 
             # Check available languages
             lang_result = subprocess.run(
-                ['tesseract', '--list-langs'],
-                capture_output=True,
+                ["tesseract", "--list-langs"],
+                check=False, capture_output=True,
                 text=True,
                 timeout=10
             )
 
             if lang_result.returncode == 0:
-                available_langs = set(lang_result.stdout.strip().split('\n')[1:])
+                available_langs = set(lang_result.stdout.strip().split("\n")[1:])
                 requested_langs = set(self.languages)
 
                 missing_langs = requested_langs - available_langs
@@ -65,9 +67,10 @@ class TesseractOCRWorker:
                 logger.info(f"Using Tesseract languages: {self.languages}")
 
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError) as e:
-            raise RuntimeError(f"Tesseract validation failed: {e}")
+            msg = f"Tesseract validation failed: {e}"
+            raise RuntimeError(msg)
 
-    async def extract_text(self, photo: Photo, language: str = None) -> Optional[OCRResult]:
+    async def extract_text(self, photo: Photo, language: str | None = None) -> OCRResult | None:
         """Extract text from a photo using Tesseract OCR."""
         start_time = time.time()
 
@@ -84,22 +87,21 @@ class TesseractOCRWorker:
                 ocr_language
             )
 
-            processing_time = time.time() - start_time
+            time.time() - start_time
 
             if ocr_result:
                 self.stats.add_result(ocr_result, success=True)
                 logger.debug(f"OCR extracted {ocr_result.get_word_count()} words from {photo.path}")
                 return ocr_result
-            else:
-                self.stats.add_result(None, success=False)
-                return None
+            self.stats.add_result(None, success=False)
+            return None
 
         except Exception as e:
             logger.warning(f"OCR failed for {photo.path}: {e}")
             self.stats.add_result(None, success=False)
             return None
 
-    def _extract_text_sync(self, file_path: str, language: str) -> Optional[OCRResult]:
+    def _extract_text_sync(self, file_path: str, language: str) -> OCRResult | None:
         """Synchronously extract text using Tesseract."""
         try:
             # For safety, create a copy of the image in temp directory
@@ -113,18 +115,18 @@ class TesseractOCRWorker:
 
                 # Run Tesseract with detailed output
                 cmd = [
-                    'tesseract',
+                    "tesseract",
                     temp_path,
-                    'stdout',
-                    '-l', language,
-                    '--psm', '3',  # Fully automatic page segmentation
-                    '--oem', '3',  # Default OCR Engine Mode
-                    '-c', 'tessedit_create_tsv=1'  # Create TSV output for confidence scores
+                    "stdout",
+                    "-l", language,
+                    "--psm", "3",  # Fully automatic page segmentation
+                    "--oem", "3",  # Default OCR Engine Mode
+                    "-c", "tessedit_create_tsv=1"  # Create TSV output for confidence scores
                 ]
 
                 result = subprocess.run(
                     cmd,
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=30  # 30 second timeout
                 )
@@ -134,7 +136,7 @@ class TesseractOCRWorker:
                     return None
 
                 # Parse TSV output for confidence scores
-                tsv_lines = result.stdout.strip().split('\n')
+                tsv_lines = result.stdout.strip().split("\n")
                 if len(tsv_lines) < 2:
                     return None
 
@@ -143,7 +145,7 @@ class TesseractOCRWorker:
                 confidences = []
 
                 for line in tsv_lines[1:]:  # Skip header
-                    fields = line.split('\t')
+                    fields = line.split("\t")
                     if len(fields) >= 12:
                         word_text = fields[11].strip()
                         try:
@@ -158,13 +160,13 @@ class TesseractOCRWorker:
                 if not text_parts:
                     return None
 
-                full_text = ' '.join(text_parts)
+                full_text = " ".join(text_parts)
                 avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
                 # Create OCR result
                 # We need file_id, but we only have file_path here
                 # This would typically be resolved by the calling code
-                ocr_result = OCRResult(
+                return OCRResult(
                     file_id=0,  # Will be set by caller
                     text=full_text,
                     language=language,
@@ -172,20 +174,17 @@ class TesseractOCRWorker:
                     processed_at=time.time()
                 )
 
-                return ocr_result
 
             finally:
                 # Clean up temp file
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(temp_path)
-                except OSError:
-                    pass
 
         except Exception as e:
             logger.debug(f"Tesseract processing failed for {file_path}: {e}")
             return None
 
-    async def extract_batch(self, photos: List[Photo], language: str = None) -> List[Optional[OCRResult]]:
+    async def extract_batch(self, photos: list[Photo], language: str | None = None) -> list[OCRResult | None]:
         """Extract text from multiple photos concurrently."""
         if not photos:
             return []
@@ -214,12 +213,12 @@ class TesseractOCRWorker:
 
         return results
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get OCR processing statistics."""
         stats_dict = self.stats.to_dict()
         stats_dict.update({
-            'languages': self.languages,
-            'max_workers': self.max_workers,
+            "languages": self.languages,
+            "max_workers": self.max_workers,
         })
         return stats_dict
 
@@ -235,7 +234,7 @@ class TesseractOCRWorker:
 class SmartOCRWorker(TesseractOCRWorker):
     """Smart OCR worker with image preprocessing and optimization."""
 
-    def __init__(self, max_workers: int = 2, languages: List[str] = None,
+    def __init__(self, max_workers: int = 2, languages: list[str] | None = None,
                  enable_preprocessing: bool = True):
         super().__init__(max_workers, languages)
         self.enable_preprocessing = enable_preprocessing
@@ -249,43 +248,40 @@ class SmartOCRWorker(TesseractOCRWorker):
         except ImportError:
             logger.warning("PIL not available, skipping OCR preprocessing")
 
-    def _extract_text_sync(self, file_path: str, language: str) -> Optional[OCRResult]:
+    def _extract_text_sync(self, file_path: str, language: str) -> OCRResult | None:
         """Enhanced text extraction with preprocessing."""
         if self.enable_preprocessing and self.pil_available:
             return self._extract_with_preprocessing(file_path, language)
-        else:
-            return super()._extract_text_sync(file_path, language)
+        return super()._extract_text_sync(file_path, language)
 
-    def _extract_with_preprocessing(self, file_path: str, language: str) -> Optional[OCRResult]:
+    def _extract_with_preprocessing(self, file_path: str, language: str) -> OCRResult | None:
         """Extract text with image preprocessing for better accuracy."""
         try:
-            from PIL import Image, ImageEnhance, ImageFilter
+            from PIL import Image
 
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
                 temp_path = temp_file.name
 
             try:
                 # Load and preprocess image
                 with Image.open(file_path) as img:
                     # Convert to RGB if necessary
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
 
                     # Apply preprocessing steps
                     processed_img = self._preprocess_image(img)
 
                     # Save preprocessed image
-                    processed_img.save(temp_path, 'PNG')
+                    processed_img.save(temp_path, "PNG")
 
                 # Run OCR on preprocessed image
                 return self._run_tesseract_on_file(temp_path, language)
 
             finally:
                 # Clean up temp file
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(temp_path)
-                except OSError:
-                    pass
 
         except Exception as e:
             logger.debug(f"Preprocessing failed for {file_path}, trying direct OCR: {e}")
@@ -317,11 +313,10 @@ class SmartOCRWorker(TesseractOCRWorker):
         img = enhancer.enhance(1.1)
 
         # Apply slight denoising
-        img = img.filter(ImageFilter.MedianFilter(size=3))
+        return img.filter(ImageFilter.MedianFilter(size=3))
 
-        return img
 
-    def _run_tesseract_on_file(self, file_path: str, language: str) -> Optional[OCRResult]:
+    def _run_tesseract_on_file(self, file_path: str, language: str) -> OCRResult | None:
         """Run Tesseract on a preprocessed file."""
         try:
             # Try multiple PSM modes for better results
@@ -332,19 +327,19 @@ class SmartOCRWorker(TesseractOCRWorker):
 
             for psm in psm_modes:
                 cmd = [
-                    'tesseract',
+                    "tesseract",
                     file_path,
-                    'stdout',
-                    '-l', language,
-                    '--psm', str(psm),
-                    '--oem', '3',
-                    '-c', 'tessedit_create_tsv=1'
+                    "stdout",
+                    "-l", language,
+                    "--psm", str(psm),
+                    "--oem", "3",
+                    "-c", "tessedit_create_tsv=1"
                 ]
 
                 try:
                     result = subprocess.run(
                         cmd,
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         timeout=30
                     )
@@ -364,9 +359,9 @@ class SmartOCRWorker(TesseractOCRWorker):
             logger.debug(f"Enhanced Tesseract processing failed: {e}")
             return None
 
-    def _parse_tesseract_output(self, tsv_output: str, language: str) -> Optional[OCRResult]:
+    def _parse_tesseract_output(self, tsv_output: str, language: str) -> OCRResult | None:
         """Parse Tesseract TSV output."""
-        lines = tsv_output.strip().split('\n')
+        lines = tsv_output.strip().split("\n")
         if len(lines) < 2:
             return None
 
@@ -374,7 +369,7 @@ class SmartOCRWorker(TesseractOCRWorker):
         confidences = []
 
         for line in lines[1:]:  # Skip header
-            fields = line.split('\t')
+            fields = line.split("\t")
             if len(fields) >= 12:
                 word_text = fields[11].strip()
                 try:
@@ -389,7 +384,7 @@ class SmartOCRWorker(TesseractOCRWorker):
         if not text_parts:
             return None
 
-        full_text = ' '.join(text_parts)
+        full_text = " ".join(text_parts)
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
         return OCRResult(
@@ -424,10 +419,7 @@ class OCRQualityFilter:
             return False
 
         # Check for gibberish
-        if self._is_mostly_gibberish(ocr_result.text):
-            return False
-
-        return True
+        return not self._is_mostly_gibberish(ocr_result.text)
 
     def _is_mostly_gibberish(self, text: str) -> bool:
         """Detect if text is mostly gibberish."""
@@ -453,8 +445,8 @@ class OCRQualityFilter:
             return True
 
         # Check for excessive consonants or vowels
-        vowels = set('aeiouAEIOU')
-        consonants = set('bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ')
+        vowels = set("aeiouAEIOU")
+        consonants = set("bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ")
 
         vowel_count = sum(1 for c in word if c in vowels)
         consonant_count = sum(1 for c in word if c in consonants)
@@ -467,7 +459,4 @@ class OCRQualityFilter:
             return True
 
         # Check for repeating patterns
-        if len(set(word.lower())) < len(word) / 3:
-            return True
-
-        return False
+        return len(set(word.lower())) < len(word) / 3

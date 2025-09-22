@@ -1,18 +1,16 @@
 """Photo model for the photo search system."""
 
+import hashlib
 from dataclasses import dataclass
-from typing import Optional, List
 from datetime import datetime
 from pathlib import Path
-import hashlib
-import os
 
 
 @dataclass
 class Photo:
     """Core photo entity with metadata and processing state."""
 
-    id: Optional[int] = None
+    id: int | None = None
     path: str = ""
     folder: str = ""
     filename: str = ""
@@ -21,8 +19,8 @@ class Photo:
     created_ts: float = 0.0
     modified_ts: float = 0.0
     sha1: str = ""
-    phash: Optional[str] = None
-    indexed_at: Optional[float] = None
+    phash: str | None = None
+    indexed_at: float | None = None
     index_version: int = 1
 
     @classmethod
@@ -31,7 +29,8 @@ class Photo:
         path_obj = Path(file_path)
 
         if not path_obj.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
 
         stat = path_obj.stat()
 
@@ -50,45 +49,45 @@ class Photo:
     def from_db_row(cls, row) -> "Photo":
         """Create Photo instance from database row."""
         return cls(
-            id=row['id'],
-            path=row['path'],
-            folder=row['folder'],
-            filename=row['filename'],
-            ext=row['ext'],
-            size=row['size'],
-            created_ts=row['created_ts'],
-            modified_ts=row['modified_ts'],
-            sha1=row['sha1'],
-            phash=row['phash'],
-            indexed_at=row['indexed_at'],
-            index_version=row['index_version'],
+            id=row["id"],
+            path=row["path"],
+            folder=row["folder"],
+            filename=row["filename"],
+            ext=row["ext"],
+            size=row["size"],
+            created_ts=row["created_ts"],
+            modified_ts=row["modified_ts"],
+            sha1=row["sha1"],
+            phash=row["phash"],
+            indexed_at=row["indexed_at"],
+            index_version=row["index_version"],
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'id': self.id,
-            'path': self.path,
-            'folder': self.folder,
-            'filename': self.filename,
-            'ext': self.ext,
-            'size': self.size,
-            'created_ts': self.created_ts,
-            'modified_ts': self.modified_ts,
-            'sha1': self.sha1,
-            'phash': self.phash,
-            'indexed_at': self.indexed_at,
-            'index_version': self.index_version,
+            "id": self.id,
+            "path": self.path,
+            "folder": self.folder,
+            "filename": self.filename,
+            "ext": self.ext,
+            "size": self.size,
+            "created_ts": self.created_ts,
+            "modified_ts": self.modified_ts,
+            "sha1": self.sha1,
+            "phash": self.phash,
+            "indexed_at": self.indexed_at,
+            "index_version": self.index_version,
         }
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate photo data and return list of errors."""
         errors = []
 
         if not self.path or not Path(self.path).is_absolute():
             errors.append("Path must be absolute")
 
-        if self.ext not in ['.jpg', '.jpeg', '.png', '.tiff', '.tif']:
+        if self.ext not in [".jpg", ".jpeg", ".png", ".tiff", ".tif"]:
             errors.append(f"Unsupported file extension: {self.ext}")
 
         if self.size <= 0:
@@ -130,7 +129,7 @@ class Photo:
         sha1_hash = hashlib.sha1()
 
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     sha1_hash.update(chunk)
         except Exception:
@@ -138,16 +137,16 @@ class Photo:
 
         return sha1_hash.hexdigest()
 
-    def calculate_perceptual_hash(self) -> Optional[str]:
+    def calculate_perceptual_hash(self) -> str | None:
         """Calculate perceptual hash for duplicate detection."""
         try:
-            from PIL import Image
             import imagehash
+            from PIL import Image
 
             with Image.open(self.path) as img:
                 # Convert to RGB if necessary
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
 
                 # Calculate average hash (simple but effective)
                 hash_value = imagehash.average_hash(img, hash_size=8)
@@ -195,7 +194,7 @@ class PhotoFilter:
         self.params.append(f"{folder_path}%")
         return self
 
-    def by_extension(self, extensions: List[str]) -> "PhotoFilter":
+    def by_extension(self, extensions: list[str]) -> "PhotoFilter":
         """Filter by file extensions."""
         placeholders = ",".join("?" * len(extensions))
         self.conditions.append(f"ext IN ({placeholders})")

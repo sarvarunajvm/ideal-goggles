@@ -1,6 +1,5 @@
 """Integration test for face enrollment and search workflow."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 

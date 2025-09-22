@@ -1,10 +1,10 @@
 """Embedding model for photo search system."""
 
-from dataclasses import dataclass
-from typing import Optional, List, Union
-import numpy as np
-from datetime import datetime
 import struct
+from dataclasses import dataclass
+from datetime import datetime
+
+import numpy as np
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Embedding:
     file_id: int
     clip_vector: np.ndarray
     embedding_model: str
-    processed_at: Optional[float] = None
+    processed_at: float | None = None
 
     def __post_init__(self):
         """Post-initialization validation."""
@@ -32,7 +32,7 @@ class Embedding:
                 self.clip_vector = self.clip_vector / norm
 
     @classmethod
-    def from_clip_output(cls, file_id: int, clip_features: Union[np.ndarray, List[float]], model_name: str = "clip-vit-b-32") -> "Embedding":
+    def from_clip_output(cls, file_id: int, clip_features: np.ndarray | list[float], model_name: str = "clip-vit-b-32") -> "Embedding":
         """Create Embedding from CLIP model output."""
         # Convert to numpy array if needed
         if not isinstance(clip_features, np.ndarray):
@@ -53,25 +53,25 @@ class Embedding:
     def from_db_row(cls, row) -> "Embedding":
         """Create Embedding from database row."""
         # Decode blob to numpy array
-        vector_blob = row['clip_vector']
+        vector_blob = row["clip_vector"]
         clip_vector = cls._blob_to_numpy(vector_blob)
 
         return cls(
-            file_id=row['file_id'],
+            file_id=row["file_id"],
             clip_vector=clip_vector,
-            embedding_model=row['embedding_model'],
-            processed_at=row['processed_at'],
+            embedding_model=row["embedding_model"],
+            processed_at=row["processed_at"],
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'file_id': self.file_id,
-            'clip_vector': self.clip_vector.tolist(),
-            'embedding_model': self.embedding_model,
-            'processed_at': self.processed_at,
-            'vector_dimension': len(self.clip_vector),
-            'vector_norm': float(np.linalg.norm(self.clip_vector)),
+            "file_id": self.file_id,
+            "clip_vector": self.clip_vector.tolist(),
+            "embedding_model": self.embedding_model,
+            "processed_at": self.processed_at,
+            "vector_dimension": len(self.clip_vector),
+            "vector_norm": float(np.linalg.norm(self.clip_vector)),
         }
 
     def to_db_params(self) -> tuple:
@@ -84,7 +84,7 @@ class Embedding:
             self.processed_at
         )
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate embedding data and return list of errors."""
         errors = []
 
@@ -117,7 +117,8 @@ class Embedding:
     def cosine_similarity(self, other: "Embedding") -> float:
         """Calculate cosine similarity with another embedding."""
         if len(self.clip_vector) != len(other.clip_vector):
-            raise ValueError("Vector dimensions must match")
+            msg = "Vector dimensions must match"
+            raise ValueError(msg)
 
         # Since vectors are normalized, dot product equals cosine similarity
         similarity = np.dot(self.clip_vector, other.clip_vector)
@@ -126,7 +127,8 @@ class Embedding:
     def euclidean_distance(self, other: "Embedding") -> float:
         """Calculate Euclidean distance with another embedding."""
         if len(self.clip_vector) != len(other.clip_vector):
-            raise ValueError("Vector dimensions must match")
+            msg = "Vector dimensions must match"
+            raise ValueError(msg)
 
         distance = np.linalg.norm(self.clip_vector - other.clip_vector)
         return float(distance)
@@ -152,13 +154,13 @@ class Embedding:
     def get_vector_stats(self) -> dict:
         """Get statistics about the vector."""
         return {
-            'dimension': self.get_dimension(),
-            'norm': self.get_norm(),
-            'mean': float(np.mean(self.clip_vector)),
-            'std': float(np.std(self.clip_vector)),
-            'min': float(np.min(self.clip_vector)),
-            'max': float(np.max(self.clip_vector)),
-            'is_normalized': self.is_normalized(),
+            "dimension": self.get_dimension(),
+            "norm": self.get_norm(),
+            "mean": float(np.mean(self.clip_vector)),
+            "std": float(np.std(self.clip_vector)),
+            "min": float(np.min(self.clip_vector)),
+            "max": float(np.max(self.clip_vector)),
+            "is_normalized": self.is_normalized(),
         }
 
     @staticmethod
@@ -166,7 +168,7 @@ class Embedding:
         """Convert numpy array to blob for database storage."""
         # Store dimension first, then float32 data
         dimension = len(vector)
-        blob = struct.pack('<I', dimension)  # 4 bytes for dimension
+        blob = struct.pack("<I", dimension)  # 4 bytes for dimension
         blob += vector.astype(np.float32).tobytes()
         return blob
 
@@ -174,26 +176,29 @@ class Embedding:
     def _blob_to_numpy(blob: bytes) -> np.ndarray:
         """Convert blob from database to numpy array."""
         if len(blob) < 4:
-            raise ValueError("Invalid blob: too short")
+            msg = "Invalid blob: too short"
+            raise ValueError(msg)
 
         # Read dimension
-        dimension = struct.unpack('<I', blob[:4])[0]
+        dimension = struct.unpack("<I", blob[:4])[0]
 
         # Read vector data
         expected_size = 4 + dimension * 4  # 4 bytes for dim + 4 bytes per float32
         if len(blob) != expected_size:
-            raise ValueError(f"Invalid blob size: expected {expected_size}, got {len(blob)}")
+            msg = f"Invalid blob size: expected {expected_size}, got {len(blob)}"
+            raise ValueError(msg)
 
         vector_bytes = blob[4:]
         vector = np.frombuffer(vector_bytes, dtype=np.float32)
 
         if len(vector) != dimension:
-            raise ValueError(f"Dimension mismatch: expected {dimension}, got {len(vector)}")
+            msg = f"Dimension mismatch: expected {dimension}, got {len(vector)}"
+            raise ValueError(msg)
 
         return vector
 
     @staticmethod
-    def batch_cosine_similarity(query_vector: np.ndarray, vectors: List[np.ndarray]) -> np.ndarray:
+    def batch_cosine_similarity(query_vector: np.ndarray, vectors: list[np.ndarray]) -> np.ndarray:
         """Calculate cosine similarity between query and batch of vectors."""
         if not vectors:
             return np.array([])
@@ -202,9 +207,8 @@ class Embedding:
         matrix = np.stack(vectors)
 
         # Calculate dot products (cosine similarity for normalized vectors)
-        similarities = np.dot(matrix, query_vector)
+        return np.dot(matrix, query_vector)
 
-        return similarities
 
     @staticmethod
     def create_random_embedding(file_id: int, dimension: int = 512, model_name: str = "random") -> "Embedding":
@@ -258,9 +262,9 @@ class EmbeddingStats:
     def to_dict(self) -> dict:
         """Convert statistics to dictionary."""
         return {
-            'total_embeddings': self.total_embeddings,
-            'model_counts': self.model_counts,
-            'dimension_counts': self.dimension_counts,
-            'total_processing_time': round(self.total_processing_time, 2),
-            'average_processing_time': round(self.get_average_processing_time(), 3),
+            "total_embeddings": self.total_embeddings,
+            "model_counts": self.model_counts,
+            "dimension_counts": self.dimension_counts,
+            "total_processing_time": round(self.total_processing_time, 2),
+            "average_processing_time": round(self.get_average_processing_time(), 3),
         }

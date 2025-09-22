@@ -1,13 +1,13 @@
 """Thumbnail generator worker for creating preview images."""
 
-import logging
 import asyncio
-import time
-import os
-from typing import Optional, List, Dict, Any, Tuple
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
+import logging
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any
+
 from PIL import Image
 
 from ..models.photo import Photo
@@ -33,11 +33,11 @@ class ThumbnailGenerator:
 
         # Statistics
         self.stats = {
-            'generated': 0,
-            'failed': 0,
-            'skipped': 0,
-            'total_time': 0.0,
-            'cache_hits': 0,
+            "generated": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total_time": 0.0,
+            "cache_hits": 0,
         }
 
         # Validate PIL availability
@@ -49,24 +49,26 @@ class ThumbnailGenerator:
             from PIL import Image
 
             # Check WebP support if using WebP format
-            if self.format == 'webp':
-                test_img = Image.new('RGB', (1, 1))
-                with tempfile.NamedTemporaryFile(suffix='.webp') as f:
-                    test_img.save(f.name, 'WEBP')
+            if self.format == "webp":
+                test_img = Image.new("RGB", (1, 1))
+                with tempfile.NamedTemporaryFile(suffix=".webp") as f:
+                    test_img.save(f.name, "WEBP")
                 logger.info("WebP support confirmed")
 
             logger.info(f"PIL available for thumbnail generation (format: {self.format})")
 
         except ImportError:
-            raise RuntimeError("PIL not available for thumbnail generation")
+            msg = "PIL not available for thumbnail generation"
+            raise RuntimeError(msg)
         except Exception as e:
-            if self.format == 'webp':
+            if self.format == "webp":
                 logger.warning(f"WebP support issue: {e}, falling back to JPEG")
-                self.format = 'jpeg'
+                self.format = "jpeg"
             else:
-                raise RuntimeError(f"PIL format support issue: {e}")
+                msg = f"PIL format support issue: {e}"
+                raise RuntimeError(msg)
 
-    async def generate_thumbnail(self, photo: Photo, force_regenerate: bool = False) -> Optional[Thumbnail]:
+    async def generate_thumbnail(self, photo: Photo, force_regenerate: bool = False) -> Thumbnail | None:
         """Generate thumbnail for a photo."""
         start_time = time.time()
 
@@ -75,7 +77,7 @@ class ThumbnailGenerator:
             existing_thumbnail = await self._check_existing_thumbnail(photo)
             if existing_thumbnail and not force_regenerate:
                 if not existing_thumbnail.needs_regeneration(photo.modified_ts, str(self.cache_root)):
-                    self.stats['cache_hits'] += 1
+                    self.stats["cache_hits"] += 1
                     logger.debug(f"Using cached thumbnail for {photo.path}")
                     return existing_thumbnail
 
@@ -90,20 +92,19 @@ class ThumbnailGenerator:
             processing_time = time.time() - start_time
 
             if thumbnail:
-                self.stats['generated'] += 1
-                self.stats['total_time'] += processing_time
+                self.stats["generated"] += 1
+                self.stats["total_time"] += processing_time
                 logger.debug(f"Generated thumbnail for {photo.path} ({processing_time:.2f}s)")
                 return thumbnail
-            else:
-                self.stats['failed'] += 1
-                return None
+            self.stats["failed"] += 1
+            return None
 
         except Exception as e:
             logger.warning(f"Thumbnail generation failed for {photo.path}: {e}")
-            self.stats['failed'] += 1
+            self.stats["failed"] += 1
             return None
 
-    def _generate_thumbnail_sync(self, photo: Photo) -> Optional[Thumbnail]:
+    def _generate_thumbnail_sync(self, photo: Photo) -> Thumbnail | None:
         """Synchronously generate thumbnail using PIL."""
         try:
             from PIL import Image, ImageOps
@@ -114,16 +115,16 @@ class ThumbnailGenerator:
                 original_width, original_height = img.size
 
                 # Convert to RGB if necessary
-                if img.mode in ('RGBA', 'LA'):
+                if img.mode in ("RGBA", "LA"):
                     # Create white background for transparency
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'RGBA':
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    if img.mode == "RGBA":
                         background.paste(img, mask=img.split()[-1])
                     else:
                         background.paste(img)
                     img = background
-                elif img.mode != 'RGB':
-                    img = img.convert('RGB')
+                elif img.mode != "RGB":
+                    img = img.convert("RGB")
 
                 # Auto-orient image based on EXIF
                 img = ImageOps.exif_transpose(img)
@@ -155,7 +156,7 @@ class ThumbnailGenerator:
             logger.debug(f"PIL thumbnail generation failed for {photo.path}: {e}")
             return None
 
-    def _calculate_thumbnail_size(self, width: int, height: int, max_size: int) -> Tuple[int, int]:
+    def _calculate_thumbnail_size(self, width: int, height: int, max_size: int) -> tuple[int, int]:
         """Calculate thumbnail dimensions preserving aspect ratio."""
         if width <= 0 or height <= 0:
             return max_size, max_size
@@ -178,28 +179,27 @@ class ThumbnailGenerator:
 
         return thumb_width, thumb_height
 
-    def _get_save_kwargs(self) -> Dict[str, Any]:
+    def _get_save_kwargs(self) -> dict[str, Any]:
         """Get save parameters for different formats."""
-        if self.format == 'webp':
+        if self.format == "webp":
             return {
-                'quality': self.quality,
-                'method': 6,  # High quality method
-                'optimize': True,
+                "quality": self.quality,
+                "method": 6,  # High quality method
+                "optimize": True,
             }
-        elif self.format == 'jpeg':
+        if self.format == "jpeg":
             return {
-                'quality': self.quality,
-                'optimize': True,
-                'progressive': True,
+                "quality": self.quality,
+                "optimize": True,
+                "progressive": True,
             }
-        elif self.format == 'png':
+        if self.format == "png":
             return {
-                'optimize': True,
+                "optimize": True,
             }
-        else:
-            return {}
+        return {}
 
-    async def _check_existing_thumbnail(self, photo: Photo) -> Optional[Thumbnail]:
+    async def _check_existing_thumbnail(self, photo: Photo) -> Thumbnail | None:
         """Check if thumbnail already exists."""
         # This would typically query the database
         # For now, just check if file exists in expected location
@@ -213,8 +213,8 @@ class ThumbnailGenerator:
 
         return None
 
-    async def generate_batch(self, photos: List[Photo],
-                           force_regenerate: bool = False) -> List[Optional[Thumbnail]]:
+    async def generate_batch(self, photos: list[Photo],
+                           force_regenerate: bool = False) -> list[Thumbnail | None]:
         """Generate thumbnails for multiple photos."""
         if not photos:
             return []
@@ -239,36 +239,36 @@ class ThumbnailGenerator:
 
         return results
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get thumbnail generation statistics."""
-        total_processed = self.stats['generated'] + self.stats['failed']
-        avg_time = (self.stats['total_time'] / self.stats['generated']
-                   if self.stats['generated'] > 0 else 0)
+        total_processed = self.stats["generated"] + self.stats["failed"]
+        avg_time = (self.stats["total_time"] / self.stats["generated"]
+                   if self.stats["generated"] > 0 else 0)
 
         return {
-            'generated': self.stats['generated'],
-            'failed': self.stats['failed'],
-            'skipped': self.stats['skipped'],
-            'cache_hits': self.stats['cache_hits'],
-            'total_processed': total_processed,
-            'success_rate': (self.stats['generated'] / total_processed
+            "generated": self.stats["generated"],
+            "failed": self.stats["failed"],
+            "skipped": self.stats["skipped"],
+            "cache_hits": self.stats["cache_hits"],
+            "total_processed": total_processed,
+            "success_rate": (self.stats["generated"] / total_processed
                            if total_processed > 0 else 0),
-            'average_generation_time': avg_time,
-            'total_generation_time': self.stats['total_time'],
-            'cache_root': str(self.cache_root),
-            'format': self.format,
-            'max_size': self.max_size,
-            'quality': self.quality,
+            "average_generation_time": avg_time,
+            "total_generation_time": self.stats["total_time"],
+            "cache_root": str(self.cache_root),
+            "format": self.format,
+            "max_size": self.max_size,
+            "quality": self.quality,
         }
 
     def reset_statistics(self):
         """Reset generation statistics."""
         self.stats = {
-            'generated': 0,
-            'failed': 0,
-            'skipped': 0,
-            'total_time': 0.0,
-            'cache_hits': 0,
+            "generated": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total_time": 0.0,
+            "cache_hits": 0,
         }
 
     def shutdown(self):
@@ -280,7 +280,7 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
     """Smart thumbnail generator with adaptive quality and multiple sizes."""
 
     def __init__(self, cache_root: str, max_workers: int = 4,
-                 sizes: List[int] = None, adaptive_quality: bool = True):
+                 sizes: list[int] | None = None, adaptive_quality: bool = True):
         # Default sizes for different use cases
         self.sizes = sizes or [128, 256, 512]
         self.adaptive_quality = adaptive_quality
@@ -288,7 +288,7 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
         # Use largest size as max_size for base class
         super().__init__(cache_root, max_workers, max(self.sizes))
 
-    async def generate_multi_size_thumbnails(self, photo: Photo) -> List[Optional[Thumbnail]]:
+    async def generate_multi_size_thumbnails(self, photo: Photo) -> list[Thumbnail | None]:
         """Generate thumbnails in multiple sizes."""
         thumbnails = []
 
@@ -305,7 +305,7 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
 
         return thumbnails
 
-    def _generate_thumbnail_sync(self, photo: Photo) -> Optional[Thumbnail]:
+    def _generate_thumbnail_sync(self, photo: Photo) -> Thumbnail | None:
         """Enhanced thumbnail generation with adaptive quality."""
         try:
             from PIL import Image, ImageOps
@@ -317,15 +317,15 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
                 quality = self._calculate_adaptive_quality(img, photo)
 
                 # Process image
-                if img.mode in ('RGBA', 'LA'):
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'RGBA':
+                if img.mode in ("RGBA", "LA"):
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    if img.mode == "RGBA":
                         background.paste(img, mask=img.split()[-1])
                     else:
                         background.paste(img)
                     img = background
-                elif img.mode != 'RGB':
-                    img = img.convert('RGB')
+                elif img.mode != "RGB":
+                    img = img.convert("RGB")
 
                 # Auto-orient
                 img = ImageOps.exif_transpose(img)
@@ -372,7 +372,7 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
 
         if total_pixels < 500000:  # Small images
             return min(95, base_quality + 10)
-        elif total_pixels > 10000000:  # Large images
+        if total_pixels > 10000000:  # Large images
             return max(70, base_quality - 10)
 
         # Adjust based on file size (if available)
@@ -380,7 +380,7 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
             file_size_mb = photo.size / (1024 * 1024)
             if file_size_mb < 1:  # Small file, might be lower quality
                 return min(95, base_quality + 5)
-            elif file_size_mb > 20:  # Large file, can reduce quality
+            if file_size_mb > 20:  # Large file, can reduce quality
                 return max(75, base_quality - 5)
         except:
             pass
@@ -398,30 +398,28 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
 
             # Slightly increase sharpness
             enhancer = ImageEnhance.Sharpness(img)
-            img = enhancer.enhance(1.02)
+            return enhancer.enhance(1.02)
 
-            return img
 
         except Exception:
             # If enhancement fails, return original
             return img
 
-    def _get_adaptive_save_kwargs(self, quality: int) -> Dict[str, Any]:
+    def _get_adaptive_save_kwargs(self, quality: int) -> dict[str, Any]:
         """Get adaptive save parameters."""
-        if self.format == 'webp':
+        if self.format == "webp":
             return {
-                'quality': quality,
-                'method': 6 if quality > 80 else 4,
-                'optimize': True,
+                "quality": quality,
+                "method": 6 if quality > 80 else 4,
+                "optimize": True,
             }
-        elif self.format == 'jpeg':
+        if self.format == "jpeg":
             return {
-                'quality': quality,
-                'optimize': True,
-                'progressive': quality > 80,
+                "quality": quality,
+                "optimize": True,
+                "progressive": quality > 80,
             }
-        else:
-            return super()._get_save_kwargs()
+        return super()._get_save_kwargs()
 
 
 class ThumbnailCacheManager:
@@ -430,7 +428,7 @@ class ThumbnailCacheManager:
     def __init__(self, cache_root: str):
         self.cache = ThumbnailCache(cache_root)
 
-    async def cleanup_orphaned_thumbnails(self, valid_file_ids: List[int]) -> int:
+    async def cleanup_orphaned_thumbnails(self, valid_file_ids: list[int]) -> int:
         """Remove thumbnails for files that no longer exist."""
         loop = asyncio.get_event_loop()
         removed_count = await loop.run_in_executor(
@@ -453,34 +451,33 @@ class ThumbnailCacheManager:
         logger.info(f"Removed {removed_count} empty directories")
         return removed_count
 
-    async def get_cache_statistics(self) -> Dict[str, Any]:
+    async def get_cache_statistics(self) -> dict[str, Any]:
         """Get comprehensive cache statistics."""
         loop = asyncio.get_event_loop()
-        stats = await loop.run_in_executor(
+        return await loop.run_in_executor(
             None,
             self.cache.get_cache_stats
         )
 
-        return stats
 
-    async def validate_cache_integrity(self, sample_size: int = 100) -> Dict[str, Any]:
+    async def validate_cache_integrity(self, sample_size: int = 100) -> dict[str, Any]:
         """Validate cache integrity by checking a sample of files."""
         stats = await self.get_cache_statistics()
 
-        if not stats['exists'] or stats['total_files'] == 0:
+        if not stats["exists"] or stats["total_files"] == 0:
             return {
-                'valid_files': 0,
-                'invalid_files': 0,
-                'missing_files': 0,
-                'total_checked': 0,
+                "valid_files": 0,
+                "invalid_files": 0,
+                "missing_files": 0,
+                "total_checked": 0,
             }
 
         # TODO: Implement sampling and validation logic
         # This would check if thumbnail files are valid images
 
         return {
-            'valid_files': 0,
-            'invalid_files': 0,
-            'missing_files': 0,
-            'total_checked': 0,
+            "valid_files": 0,
+            "invalid_files": 0,
+            "missing_files": 0,
+            "total_checked": 0,
         }

@@ -1,6 +1,5 @@
 """Integration test for file indexing pipeline."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -36,7 +35,6 @@ class TestIndexingWorkflow:
         """Test indexing meets throughput requirement from plan.md."""
         # Constitutional requirement: 100k photos/day on target hardware
         # This will be validated with real indexing implementation
-        pass
 
     def test_indexing_resume_after_interruption(self, client: TestClient) -> None:
         """Test indexing can resume after interruption (constitutional requirement)."""

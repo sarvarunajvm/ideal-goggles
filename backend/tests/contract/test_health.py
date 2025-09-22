@@ -1,8 +1,9 @@
 """Contract test for GET /health endpoint."""
 
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime
 
 
 class TestHealthEndpoint:
@@ -27,7 +28,7 @@ class TestHealthEndpoint:
         assert isinstance(data["timestamp"], str)
 
         # Validate timestamp is valid ISO format
-        datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
+        datetime.fromisoformat(data["timestamp"])
 
     def test_health_endpoint_content_type(self, client: TestClient) -> None:
         """Test that health endpoint returns JSON content type."""

@@ -1,9 +1,10 @@
 """People management endpoints for photo search API."""
 
+from datetime import datetime
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 
 from ..db.connection import get_database_manager
 
@@ -22,47 +23,53 @@ class PersonResponse(BaseModel):
 class CreatePersonRequest(BaseModel):
     """Request model for creating a person."""
     name: str = Field(description="Person's display name")
-    sample_file_ids: List[int] = Field(description="Array of photo IDs containing this person")
+    sample_file_ids: list[int] = Field(description="Array of photo IDs containing this person")
 
-    @validator('name')
-    def validate_name(cls, v):
+    @validator("name")
+    def validate_name(self, v):
         """Validate person name."""
         if not v or not v.strip():
-            raise ValueError("Person name cannot be empty")
+            msg = "Person name cannot be empty"
+            raise ValueError(msg)
         if len(v.strip()) > 255:
-            raise ValueError("Person name too long (max 255 characters)")
+            msg = "Person name too long (max 255 characters)"
+            raise ValueError(msg)
         return v.strip()
 
-    @validator('sample_file_ids')
-    def validate_sample_file_ids(cls, v):
+    @validator("sample_file_ids")
+    def validate_sample_file_ids(self, v):
         """Validate sample file IDs."""
         if not v or len(v) < 1:
-            raise ValueError("At least one sample photo is required")
+            msg = "At least one sample photo is required"
+            raise ValueError(msg)
         if len(v) > 10:
-            raise ValueError("Too many sample photos (max 10)")
+            msg = "Too many sample photos (max 10)"
+            raise ValueError(msg)
         return v
 
 
 class UpdatePersonRequest(BaseModel):
     """Request model for updating a person."""
-    name: Optional[str] = Field(None, description="Person's display name")
-    active: Optional[bool] = Field(None, description="Whether person search is enabled")
-    additional_sample_file_ids: Optional[List[int]] = Field(None, description="Additional sample photos")
+    name: str | None = Field(None, description="Person's display name")
+    active: bool | None = Field(None, description="Whether person search is enabled")
+    additional_sample_file_ids: list[int] | None = Field(None, description="Additional sample photos")
 
-    @validator('name')
-    def validate_name(cls, v):
+    @validator("name")
+    def validate_name(self, v):
         """Validate person name."""
         if v is not None:
             if not v or not v.strip():
-                raise ValueError("Person name cannot be empty")
+                msg = "Person name cannot be empty"
+                raise ValueError(msg)
             if len(v.strip()) > 255:
-                raise ValueError("Person name too long (max 255 characters)")
+                msg = "Person name too long (max 255 characters)"
+                raise ValueError(msg)
             return v.strip()
         return v
 
 
-@router.get("/people", response_model=List[PersonResponse])
-async def list_people() -> List[PersonResponse]:
+@router.get("/people", response_model=list[PersonResponse])
+async def list_people() -> list[PersonResponse]:
     """
     List all enrolled people.
 
@@ -97,7 +104,7 @@ async def list_people() -> List[PersonResponse]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list people: {str(e)}"
+            detail=f"Failed to list people: {e!s}"
         )
 
 
@@ -144,7 +151,7 @@ async def get_person(person_id: int) -> PersonResponse:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get person: {str(e)}"
+            detail=f"Failed to get person: {e!s}"
         )
 
 
@@ -161,8 +168,8 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
     """
     try:
         # Import face worker
-        from ..workers.face_worker import FaceDetectionWorker
         from ..models.photo import Photo
+        from ..workers.face_worker import FaceDetectionWorker
 
         db_manager = get_database_manager()
 
@@ -177,7 +184,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
             )
 
         # Validate that all sample file IDs exist
-        file_ids_str = ','.join('?' * len(request.sample_file_ids))
+        file_ids_str = ",".join("?" * len(request.sample_file_ids))
         photos_query = f"""
             SELECT id, path, filename, modified_ts
             FROM photos
@@ -269,7 +276,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create person: {str(e)}"
+            detail=f"Failed to create person: {e!s}"
         )
 
 
@@ -328,12 +335,12 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
         # Handle additional sample photos
         if request.additional_sample_file_ids:
             # Import necessary classes
-            from ..workers.face_worker import FaceDetectionWorker
             from ..models.person import Person
             from ..models.photo import Photo
+            from ..workers.face_worker import FaceDetectionWorker
 
             # Validate sample file IDs
-            file_ids_str = ','.join('?' * len(request.additional_sample_file_ids))
+            file_ids_str = ",".join("?" * len(request.additional_sample_file_ids))
             photos_query = f"""
                 SELECT id, path, filename, modified_ts
                 FROM photos
@@ -362,13 +369,13 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             # Load existing person
             person_row = person_rows[0]
             existing_person = Person.from_db_row({
-                'id': person_row[0],
-                'name': person_row[1],
-                'face_vector': person_row[2],
-                'sample_count': person_row[3],
-                'created_at': person_row[4],
-                'updated_at': person_row[5],
-                'active': person_row[6]
+                "id": person_row[0],
+                "name": person_row[1],
+                "face_vector": person_row[2],
+                "sample_count": person_row[3],
+                "created_at": person_row[4],
+                "updated_at": person_row[5],
+                "active": person_row[6]
             })
 
             # Update enrollment with additional photos
@@ -426,7 +433,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update person: {str(e)}"
+            detail=f"Failed to update person: {e!s}"
         )
 
 
@@ -472,7 +479,7 @@ async def delete_person(person_id: int):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete person: {str(e)}"
+            detail=f"Failed to delete person: {e!s}"
         )
 
 
@@ -481,7 +488,7 @@ async def get_person_photos(
     person_id: int,
     limit: int = 50,
     offset: int = 0
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get photos containing a specific person.
 
@@ -559,5 +566,5 @@ async def get_person_photos(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get person photos: {str(e)}"
+            detail=f"Failed to get person photos: {e!s}"
         )

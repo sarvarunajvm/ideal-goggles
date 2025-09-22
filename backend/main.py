@@ -1,20 +1,20 @@
 """Main FastAPI application for photo search system."""
 
 import logging
-import os
-from pathlib import Path
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.api.config import router as config_router
+
 # Import API routers
 from src.api.health import router as health_router
-from src.api.config import router as config_router
-from src.api.search import router as search_router
 from src.api.indexing import router as indexing_router
 from src.api.people import router as people_router
+from src.api.search import router as search_router
 
 # Import database initialization
 from src.db.connection import init_database
@@ -22,10 +22,10 @@ from src.db.connection import init_database
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(Path.home() / '.photo-search' / 'app.log')
+        logging.FileHandler(Path.home() / ".photo-search" / "app.log")
     ]
 )
 
@@ -33,24 +33,24 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan management."""
     # Startup
     logger.info("Starting Photo Search API")
 
     # Initialize database
     try:
-        db_manager = init_database()
+        init_database()
         logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+    except Exception:
+        logger.exception("Failed to initialize database")
         raise
 
     # Create necessary directories
     directories = [
-        Path.home() / '.photo-search',
-        Path.home() / '.photo-search' / 'thumbnails',
-        Path.home() / '.photo-search' / 'logs'
+        Path.home() / ".photo-search",
+        Path.home() / ".photo-search" / "thumbnails",
+        Path.home() / ".photo-search" / "logs"
     ]
 
     for directory in directories:
@@ -73,7 +73,10 @@ app = FastAPI(
 # Add CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # React dev server
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],  # React dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,9 +85,9 @@ app.add_middleware(
 
 # Global exception handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(_request, exc):
     """Global exception handler for unhandled errors."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception: %s", exc)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

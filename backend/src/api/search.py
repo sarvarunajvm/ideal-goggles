@@ -1,12 +1,13 @@
 """Search endpoints for photo search API."""
 
-from fastapi import APIRouter, HTTPException, status, Query, File, UploadFile, Form
-from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
-import tempfile
+import contextlib
 import os
+import tempfile
+from datetime import date, datetime
 from pathlib import Path
+
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
+from pydantic import BaseModel, Field
 
 from ..db.connection import get_database_manager
 
@@ -19,18 +20,18 @@ class SearchResultItem(BaseModel):
     path: str = Field(description="Absolute path to photo file")
     folder: str = Field(description="Parent folder path")
     filename: str = Field(description="File name with extension")
-    thumb_path: Optional[str] = Field(description="Relative path to thumbnail")
-    shot_dt: Optional[datetime] = Field(description="Photo capture timestamp")
+    thumb_path: str | None = Field(description="Relative path to thumbnail")
+    shot_dt: datetime | None = Field(description="Photo capture timestamp")
     score: float = Field(description="Relevance score (0.0-1.0)")
-    badges: List[str] = Field(description="Types of matches found")
-    snippet: Optional[str] = Field(description="Relevant text excerpt for text matches")
+    badges: list[str] = Field(description="Types of matches found")
+    snippet: str | None = Field(description="Relevant text excerpt for text matches")
 
 
 class SearchResults(BaseModel):
     """Search results model."""
     query: str = Field(description="Original search query")
     total_matches: int = Field(description="Total number of matching photos")
-    items: List[SearchResultItem] = Field(description="Search result items")
+    items: list[SearchResultItem] = Field(description="Search result items")
     took_ms: int = Field(description="Search execution time in milliseconds")
 
 
@@ -48,10 +49,10 @@ class FaceSearchRequest(BaseModel):
 
 @router.get("/search", response_model=SearchResults)
 async def search_photos(
-    q: Optional[str] = Query(None, description="Search query text"),
-    from_date: Optional[date] = Query(None, alias="from", description="Start date filter (YYYY-MM-DD)"),
-    to_date: Optional[date] = Query(None, alias="to", description="End date filter (YYYY-MM-DD)"),
-    folder: Optional[str] = Query(None, description="Folder path filter"),
+    q: str | None = Query(None, description="Search query text"),
+    from_date: date | None = Query(None, alias="from", description="Start date filter (YYYY-MM-DD)"),
+    to_date: date | None = Query(None, alias="to", description="End date filter (YYYY-MM-DD)"),
+    folder: str | None = Query(None, description="Folder path filter"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Results offset for pagination")
 ) -> SearchResults:
@@ -92,7 +93,7 @@ async def search_photos(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+            detail=f"Search failed: {e!s}"
         )
 
 
@@ -145,7 +146,7 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Semantic search failed: {str(e)}"
+            detail=f"Semantic search failed: {e!s}"
         )
 
 
@@ -168,7 +169,7 @@ async def image_search(
 
     try:
         # Validate file type
-        if not file.content_type or not file.content_type.startswith('image/'):
+        if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid image file"
@@ -182,8 +183,8 @@ async def image_search(
 
         try:
             # Import embedding worker
-            from ..workers.embedding_worker import CLIPEmbeddingWorker
             from ..models.photo import Photo
+            from ..workers.embedding_worker import CLIPEmbeddingWorker
 
             # Create temporary photo object for embedding generation
             temp_photo = Photo(path=temp_path)
@@ -217,17 +218,15 @@ async def image_search(
 
         finally:
             # Clean up temporary file
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(temp_path)
-            except OSError:
-                pass
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Image search failed: {str(e)}"
+            detail=f"Image search failed: {e!s}"
         )
 
 
@@ -279,14 +278,14 @@ async def face_search(request: FaceSearchRequest) -> SearchResults:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Face search failed: {str(e)}"
+            detail=f"Face search failed: {e!s}"
         )
 
 
 async def _execute_text_search(
-    db_manager, query: Optional[str], from_date: Optional[date], to_date: Optional[date],
-    folder: Optional[str], limit: int, offset: int
-) -> List[SearchResultItem]:
+    db_manager, query: str | None, from_date: date | None, to_date: date | None,
+    folder: str | None, limit: int, offset: int
+) -> list[SearchResultItem]:
     """Execute text-based search with filters."""
     # Build WHERE clause
     where_conditions = []
@@ -393,7 +392,7 @@ async def _execute_text_search(
 
 async def _execute_semantic_search(
     db_manager, query_embedding, top_k: int
-) -> List[SearchResultItem]:
+) -> list[SearchResultItem]:
     """Execute semantic search using CLIP embeddings."""
     # This is a simplified implementation
     # In a real system, you'd use FAISS for efficient vector search
@@ -413,8 +412,9 @@ async def _execute_semantic_search(
 
     # Calculate similarities
     similarities = []
-    from ..models.embedding import Embedding
     import numpy as np
+
+    from ..models.embedding import Embedding
 
     for row in rows:
         try:
@@ -454,7 +454,7 @@ async def _execute_semantic_search(
 
 async def _execute_image_search(
     db_manager, query_embedding, top_k: int
-) -> List[SearchResultItem]:
+) -> list[SearchResultItem]:
     """Execute image search using visual similarity."""
     # Reuse semantic search logic since both use CLIP embeddings
     return await _execute_semantic_search(db_manager, query_embedding, top_k)
@@ -462,7 +462,7 @@ async def _execute_image_search(
 
 async def _execute_face_search(
     db_manager, person_id: int, top_k: int
-) -> List[SearchResultItem]:
+) -> list[SearchResultItem]:
     """Execute face-based search."""
     # Get faces associated with the person
     faces_query = """

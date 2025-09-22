@@ -1,23 +1,24 @@
 """Person and Face models for face recognition functionality."""
 
-from dataclasses import dataclass
-from typing import Optional, List, Tuple, Dict, Any
-import numpy as np
-from datetime import datetime
 import json
 import struct
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
+
+import numpy as np
 
 
 @dataclass
 class Person:
     """Enrolled person for face-based search functionality."""
 
-    id: Optional[int] = None
+    id: int | None = None
     name: str = ""
-    face_vector: Optional[np.ndarray] = None
+    face_vector: np.ndarray | None = None
     sample_count: int = 0
-    created_at: Optional[float] = None
-    updated_at: Optional[float] = None
+    created_at: float | None = None
+    updated_at: float | None = None
     active: bool = True
 
     def __post_init__(self):
@@ -33,18 +34,21 @@ class Person:
             self.face_vector = np.array(self.face_vector, dtype=np.float32)
 
     @classmethod
-    def create_from_face_vectors(cls, name: str, face_vectors: List[np.ndarray]) -> "Person":
+    def create_from_face_vectors(cls, name: str, face_vectors: list[np.ndarray]) -> "Person":
         """Create Person by averaging multiple face vectors."""
         if not face_vectors:
-            raise ValueError("At least one face vector is required")
+            msg = "At least one face vector is required"
+            raise ValueError(msg)
 
         if not name.strip():
-            raise ValueError("Person name cannot be empty")
+            msg = "Person name cannot be empty"
+            raise ValueError(msg)
 
         # Validate all vectors have same dimension
         dimensions = [len(vec) for vec in face_vectors]
         if len(set(dimensions)) > 1:
-            raise ValueError("All face vectors must have the same dimension")
+            msg = "All face vectors must have the same dimension"
+            raise ValueError(msg)
 
         # Average the vectors
         stacked_vectors = np.stack(face_vectors)
@@ -68,29 +72,29 @@ class Person:
     def from_db_row(cls, row) -> "Person":
         """Create Person from database row."""
         face_vector = None
-        if row['face_vector']:
-            face_vector = cls._blob_to_numpy(row['face_vector'])
+        if row["face_vector"]:
+            face_vector = cls._blob_to_numpy(row["face_vector"])
 
         return cls(
-            id=row['id'],
-            name=row['name'],
+            id=row["id"],
+            name=row["name"],
             face_vector=face_vector,
-            sample_count=row['sample_count'],
-            created_at=row['created_at'],
-            updated_at=row['updated_at'],
-            active=bool(row['active']),
+            sample_count=row["sample_count"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            active=bool(row["active"]),
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'id': self.id,
-            'name': self.name,
-            'sample_count': self.sample_count,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at,
-            'active': self.active,
-            'face_vector_dimension': len(self.face_vector) if self.face_vector is not None else None,
+            "id": self.id,
+            "name": self.name,
+            "sample_count": self.sample_count,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "active": self.active,
+            "face_vector_dimension": len(self.face_vector) if self.face_vector is not None else None,
         }
 
     def to_db_params(self) -> tuple:
@@ -108,7 +112,7 @@ class Person:
             self.active
         )
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate person data and return list of errors."""
         errors = []
 
@@ -139,7 +143,7 @@ class Person:
         """Check if person data is valid."""
         return len(self.validate()) == 0
 
-    def update_face_vector(self, new_face_vectors: List[np.ndarray]):
+    def update_face_vector(self, new_face_vectors: list[np.ndarray]):
         """Update face vector by including new samples."""
         if not new_face_vectors:
             return
@@ -169,18 +173,18 @@ class Person:
             return 0.0
 
         if len(self.face_vector) != len(face_vector):
-            raise ValueError("Vector dimensions must match")
+            msg = "Vector dimensions must match"
+            raise ValueError(msg)
 
         if metric == "cosine":
             # Cosine similarity (higher is more similar)
-            similarity = float(np.dot(self.face_vector, face_vector))
-            return similarity
-        elif metric == "euclidean":
+            return float(np.dot(self.face_vector, face_vector))
+        if metric == "euclidean":
             # Euclidean distance (lower is more similar)
             distance = float(np.linalg.norm(self.face_vector - face_vector))
             return 1.0 / (1.0 + distance)  # Convert to similarity score
-        else:
-            raise ValueError(f"Unknown similarity metric: {metric}")
+        msg = f"Unknown similarity metric: {metric}"
+        raise ValueError(msg)
 
     def deactivate(self):
         """Deactivate person (soft delete)."""
@@ -196,7 +200,7 @@ class Person:
     def _numpy_to_blob(vector: np.ndarray) -> bytes:
         """Convert numpy array to blob for database storage."""
         dimension = len(vector)
-        blob = struct.pack('<I', dimension)
+        blob = struct.pack("<I", dimension)
         blob += vector.astype(np.float32).tobytes()
         return blob
 
@@ -204,27 +208,28 @@ class Person:
     def _blob_to_numpy(blob: bytes) -> np.ndarray:
         """Convert blob from database to numpy array."""
         if len(blob) < 4:
-            raise ValueError("Invalid blob: too short")
+            msg = "Invalid blob: too short"
+            raise ValueError(msg)
 
-        dimension = struct.unpack('<I', blob[:4])[0]
+        dimension = struct.unpack("<I", blob[:4])[0]
         expected_size = 4 + dimension * 4
         if len(blob) != expected_size:
-            raise ValueError(f"Invalid blob size: expected {expected_size}, got {len(blob)}")
+            msg = f"Invalid blob size: expected {expected_size}, got {len(blob)}"
+            raise ValueError(msg)
 
         vector_bytes = blob[4:]
-        vector = np.frombuffer(vector_bytes, dtype=np.float32)
-        return vector
+        return np.frombuffer(vector_bytes, dtype=np.float32)
 
 
 @dataclass
 class Face:
     """Individual face detection within photos."""
 
-    id: Optional[int] = None
+    id: int | None = None
     file_id: int = 0
-    person_id: Optional[int] = None
-    box_xyxy: List[float] = None
-    face_vector: Optional[np.ndarray] = None
+    person_id: int | None = None
+    box_xyxy: list[float] = None
+    face_vector: np.ndarray | None = None
     confidence: float = 0.0
     verified: bool = False
 
@@ -238,15 +243,16 @@ class Face:
             self.face_vector = np.array(self.face_vector, dtype=np.float32)
 
     @classmethod
-    def from_detection_result(cls, file_id: int, detection_result: Dict[str, Any]) -> "Face":
+    def from_detection_result(cls, file_id: int, detection_result: dict[str, Any]) -> "Face":
         """Create Face from face detection result."""
         # Extract bounding box
-        box = detection_result.get('bbox', [0, 0, 0, 0])
+        box = detection_result.get("bbox", [0, 0, 0, 0])
         if len(box) != 4:
-            raise ValueError("Bounding box must have 4 coordinates")
+            msg = "Bounding box must have 4 coordinates"
+            raise ValueError(msg)
 
         # Extract face embedding
-        embedding = detection_result.get('embedding')
+        embedding = detection_result.get("embedding")
         if embedding is not None:
             if not isinstance(embedding, np.ndarray):
                 embedding = np.array(embedding, dtype=np.float32)
@@ -260,7 +266,7 @@ class Face:
             file_id=file_id,
             box_xyxy=box,
             face_vector=embedding,
-            confidence=detection_result.get('confidence', 0.0),
+            confidence=detection_result.get("confidence", 0.0),
             verified=False
         )
 
@@ -268,33 +274,33 @@ class Face:
     def from_db_row(cls, row) -> "Face":
         """Create Face from database row."""
         # Parse bounding box JSON
-        box_xyxy = json.loads(row['box_xyxy'])
+        box_xyxy = json.loads(row["box_xyxy"])
 
         # Decode face vector
         face_vector = None
-        if row['face_vector']:
-            face_vector = Person._blob_to_numpy(row['face_vector'])
+        if row["face_vector"]:
+            face_vector = Person._blob_to_numpy(row["face_vector"])
 
         return cls(
-            id=row['id'],
-            file_id=row['file_id'],
-            person_id=row['person_id'],
+            id=row["id"],
+            file_id=row["file_id"],
+            person_id=row["person_id"],
             box_xyxy=box_xyxy,
             face_vector=face_vector,
-            confidence=row['confidence'],
-            verified=bool(row['verified']),
+            confidence=row["confidence"],
+            verified=bool(row["verified"]),
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'id': self.id,
-            'file_id': self.file_id,
-            'person_id': self.person_id,
-            'box_xyxy': self.box_xyxy,
-            'confidence': self.confidence,
-            'verified': self.verified,
-            'face_vector_dimension': len(self.face_vector) if self.face_vector is not None else None,
+            "id": self.id,
+            "file_id": self.file_id,
+            "person_id": self.person_id,
+            "box_xyxy": self.box_xyxy,
+            "confidence": self.confidence,
+            "verified": self.verified,
+            "face_vector_dimension": len(self.face_vector) if self.face_vector is not None else None,
         }
 
     def to_db_params(self) -> tuple:
@@ -314,7 +320,7 @@ class Face:
             self.verified
         )
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate face data and return list of errors."""
         errors = []
 
@@ -348,7 +354,7 @@ class Face:
         x1, y1, x2, y2 = self.box_xyxy
         return abs((x2 - x1) * (y2 - y1))
 
-    def get_box_center(self) -> Tuple[float, float]:
+    def get_box_center(self) -> tuple[float, float]:
         """Get bounding box center coordinates."""
         x1, y1, x2, y2 = self.box_xyxy
         center_x = (x1 + x2) / 2
@@ -380,16 +386,16 @@ class Face:
             return 0.0
 
         if len(self.face_vector) != len(other_face.face_vector):
-            raise ValueError("Vector dimensions must match")
+            msg = "Vector dimensions must match"
+            raise ValueError(msg)
 
         if metric == "cosine":
-            similarity = float(np.dot(self.face_vector, other_face.face_vector))
-            return similarity
-        elif metric == "euclidean":
+            return float(np.dot(self.face_vector, other_face.face_vector))
+        if metric == "euclidean":
             distance = float(np.linalg.norm(self.face_vector - other_face.face_vector))
             return 1.0 / (1.0 + distance)
-        else:
-            raise ValueError(f"Unknown similarity metric: {metric}")
+        msg = f"Unknown similarity metric: {metric}"
+        raise ValueError(msg)
 
     def is_high_confidence(self, threshold: float = 0.8) -> bool:
         """Check if face detection confidence is high."""
@@ -408,26 +414,26 @@ class FaceSearchResult:
         """Add a face match to results."""
         if similarity >= self.threshold:
             self.matches.append({
-                'face': face,
-                'similarity': similarity,
-                'file_id': face.file_id,
-                'person_id': face.person_id,
+                "face": face,
+                "similarity": similarity,
+                "file_id": face.file_id,
+                "person_id": face.person_id,
             })
 
     def sort_by_similarity(self):
         """Sort matches by similarity (highest first)."""
-        self.matches.sort(key=lambda x: x['similarity'], reverse=True)
+        self.matches.sort(key=lambda x: x["similarity"], reverse=True)
 
-    def get_top_matches(self, n: int = 10) -> List[Dict[str, Any]]:
+    def get_top_matches(self, n: int = 10) -> list[dict[str, Any]]:
         """Get top N matches."""
         self.sort_by_similarity()
         return self.matches[:n]
 
-    def get_unique_files(self) -> List[int]:
+    def get_unique_files(self) -> list[int]:
         """Get unique file IDs from matches."""
-        file_ids = [match['file_id'] for match in self.matches]
+        file_ids = [match["file_id"] for match in self.matches]
         return list(set(file_ids))
 
-    def get_matches_by_person(self, person_id: int) -> List[Dict[str, Any]]:
+    def get_matches_by_person(self, person_id: int) -> list[dict[str, Any]]:
         """Get matches for specific person."""
-        return [match for match in self.matches if match['person_id'] == person_id]
+        return [match for match in self.matches if match["person_id"] == person_id]

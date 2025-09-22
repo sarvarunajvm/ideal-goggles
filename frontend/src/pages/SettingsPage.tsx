@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { apiService, ConfigResponse, IndexStatus } from '../services/api';
+import { apiService, IndexStatus } from '../services/api';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 
 export default function SettingsPage() {
-  const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
   const [indexStats, setIndexStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +30,6 @@ export default function SettingsPage() {
         apiService.getIndexStats(),
       ]);
 
-      setConfig(configData);
       setIndexStatus(statusData);
       setIndexStats(statsData);
 

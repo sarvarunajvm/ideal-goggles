@@ -1,10 +1,9 @@
 """Thumbnail model for photo search system."""
 
+import contextlib
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
 from datetime import datetime
 from pathlib import Path
-import hashlib
 
 
 @dataclass
@@ -16,7 +15,7 @@ class Thumbnail:
     width: int
     height: int
     format: str = "webp"
-    generated_at: Optional[float] = None
+    generated_at: float | None = None
 
     def __post_init__(self):
         """Post-initialization validation and defaults."""
@@ -51,23 +50,23 @@ class Thumbnail:
     def from_db_row(cls, row) -> "Thumbnail":
         """Create Thumbnail from database row."""
         return cls(
-            file_id=row['file_id'],
-            thumb_path=row['thumb_path'],
-            width=row['width'],
-            height=row['height'],
-            format=row['format'],
-            generated_at=row['generated_at'],
+            file_id=row["file_id"],
+            thumb_path=row["thumb_path"],
+            width=row["width"],
+            height=row["height"],
+            format=row["format"],
+            generated_at=row["generated_at"],
         )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'file_id': self.file_id,
-            'thumb_path': self.thumb_path,
-            'width': self.width,
-            'height': self.height,
-            'format': self.format,
-            'generated_at': self.generated_at,
+            "file_id": self.file_id,
+            "thumb_path": self.thumb_path,
+            "width": self.width,
+            "height": self.height,
+            "format": self.format,
+            "generated_at": self.generated_at,
         }
 
     def to_db_params(self) -> tuple:
@@ -81,7 +80,7 @@ class Thumbnail:
             self.generated_at
         )
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate thumbnail data and return list of errors."""
         errors = []
 
@@ -97,7 +96,7 @@ class Thumbnail:
         if self.width > 1024 or self.height > 1024:
             errors.append("Thumbnail dimensions too large (max 1024px)")
 
-        if self.format not in ['webp', 'jpeg', 'png']:
+        if self.format not in ["webp", "jpeg", "png"]:
             errors.append(f"Unsupported thumbnail format: {self.format}")
 
         return errors
@@ -116,7 +115,7 @@ class Thumbnail:
         abs_path = self.get_absolute_path(cache_root)
         return Path(abs_path).exists()
 
-    def get_file_size(self, cache_root: str) -> Optional[int]:
+    def get_file_size(self, cache_root: str) -> int | None:
         """Get thumbnail file size in bytes."""
         abs_path = self.get_absolute_path(cache_root)
         try:
@@ -150,10 +149,7 @@ class Thumbnail:
             return True
 
         # Check if thumbnail file doesn't exist
-        if not self.file_exists(cache_root):
-            return True
-
-        return False
+        return bool(not self.file_exists(cache_root))
 
     def get_size_category(self) -> str:
         """Get size category for UI purposes."""
@@ -161,14 +157,13 @@ class Thumbnail:
 
         if max_dimension <= 128:
             return "small"
-        elif max_dimension <= 256:
+        if max_dimension <= 256:
             return "medium"
-        elif max_dimension <= 512:
+        if max_dimension <= 512:
             return "large"
-        else:
-            return "xlarge"
+        return "xlarge"
 
-    def get_display_size(self, target_size: int) -> Tuple[int, int]:
+    def get_display_size(self, target_size: int) -> tuple[int, int]:
         """Get display dimensions for a target size."""
         if target_size <= 0:
             return self.width, self.height
@@ -187,7 +182,7 @@ class Thumbnail:
         return display_width, display_height
 
     @staticmethod
-    def _calculate_thumbnail_size(original_width: int, original_height: int, max_size: int) -> Tuple[int, int]:
+    def _calculate_thumbnail_size(original_width: int, original_height: int, max_size: int) -> tuple[int, int]:
         """Calculate thumbnail dimensions preserving aspect ratio."""
         if original_width <= 0 or original_height <= 0:
             return max_size, max_size
@@ -233,32 +228,30 @@ class Thumbnail:
 
         if not cache_path.exists():
             return {
-                'exists': False,
-                'total_files': 0,
-                'total_size_bytes': 0,
-                'directories': 0,
+                "exists": False,
+                "total_files": 0,
+                "total_size_bytes": 0,
+                "directories": 0,
             }
 
         total_files = 0
         total_size = 0
         directories = 0
 
-        for item in cache_path.rglob('*'):
+        for item in cache_path.rglob("*"):
             if item.is_file():
                 total_files += 1
-                try:
+                with contextlib.suppress(OSError):
                     total_size += item.stat().st_size
-                except OSError:
-                    pass
             elif item.is_dir():
                 directories += 1
 
         return {
-            'exists': True,
-            'total_files': total_files,
-            'total_size_bytes': total_size,
-            'total_size_mb': round(total_size / (1024 * 1024), 2),
-            'directories': directories,
+            "exists": True,
+            "total_files": total_files,
+            "total_size_bytes": total_size,
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "directories": directories,
         }
 
 
@@ -282,12 +275,12 @@ class ThumbnailCache:
         full_path = self.cache_root / thumb_path
         full_path.parent.mkdir(parents=True, exist_ok=True)
 
-    def cleanup_orphaned_thumbnails(self, valid_file_ids: List[int]) -> int:
+    def cleanup_orphaned_thumbnails(self, valid_file_ids: list[int]) -> int:
         """Remove thumbnails for files that no longer exist."""
         valid_ids_set = set(valid_file_ids)
         removed_count = 0
 
-        for thumb_file in self.cache_root.rglob(f'*.{self.format}'):
+        for thumb_file in self.cache_root.rglob(f"*.{self.format}"):
             try:
                 # Extract file_id from filename
                 file_id = int(thumb_file.stem)
@@ -305,7 +298,7 @@ class ThumbnailCache:
         removed_count = 0
 
         # Walk directories from deepest to shallowest
-        for dir_path in sorted(self.cache_root.rglob('*'), key=lambda p: len(p.parts), reverse=True):
+        for dir_path in sorted(self.cache_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
             if dir_path.is_dir() and not any(dir_path.iterdir()):
                 try:
                     dir_path.rmdir()
