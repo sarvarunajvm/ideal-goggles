@@ -1,0 +1,195 @@
+/**
+ * API service for photo search backend
+ */
+
+const API_BASE_URL = '/api';
+
+export interface SearchResult {
+  file_id: number;
+  path: string;
+  folder: string;
+  filename: string;
+  thumb_path: string | null;
+  shot_dt: string | null;
+  score: number;
+  badges: string[];
+  snippet: string | null;
+}
+
+export interface SearchResponse {
+  query: string;
+  total_matches: number;
+  items: SearchResult[];
+  took_ms: number;
+}
+
+export interface HealthResponse {
+  status: string;
+  timestamp: string;
+  version: string;
+  service: string;
+  system: any;
+  database: any;
+  dependencies: any;
+}
+
+export interface ConfigResponse {
+  roots: string[];
+  ocr_languages: string[];
+  face_search_enabled: boolean;
+  index_version: string;
+}
+
+export interface IndexStatus {
+  status: string;
+  progress: {
+    total_files: number;
+    processed_files: number;
+    current_phase: string;
+  };
+  errors: string[];
+  started_at: string | null;
+  estimated_completion: string | null;
+}
+
+class ApiService {
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API request failed: ${endpoint}`, error);
+      throw error;
+    }
+  }
+
+  // Health and system endpoints
+  async getHealth(): Promise<HealthResponse> {
+    return this.request<HealthResponse>('/health');
+  }
+
+  // Configuration endpoints
+  async getConfig(): Promise<ConfigResponse> {
+    return this.request<ConfigResponse>('/config/config');
+  }
+
+  async updateRoots(roots: string[]): Promise<any> {
+    return this.request('/config/config/roots', {
+      method: 'POST',
+      body: JSON.stringify({ roots }),
+    });
+  }
+
+  async updateConfig(config: Partial<{
+    ocr_languages: string[];
+    face_search_enabled: boolean;
+    thumbnail_size: number;
+    thumbnail_quality: number;
+  }>): Promise<any> {
+    return this.request('/config/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // Search endpoints
+  async searchPhotos(params: {
+    q?: string;
+    from?: string;
+    to?: string;
+    folder?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<SearchResponse> {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, value.toString());
+      }
+    });
+
+    return this.request<SearchResponse>(`/search/search?${searchParams}`);
+  }
+
+  async semanticSearch(text: string, topK = 50): Promise<SearchResponse> {
+    return this.request<SearchResponse>('/search/search/semantic', {
+      method: 'POST',
+      body: JSON.stringify({ text, top_k: topK }),
+    });
+  }
+
+  async imageSearch(file: File, topK = 50): Promise<SearchResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('top_k', topK.toString());
+
+    return this.request<SearchResponse>('/search/search/image', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Let browser set Content-Type for FormData
+    });
+  }
+
+  // Indexing endpoints
+  async getIndexStatus(): Promise<IndexStatus> {
+    return this.request<IndexStatus>('/index/index/status');
+  }
+
+  async startIndexing(full = false): Promise<any> {
+    return this.request('/index/index/start', {
+      method: 'POST',
+      body: JSON.stringify({ full }),
+    });
+  }
+
+  async stopIndexing(): Promise<any> {
+    return this.request('/index/index/stop', {
+      method: 'POST',
+    });
+  }
+
+  async getIndexStats(): Promise<any> {
+    return this.request('/index/index/stats');
+  }
+
+  // People endpoints
+  async getPeople(): Promise<any[]> {
+    return this.request('/people/people');
+  }
+
+  async createPerson(name: string, sampleFileIds: number[]): Promise<any> {
+    return this.request('/people/people', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        sample_file_ids: sampleFileIds,
+      }),
+    });
+  }
+
+  async searchFaces(personId: number, topK = 50): Promise<SearchResponse> {
+    return this.request<SearchResponse>('/search/search/faces', {
+      method: 'POST',
+      body: JSON.stringify({
+        person_id: personId,
+        top_k: topK,
+      }),
+    });
+  }
+}
+
+export const apiService = new ApiService();
