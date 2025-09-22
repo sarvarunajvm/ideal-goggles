@@ -3,6 +3,7 @@ Basic unit tests to ensure test framework works and provide minimal coverage.
 """
 
 import pytest
+
 from src.core.config import settings
 
 
@@ -14,7 +15,7 @@ def test_basic_math():
 def test_config_creation():
     """Test that config can be created."""
     assert settings is not None
-    assert hasattr(settings, 'DATABASE_URL')
+    assert hasattr(settings, "DATABASE_URL")
 
 
 def test_string_operations():
