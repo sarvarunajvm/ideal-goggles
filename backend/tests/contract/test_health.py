@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 class TestHealthEndpoint:
     """Test health check endpoint contract compliance."""
 
+    @pytest.mark.contract
     def test_health_endpoint_returns_200(self, client: TestClient) -> None:
         """Test that health endpoint returns 200 status code."""
         response = client.get("/health")
