@@ -14,14 +14,11 @@ NC='\033[0m' # No Color
 cleanup() {
     echo -e "\n${YELLOW}Shutting down development environment...${NC}"
 
-    # Kill backend if running
-    if [ ! -z "$BACKEND_PID" ]; then
-        echo "Stopping backend (PID: $BACKEND_PID)..."
-        kill $BACKEND_PID 2>/dev/null
-    fi
-
     # Kill any python process running on port 5555
     lsof -ti:5555 | xargs kill -9 2>/dev/null
+
+    # Kill any node process running on port 3333
+    lsof -ti:3333 | xargs kill -9 2>/dev/null
 
     exit 0
 }
@@ -29,31 +26,23 @@ cleanup() {
 # Set trap to cleanup on script exit
 trap cleanup EXIT INT TERM
 
-# Check if backend is already running on port 5555
+# Check if ports are in use and kill them
+echo -e "${YELLOW}Checking for processes on development ports...${NC}"
 if lsof -Pi :5555 -sTCP:LISTEN -t >/dev/null ; then
-    echo -e "${YELLOW}Backend already running on port 5555${NC}"
-else
-    # Start backend
-    echo -e "${GREEN}Starting backend on port 5555...${NC}"
-    cd backend
-    python3 -m src.main &
-    BACKEND_PID=$!
-    cd ..
-
-    # Wait for backend to be ready
-    echo "Waiting for backend to start..."
-    for i in {1..20}; do
-        if curl -s http://127.0.0.1:5555/ > /dev/null; then
-            echo -e "${GREEN}Backend is ready!${NC}"
-            break
-        fi
-        sleep 1
-    done
+    echo "Killing process on port 5555..."
+    lsof -ti:5555 | xargs kill -9 2>/dev/null
+    sleep 1
 fi
 
-# Start frontend/electron in dev mode
-echo -e "${GREEN}Starting Electron app in development mode...${NC}"
-pnpm run dev
+if lsof -Pi :3333 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Killing process on port 3333..."
+    lsof -ti:3333 | xargs kill -9 2>/dev/null
+    sleep 1
+fi
 
-# Script will stay running until interrupted
-wait
+# Start all services using pnpm dev (which runs backend, frontend, and electron concurrently)
+echo -e "${GREEN}Starting all services in development mode...${NC}"
+echo -e "${YELLOW}Backend will run on port 5555${NC}"
+echo -e "${YELLOW}Frontend will run on port 3333${NC}"
+echo ""
+pnpm run dev
