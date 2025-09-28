@@ -1,6 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import type { ElectronAPI } from '../electron/preload'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
 import PeoplePage from './pages/PeoplePage'
@@ -11,8 +10,8 @@ function App() {
   const [logPath, setLogPath] = useState<string>('')
   const [backendPort, setBackendPort] = useState<number | null>(null)
   const backendBaseDisplay = useMemo(() => {
-    const isElectron = typeof window !== 'undefined' && (window as unknown as { electronAPI?: ElectronAPI }).electronAPI
-    const port = backendPort ?? (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT ?? 5555
+    const isElectron = typeof window !== 'undefined' && window.electronAPI
+    const port = backendPort ?? window.BACKEND_PORT ?? 5555
     return isElectron ? `http://127.0.0.1:${port}` : '/api'
   }, [backendPort])
 
@@ -21,7 +20,7 @@ function App() {
 
     async function check() {
       try {
-        const api = (window as unknown as { electronAPI?: ElectronAPI }).electronAPI
+        const api = window.electronAPI
         if (api?.getBackendLogPath) {
           const p = await api.getBackendLogPath()
           if (!cancelled) setLogPath(p)
@@ -29,7 +28,7 @@ function App() {
         if (api?.getBackendPort) {
           const port = await api.getBackendPort()
           // Make port available to other modules that compute API base URL
-          ;(window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT = port
+          window.BACKEND_PORT = port
           if (!cancelled) setBackendPort(port)
         }
         // Use shared API client so Electron dynamic port and web proxy are handled
