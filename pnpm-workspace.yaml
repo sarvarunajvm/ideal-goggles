@@ -2,3 +2,6 @@ packages:
   - frontend
   - electron
   - tests
+
+onlyBuiltDependencies:
+  - electron
