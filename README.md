@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
+[![Dependabot Updates](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates)
 
 A privacy-focused desktop application for intelligent photo search and organization. Search your photos using natural language, faces, and text within images - all processed locally on your machine.
 
