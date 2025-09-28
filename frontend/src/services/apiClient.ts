@@ -6,7 +6,7 @@ export const getApiBaseUrl = (): string => {
   // In Electron production, backend runs at a dynamic localhost port (spawned by main)
   // In web dev, Vite proxy rewrites '/api' -> backend
   if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
-    const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 55555;
+    const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 5555;
     return `http://127.0.0.1:${port}`;
   }
   return '/api';

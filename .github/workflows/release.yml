@@ -29,20 +29,7 @@ jobs:
     - name: Setup PNPM
       uses: pnpm/action-setup@v2
       with:
-        version: 8
-
-    - name: Get pnpm store directory
-      working-directory: ./frontend
-      shell: bash
-      run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-    - name: Setup pnpm cache
-      uses: actions/cache@v3
-      with:
-        path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+        version: 10
 
     - name: Build backend binary (PyInstaller)
       working-directory: ./backend
@@ -51,29 +38,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
         pip install pyinstaller
-        pyinstaller --onefile --name photo-search-backend src/main.py
+        pyinstaller --onefile --name photo-search-backend -p src -s src/main.py
 
-    - name: Install frontend dependencies
-      working-directory: ./frontend
-      run: pnpm install --no-frozen-lockfile
+    - name: Install dependencies
+      run: pnpm install --no-lockfile
 
-    - name: Lint + typecheck frontend (unit only; UI/E2E disabled)
-      working-directory: ./frontend
+    - name: Lint + typecheck frontend
       run: |
         pnpm run lint
         pnpm run type-check
         pnpm run test:unit
 
-    - name: Build renderer
-      working-directory: ./frontend
-      run: pnpm run build
+    - name: Build frontend
+      run: pnpm run build:frontend
 
     - name: Build Electron main/preload
-      working-directory: ./frontend
       run: pnpm run build:electron:main
 
     - name: Package app (electron-builder)
-      working-directory: ./frontend
       shell: bash
       run: |
         if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm exec electron-builder --mac; fi
@@ -85,14 +67,14 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: macos-dmg
-        path: frontend/dist-electron/*.dmg
+        path: dist-electron/*.dmg
 
     - name: Upload artifacts (windows)
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: windows-installer
-        path: frontend/dist-electron/*.exe
+        path: dist-electron/*.exe
 
     - name: Upload artifacts (linux)
       if: matrix.os == 'ubuntu-latest'
@@ -100,8 +82,8 @@ jobs:
       with:
         name: linux-packages
         path: |
-          frontend/dist-electron/*.AppImage
-          frontend/dist-electron/*.deb
+          dist-electron/*.AppImage
+          dist-electron/*.deb
 
   create-release:
     needs: [build]
