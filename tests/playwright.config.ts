@@ -102,7 +102,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'cd ../backend && python -m src.main',
+      command: 'cd ../backend && python3 -m src.main',
       port: 5555,
       timeout: 120 * 1000,
       reuseExistingServer: !process.env.CI,
