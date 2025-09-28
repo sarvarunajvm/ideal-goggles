@@ -6,6 +6,9 @@ export default defineConfig({
   root: __dirname,
   plugins: [react()],
   base: './',
+  css: {
+    postcss: './postcss.config.js',
+  },
   server: {
     port: 3333,
     strictPort: true,
