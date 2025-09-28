@@ -69,16 +69,6 @@ class UpdateConfigRequest(BaseModel):
             valid_languages = [
                 "eng",
                 "tam",
-                "fra",
-                "deu",
-                "spa",
-                "ita",
-                "por",
-                "rus",
-                "chi_sim",
-                "chi_tra",
-                "jpn",
-                "kor",
             ]
             for lang in v:
                 if lang not in valid_languages:
@@ -245,16 +235,6 @@ async def get_default_configuration() -> dict[str, Any]:
         "supported_ocr_languages": [
             "eng",
             "tam",
-            "fra",
-            "deu",
-            "spa",
-            "ita",
-            "por",
-            "rus",
-            "chi_sim",
-            "chi_tra",
-            "jpn",
-            "kor",
         ],
         "supported_image_formats": [".jpg", ".jpeg", ".png", ".tiff", ".tif"],
         "max_thumbnail_size": 1024,

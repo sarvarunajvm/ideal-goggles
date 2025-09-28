@@ -106,7 +106,7 @@ def main() -> None:
         app,
         host=settings.HOST,
         port=settings.PORT,
-        reload=False,
+        reload=settings.DEBUG,
         access_log=settings.DEBUG,
     )
 
