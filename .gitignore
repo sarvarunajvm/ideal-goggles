@@ -53,6 +53,7 @@ dist-electron/
 frontend/test-results/
 frontend/playwright-report/
 playwright-report/
+test-results.json
 test-results/
 frontend/electron/dist/
 
