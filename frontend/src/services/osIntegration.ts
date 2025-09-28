@@ -3,19 +3,6 @@
  * Handles platform-specific operations like revealing files in folders
  */
 
-interface ElectronAPI {
-  revealInFolder: (path: string) => Promise<void>;
-  openExternal: (path: string) => Promise<void>;
-  getVersion: () => Promise<string>;
-  getPlatform: () => Promise<string>;
-}
-
-declare global {
-  interface Window {
-    electronAPI?: ElectronAPI;
-  }
-}
-
 class OSIntegrationService {
   /**
    * Check if we're running in Electron

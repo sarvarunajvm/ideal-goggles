@@ -5,7 +5,7 @@
 export const getApiBaseUrl = (): string => {
   // In Electron, backend always runs on port 5555
   // In web dev, Vite proxy rewrites '/api' -> backend
-  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: any }).electronAPI) {
+  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
     return 'http://127.0.0.1:5555';
   }
   return '/api';
