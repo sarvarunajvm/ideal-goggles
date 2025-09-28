@@ -336,7 +336,7 @@ async def reset_configuration() -> dict[str, Any]:
             "roots": [],
             "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
-            "thumbnail_size": 512,
+            "thumbnail_size": "medium",
             "thumbnail_quality": 85,
         }
 
@@ -382,7 +382,7 @@ def _parse_int_setting(key: str, value: str) -> int:
     try:
         return int(value)
     except (ValueError, TypeError):
-        return {"thumbnail_size": 512, "thumbnail_quality": 85}.get(key, 0)
+        return {"thumbnail_quality": 85}.get(key, 0)
 
 
 def _parse_setting_value(key: str, value: str) -> Any:
@@ -391,8 +391,10 @@ def _parse_setting_value(key: str, value: str) -> Any:
         return _parse_json_setting(key, value)
     if key == "face_search_enabled":
         return _parse_boolean_setting(value)
-    if key in ["thumbnail_size", "thumbnail_quality"]:
+    if key == "thumbnail_quality":
         return _parse_int_setting(key, value)
+    if key == "thumbnail_size":
+        return value
     return value
 
 
@@ -402,7 +404,7 @@ def _get_config_defaults() -> dict[str, Any]:
         "roots": [],
         "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
-        "thumbnail_size": 512,
+        "thumbnail_size": "medium",
         "thumbnail_quality": 85,
         "index_version": "1",
     }
@@ -440,7 +442,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
             "roots": [],
             "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
-            "thumbnail_size": 512,
+            "thumbnail_size": "medium",
             "thumbnail_quality": 85,
             "index_version": "1",
         }
