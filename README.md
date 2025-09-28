@@ -1,6 +1,7 @@
 # Photo Search and Navigation System
 
 [![CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml)
+[![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
 
 A local-first photo search system with multi-modal search capabilities including text, semantic, image similarity, and face recognition.
 
