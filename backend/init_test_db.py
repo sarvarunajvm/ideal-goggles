@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Initialize test database with schema"""
 
-import sqlite3
 import os
+import sqlite3
 from pathlib import Path
+
 
 def init_test_database():
     """Initialize test database with schema"""
@@ -24,20 +25,21 @@ def init_test_database():
 
     # Read and execute migration
     migration_path = Path("src/db/migrations/001_initial_schema.sql")
-    with open(migration_path, 'r') as f:
+    with open(migration_path) as f:
         migration_sql = f.read()
 
     # Execute migration
     cursor.executescript(migration_sql)
     conn.commit()
 
-    print(f"Database initialized at: {db_path.absolute()}")
+    print(f"Database initialized at: {db_path.absolute()}")  # noqa: T201
 
     # Set environment variable for backend
-    os.environ['DATABASE_URL'] = f"sqlite+aiosqlite:///{db_path.absolute()}"
-    print(f"DATABASE_URL set to: {os.environ['DATABASE_URL']}")
+    os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path.absolute()}"
+    print(f"DATABASE_URL set to: {os.environ['DATABASE_URL']}")  # noqa: T201
 
     conn.close()
+
 
 if __name__ == "__main__":
     init_test_database()

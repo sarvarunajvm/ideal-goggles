@@ -18,7 +18,9 @@ class ConfigurationResponse(BaseModel):
     roots: list[str] = Field(description="Configured root folders")
     ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
-    semantic_search_enabled: bool = Field(description="Whether semantic search is enabled")
+    semantic_search_enabled: bool = Field(
+        description="Whether semantic search is enabled"
+    )
     batch_size: int = Field(description="Batch size for processing")
     thumbnail_size: str = Field(description="Thumbnail size preset")
     index_version: str = Field(description="Current index version")
