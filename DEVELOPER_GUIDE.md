@@ -101,7 +101,7 @@ ENABLE_CORS=true
 #### Frontend Environment (.env.local)
 ```bash
 # API Configuration
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:55555
 VITE_API_TIMEOUT=30000
 
 # Feature Flags

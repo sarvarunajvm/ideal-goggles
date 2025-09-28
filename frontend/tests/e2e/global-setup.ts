@@ -18,7 +18,7 @@ async function globalSetup(config: FullConfig) {
 
     // Check if backend is responding
     try {
-      const response = await page.request.get('http://localhost:8000/health');
+      const response = await page.request.get('http://localhost:55555/health');
       if (response.ok()) {
         console.log('Backend is ready');
       } else {

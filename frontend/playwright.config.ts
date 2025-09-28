@@ -87,7 +87,7 @@ export default defineConfig({
     },
     {
       command: 'cd ../backend && python -m src.main',
-      port: 8000,
+      port: 55555,
       reuseExistingServer: !process.env.CI,
     }
   ],

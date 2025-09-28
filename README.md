@@ -74,19 +74,19 @@ make install
 make dev
 ```
 
-The API will be available at: http://localhost:8000
+The API will be available at: http://localhost:55555
 
 ### API Documentation
 
-- **Interactive docs**: http://localhost:8000/docs
-- **OpenAPI spec**: http://localhost:8000/openapi.json
+- **Interactive docs**: http://localhost:55555/docs
+- **OpenAPI spec**: http://localhost:55555/openapi.json
 
 ## Basic Usage
 
 ### 1. Configure Root Folders
 
 ```bash
-curl -X POST "http://localhost:8000/config/roots" \
+curl -X POST "http://localhost:55555/config/roots" \
   -H "Content-Type: application/json" \
   -d '{"roots": ["/path/to/your/photos"]}'
 ```
@@ -94,7 +94,7 @@ curl -X POST "http://localhost:8000/config/roots" \
 ### 2. Start Indexing
 
 ```bash
-curl -X POST "http://localhost:8000/index/start" \
+curl -X POST "http://localhost:55555/index/start" \
   -H "Content-Type: application/json" \
   -d '{"full": false}'
 ```
@@ -102,26 +102,26 @@ curl -X POST "http://localhost:8000/index/start" \
 ### 3. Check Indexing Status
 
 ```bash
-curl "http://localhost:8000/index/status"
+curl "http://localhost:55555/index/status"
 ```
 
 ### 4. Search Photos
 
 **Text Search**:
 ```bash
-curl "http://localhost:8000/search?q=wedding&limit=10"
+curl "http://localhost:55555/search?q=wedding&limit=10"
 ```
 
 **Semantic Search**:
 ```bash
-curl -X POST "http://localhost:8000/search/semantic" \
+curl -X POST "http://localhost:55555/search/semantic" \
   -H "Content-Type: application/json" \
   -d '{"text": "sunset over mountains", "top_k": 10}'
 ```
 
 **Image Search** (upload a photo):
 ```bash
-curl -X POST "http://localhost:8000/search/image" \
+curl -X POST "http://localhost:55555/search/image" \
   -F "file=@/path/to/query/image.jpg" \
   -F "top_k=10"
 ```
@@ -234,7 +234,7 @@ make dist-all FRONTEND_PM=pnpm     # mac/win/linux (host-dependent)
 
 Notes:
 - Electron auto-starts the bundled backend and stores data in the OS app data folder.
-- If you see a white screen, open DevTools and check Network (backend at http://127.0.0.1:8000).
+- If you see a white screen, open DevTools and check Network (backend at http://127.0.0.1:55555).
 
 ## Release Checklist
 
