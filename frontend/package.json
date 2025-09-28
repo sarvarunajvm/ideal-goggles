@@ -1,21 +1,12 @@
 {
-  "name": "ideal-googles",
+  "name": "ideal-googles-frontend",
   "version": "1.0.8",
-  "description": "Photo search and navigation desktop application",
+  "description": "Frontend for Photo search and navigation application",
   "author": "Photo Search Team",
-  "main": "electron/dist/main.js",
   "homepage": "./",
   "scripts": {
-    "dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
-    "dev:vite": "vite",
-    "dev:electron": "wait-on http://localhost:3000 && electron .",
+    "dev": "vite",
     "build": "vite build",
-    "build:electron:main": "tsc -p electron/tsconfig.json",
-    "build:electron": "pnpm run build && pnpm run build:electron:main && electron-builder",
-    "bundle-backend": "cd ../backend && make package PYTHON=python3",
-    "dist:mac": "pnpm run bundle-backend && pnpm run build:electron -- --mac",
-    "dist:win": "pnpm run bundle-backend && pnpm run build:electron -- --win",
-    "dist:all": "pnpm run bundle-backend && pnpm run build:electron -- -mwl",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
@@ -25,13 +16,24 @@
     "test:components": "jest -c jest.config.js --testPathPattern=tests/components/.*"
   },
   "dependencies": {
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-toast": "^1.2.15",
     "axios": "^1.6.2",
-    "clsx": "^2.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "tailwind-merge": "^2.0.0",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
@@ -46,9 +48,6 @@
     "@typescript-eslint/parser": "^6.10.0",
     "@vitejs/plugin-react": "^4.1.1",
     "autoprefixer": "^10.4.16",
-    "concurrently": "^8.2.2",
-    "electron": "^38.1.2",
-    "electron-builder": "^24.6.4",
     "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
@@ -58,132 +57,9 @@
     "msw": "^2.11.3",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.5",
+    "terser": "^5.44.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.2.2",
-    "vite": "^6.3.6",
-    "vite-plugin-electron": "^0.15.5",
-    "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.idealgoogles.app",
-    "productName": "ideal-googles",
-    "copyright": "Copyright © 2023 Photo Search Team",
-    "directories": {
-      "output": "dist-electron",
-      "buildResources": "build-resources"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/dist/**/*",
-      "!electron/src/**/*",
-      "!src/**/*",
-      "!tests/**/*",
-      "!*.ts",
-      "!*.tsx"
-    ],
-    "extraResources": [
-      {
-        "from": "../backend/dist",
-        "to": "backend",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "publisherName": "Photo Search Team",
-      "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": false,
-      "signingHashAlgorithms": [],
-      "certificateFile": null,
-      "certificatePassword": null
-    },
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.photography",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "entitlements": null,
-      "entitlementsInherit": null,
-      "identity": null
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Graphics",
-      "executableName": "ideal-googles",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "ideal-googles",
-      "uninstallDisplayName": "ideal-googles"
-    },
-    "dmg": {
-      "title": "ideal-googles",
-      "iconSize": 100,
-      "contents": [
-        {
-          "x": 110,
-          "y": 150
-        },
-        {
-          "x": 240,
-          "y": 150,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "appImage": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    },
-    "deb": {
-      "packageCategory": "graphics",
-      "synopsis": "Local photo search and navigation application",
-      "description": "AI-powered photo search with text, semantic, and face recognition capabilities. Privacy-focused local processing.",
-      "maintainer": "Photo Search Team"
-    },
-    "publish": null
+    "vite": "^6.3.6"
   }
 }

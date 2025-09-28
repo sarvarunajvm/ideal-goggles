@@ -16,11 +16,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared/*": ["../packages/shared/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "../packages/shared/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "dist-electron", "electron", "playwright.config.ts", "tests/e2e/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

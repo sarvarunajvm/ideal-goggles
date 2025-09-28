@@ -3,12 +3,14 @@ module.exports = {
   preset: 'ts-jest',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.json',
+      diagnostics: false,
+    }],
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@shared/(.*)$': '<rootDir>/../packages/shared/$1',
   },
   testMatch: [
     '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js|jsx)',
@@ -23,11 +25,4 @@ module.exports = {
     '<rootDir>/dist-electron'
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setupTests.ts'],
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.json',
-      diagnostics: false,
-      isolatedModules: true,
-    },
-  },
 };

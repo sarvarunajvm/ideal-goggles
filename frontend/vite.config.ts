@@ -6,24 +6,53 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   server: {
-    port: 3000,
+    port: 3333,
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:55555',
+        target: 'http://localhost:5555',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      // Proxy backend OpenAPI + docs directly so Swagger UI works under Vite dev
+      '/openapi.json': {
+        target: 'http://localhost:5555',
+        changeOrigin: true,
+      },
+      '/docs': {
+        target: 'http://localhost:5555',
+        changeOrigin: true,
       },
     },
   },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'router': ['react-router-dom'],
+          'ui-vendor': ['@radix-ui/react-tabs', '@radix-ui/react-scroll-area', '@radix-ui/react-checkbox'],
+          'icons': ['lucide-react'],
+          'utils': ['clsx', 'class-variance-authority', 'tailwind-merge']
+        }
+      }
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    sourcemap: false,
+    target: 'es2020',
+    chunkSizeWarningLimit: 1000
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../packages/shared'),
     },
   },
 })
