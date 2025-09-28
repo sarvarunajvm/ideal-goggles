@@ -10,7 +10,7 @@ let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
-let BACKEND_PORT = 55555; // resolved at runtime in production
+let BACKEND_PORT = 5555; // resolved at runtime in production/dev
 
 // Backend management
 async function startBackend(): Promise<void> {
@@ -173,13 +173,13 @@ function createWindow(): void {
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
     },
-    icon: join(__dirname, '../../assets/icon.png'), // App icon
+    icon: join(__dirname, '../assets/icon.png'), // App icon
   });
 
   // Load the app
   const startUrl = isDev
-    ? 'http://localhost:5173'  // Vite dev server
-    : `file://${join(__dirname, '../../dist/index.html')}#/`;
+    ? 'http://localhost:3333'  // Vite dev server (configured in vite.config.ts)
+    : `file://${join(__dirname, '../frontend/dist/index.html')}#/`;
 
   mainWindow.loadURL(startUrl);
 
