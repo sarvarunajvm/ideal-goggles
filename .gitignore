@@ -89,4 +89,5 @@ yarn.lock
 .claude/
 
 AGENTS.md
+CLAUDE.md
 *.xml

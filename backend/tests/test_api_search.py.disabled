@@ -1,0 +1,244 @@
+"""
+Unit and integration tests for the search API.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock, AsyncMock
+import numpy as np
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from main import app
+
+
+class TestSearchAPI:
+    """Test suite for search endpoints."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+
+    @pytest.fixture
+    def mock_search_results(self):
+        """Mock search results data."""
+        return [
+            {
+                "photo_id": 1,
+                "file_path": "/photos/vacation/beach.jpg",
+                "score": 0.95,
+                "thumbnail": "base64_thumbnail_data",
+                "metadata": {
+                    "date_taken": "2024-01-01",
+                    "location": "Hawaii"
+                }
+            },
+            {
+                "photo_id": 2,
+                "file_path": "/photos/vacation/sunset.jpg",
+                "score": 0.87,
+                "thumbnail": "base64_thumbnail_data",
+                "metadata": {
+                    "date_taken": "2024-01-02",
+                    "location": "California"
+                }
+            }
+        ]
+
+    def test_text_search(self, client, mock_search_results):
+        """Test text-based search."""
+        with patch('api.search.TextSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.search = AsyncMock(return_value=mock_search_results)
+            mock_engine.return_value = mock_instance
+
+            response = client.post("/search/text", json={
+                "query": "beach sunset",
+                "limit": 10
+            })
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 2
+            assert data["results"][0]["score"] == 0.95
+            assert data["query"] == "beach sunset"
+
+    def test_semantic_search(self, client, mock_search_results):
+        """Test semantic/vector search."""
+        with patch('api.search.VectorSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.semantic_search = AsyncMock(return_value=mock_search_results)
+            mock_engine.return_value = mock_instance
+
+            response = client.post("/search/semantic", json={
+                "query": "happy family moments",
+                "limit": 20
+            })
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 2
+            assert data["search_type"] == "semantic"
+
+    def test_hybrid_search(self, client, mock_search_results):
+        """Test hybrid search combining text and semantic."""
+        with patch('api.search.HybridSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.search = AsyncMock(return_value=mock_search_results)
+            mock_engine.return_value = mock_instance
+
+            response = client.post("/search/hybrid", json={
+                "query": "beach vacation 2024",
+                "limit": 15,
+                "text_weight": 0.5,
+                "semantic_weight": 0.5
+            })
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 2
+            assert data["search_type"] == "hybrid"
+            assert data["weights"]["text"] == 0.5
+            assert data["weights"]["semantic"] == 0.5
+
+    def test_face_search(self, client):
+        """Test face-based search."""
+        mock_results = [
+            {
+                "photo_id": 10,
+                "file_path": "/photos/people/john.jpg",
+                "similarity": 0.98,
+                "face_location": {"x": 100, "y": 100, "w": 50, "h": 50}
+            }
+        ]
+
+        with patch('api.search.FaceSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.search_by_face = AsyncMock(return_value=mock_results)
+            mock_engine.return_value = mock_instance
+
+            response = client.post("/search/face", json={
+                "image_data": "base64_encoded_face_image",
+                "limit": 10
+            })
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 1
+            assert data["results"][0]["similarity"] == 0.98
+
+    def test_search_with_filters(self, client, mock_search_results):
+        """Test search with various filters."""
+        with patch('api.search.TextSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.search = AsyncMock(return_value=mock_search_results)
+            mock_engine.return_value = mock_instance
+
+            response = client.post("/search/text", json={
+                "query": "vacation",
+                "limit": 10,
+                "filters": {
+                    "date_from": "2024-01-01",
+                    "date_to": "2024-12-31",
+                    "location": "Hawaii",
+                    "people": ["John", "Jane"]
+                }
+            })
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "filters" in data
+            assert data["filters"]["date_from"] == "2024-01-01"
+
+    def test_search_pagination(self, client):
+        """Test search with pagination."""
+        # Create mock results for pagination
+        total_results = [
+            {"photo_id": i, "file_path": f"/photo_{i}.jpg", "score": 0.9 - i*0.01}
+            for i in range(50)
+        ]
+
+        with patch('api.search.TextSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+
+            def paginated_search(*args, **kwargs):
+                offset = kwargs.get('offset', 0)
+                limit = kwargs.get('limit', 10)
+                return total_results[offset:offset+limit]
+
+            mock_instance.search = AsyncMock(side_effect=paginated_search)
+            mock_engine.return_value = mock_instance
+
+            # First page
+            response = client.post("/search/text", json={
+                "query": "test",
+                "limit": 10,
+                "offset": 0
+            })
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 10
+            assert data["results"][0]["photo_id"] == 0
+
+            # Second page
+            response = client.post("/search/text", json={
+                "query": "test",
+                "limit": 10,
+                "offset": 10
+            })
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["results"]) == 10
+            assert data["results"][0]["photo_id"] == 10
+
+    def test_search_empty_query(self, client):
+        """Test search with empty query."""
+        response = client.post("/search/text", json={
+            "query": "",
+            "limit": 10
+        })
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "Query cannot be empty" in data["detail"]
+
+    def test_search_invalid_limit(self, client):
+        """Test search with invalid limit."""
+        response = client.post("/search/text", json={
+            "query": "test",
+            "limit": -1
+        })
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid limit" in data["detail"]
+
+    @pytest.mark.asyncio
+    async def test_search_performance(self, client):
+        """Test search performance with large result set."""
+        import time
+
+        large_results = [
+            {"photo_id": i, "file_path": f"/photo_{i}.jpg", "score": 0.9}
+            for i in range(1000)
+        ]
+
+        with patch('api.search.TextSearchEngine') as mock_engine:
+            mock_instance = MagicMock()
+            mock_instance.search = AsyncMock(return_value=large_results[:100])
+            mock_engine.return_value = mock_instance
+
+            start_time = time.time()
+            response = client.post("/search/text", json={
+                "query": "performance test",
+                "limit": 100
+            })
+            elapsed = time.time() - start_time
+
+            assert response.status_code == 200
+            assert elapsed < 2.0  # Should complete within 2 seconds
+            data = response.json()
+            assert len(data["results"]) == 100

@@ -1,0 +1,184 @@
+"""
+Tests for indexing control endpoints.
+"""
+
+import pytest
+import asyncio
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock, AsyncMock
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.main import app
+
+
+class TestIndexingEndpoints:
+    """Test suite for indexing endpoints."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+
+    def test_start_indexing_no_params(self, client):
+        """Test starting indexing without parameters."""
+        response = client.post("/index/start")
+
+        # Should succeed or return 409 if already running
+        assert response.status_code in [200, 409]
+
+        if response.status_code == 200:
+            data = response.json()
+            assert "message" in data
+            assert "status" in data
+
+    def test_start_indexing_with_full_param(self, client):
+        """Test starting indexing with full=true parameter."""
+        # First stop any existing indexing
+        client.post("/index/stop")
+
+        response = client.post("/index/start", json={"full": True})
+
+        # Should succeed or return 409 if already running
+        assert response.status_code in [200, 409]
+
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "started"
+
+    def test_start_indexing_with_empty_body(self, client):
+        """Test starting indexing with empty JSON body."""
+        # First stop any existing indexing
+        client.post("/index/stop")
+
+        response = client.post("/index/start", json={})
+
+        # Should succeed with default values
+        assert response.status_code in [200, 409]
+
+    def test_concurrent_indexing_requests(self, client):
+        """Test that concurrent indexing requests are prevented."""
+        # Start first indexing
+        response1 = client.post("/index/start", json={"full": False})
+
+        if response1.status_code == 200:
+            # Second request should fail with 409
+            response2 = client.post("/index/start", json={"full": False})
+            assert response2.status_code == 409
+            assert "already in progress" in response2.json()["detail"].lower()
+
+    def test_get_indexing_status(self, client):
+        """Test getting indexing status."""
+        response = client.get("/index/status")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "status" in data
+        assert "progress" in data
+        assert "errors" in data
+        assert isinstance(data["errors"], list)
+
+        progress = data["progress"]
+        assert "total_files" in progress
+        assert "processed_files" in progress
+        assert "current_phase" in progress
+
+    def test_stop_indexing(self, client):
+        """Test stopping indexing process."""
+        response = client.post("/index/stop")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "message" in data
+        assert "status" in data
+        assert data["status"] in ["stopped", "idle"]
+
+    def test_get_indexing_stats(self, client):
+        """Test getting indexing statistics."""
+        response = client.get("/index/stats")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "database_stats" in data
+        assert "index_stats" in data
+
+        # Check database stats structure
+        db_stats = data["database_stats"]
+        assert "total_photos" in db_stats
+        assert "total_embeddings" in db_stats
+        assert "total_people" in db_stats
+        assert "database_size_mb" in db_stats
+
+    def test_indexing_workflow(self, client):
+        """Test complete indexing workflow: start -> status -> stop."""
+        # Stop any existing indexing
+        client.post("/index/stop")
+
+        # Start indexing
+        start_response = client.post("/index/start", json={"full": False})
+        assert start_response.status_code in [200, 409]
+
+        # Check status
+        status_response = client.get("/index/status")
+        assert status_response.status_code == 200
+        status_data = status_response.json()
+        assert status_data["status"] in ["idle", "indexing", "completed", "error"]
+
+        # Stop indexing
+        stop_response = client.post("/index/stop")
+        assert stop_response.status_code == 200
+
+        # Check status after stop
+        final_status = client.get("/index/status")
+        assert final_status.status_code == 200
+        assert final_status.json()["status"] in ["idle", "stopped"]
+
+    def test_indexing_status_schema(self, client):
+        """Test that indexing status follows the expected schema."""
+        response = client.get("/index/status")
+        assert response.status_code == 200
+
+        data = response.json()
+
+        # Required fields
+        assert "status" in data
+        assert "progress" in data
+        assert "errors" in data
+
+        # Optional fields that can be None
+        assert "started_at" in data
+        assert "estimated_completion" in data
+
+        # Progress structure
+        progress = data["progress"]
+        assert isinstance(progress, dict)
+        assert "total_files" in progress
+        assert "processed_files" in progress
+        assert "current_phase" in progress
+
+        # Errors should be a list
+        assert isinstance(data["errors"], list)
+
+    @patch('src.api.indexing.get_database_manager')
+    def test_indexing_stats_with_empty_database(self, mock_db_manager, client):
+        """Test indexing stats when database is empty."""
+        mock_db = MagicMock()
+        mock_db.get_database_info.return_value = {
+            "database_size_mb": 0.5,
+            "table_counts": {
+                "photos": 0,
+                "embeddings": 0,
+                "people": 0,
+                "faces": 0
+            }
+        }
+        mock_db_manager.return_value = mock_db
+
+        response = client.get("/index/stats")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["database_stats"]["total_photos"] == 0
+        assert data["database_stats"]["total_embeddings"] == 0

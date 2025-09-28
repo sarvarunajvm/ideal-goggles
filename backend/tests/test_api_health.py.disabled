@@ -1,0 +1,71 @@
+"""
+Unit tests for the health API endpoint.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock
+import sys
+import os
+
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from main import app
+
+
+class TestHealthAPI:
+    """Test suite for health endpoints."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+
+    def test_health_check(self, client):
+        """Test basic health check endpoint."""
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "version" in data
+        assert "timestamp" in data
+
+    @patch('api.health.get_system_metrics')
+    def test_health_with_metrics(self, mock_metrics, client):
+        """Test health check with system metrics."""
+        mock_metrics.return_value = {
+            "cpu_percent": 25.5,
+            "memory_percent": 45.2,
+            "disk_usage": 60.0
+        }
+
+        response = client.get("/health/detailed")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["metrics"]["cpu_percent"] == 25.5
+        assert data["metrics"]["memory_percent"] == 45.2
+
+    @patch('api.health.check_database_connection')
+    def test_health_database_check(self, mock_db_check, client):
+        """Test health check with database status."""
+        mock_db_check.return_value = True
+
+        response = client.get("/health/database")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["database"]["connected"] is True
+        assert data["database"]["status"] == "healthy"
+
+    @patch('api.health.check_database_connection')
+    def test_health_database_failure(self, mock_db_check, client):
+        """Test health check when database is down."""
+        mock_db_check.side_effect = Exception("Database connection failed")
+
+        response = client.get("/health/database")
+        assert response.status_code == 503
+        data = response.json()
+        assert data["database"]["connected"] is False
+        assert data["database"]["status"] == "unhealthy"
+        assert "Database connection failed" in data["database"]["error"]
