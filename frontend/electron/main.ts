@@ -10,7 +10,7 @@ let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
-let BACKEND_PORT = 8000; // resolved at runtime in production
+let BACKEND_PORT = 55555; // resolved at runtime in production
 
 // Backend management
 async function startBackend(): Promise<void> {
@@ -64,8 +64,9 @@ async function startBackend(): Promise<void> {
       }
 
       // In production, start the packaged backend binary (PyInstaller output)
-      // Pick a free localhost port to avoid collisions
-      BACKEND_PORT = await findFreePort();
+      // Allow forcing a fixed port via env, otherwise pick a free localhost port
+      const forced = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT, 10) : undefined;
+      BACKEND_PORT = Number.isFinite(forced!) ? forced! : await findFreePort();
       const backendPath = join(process.resourcesPath, 'backend');
       const binaryName = process.platform === 'win32' ? 'photo-search-backend.exe' : 'photo-search-backend';
       const backendExecutable = join(backendPath, binaryName);
