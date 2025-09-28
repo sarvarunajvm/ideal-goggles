@@ -14,36 +14,38 @@ let BACKEND_PORT = 5555; // resolved at runtime in production/dev
 
 // Backend management
 async function startBackend(): Promise<void> {
-  const findFreePort = async (): Promise<number> => {
-    return await new Promise<number>((resolve, reject) => {
-      const server = net.createServer();
-      server.listen(0, '127.0.0.1');
-      server.on('listening', () => {
-        const address = server.address();
-        if (typeof address === 'object' && address && 'port' in address) {
-          const port = (address as net.AddressInfo).port;
-          server.close(() => resolve(port));
-        } else {
-          server.close(() => reject(new Error('Failed to allocate port')));
-        }
+  console.log('[Backend] Starting backend initialization...');
+  const checkPortInUse = (port: number, host = '127.0.0.1'): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const socket = net.connect({ port, host });
+      socket.once('connect', () => {
+        socket.end();
+        resolve(true); // Port is in use
       });
-      server.on('error', (err) => {
-        try { server.close(); } catch {}
-        reject(err);
+      socket.once('error', () => {
+        socket.destroy();
+        resolve(false); // Port is free
       });
     });
   };
+
   const waitForPort = (port: number, host = '127.0.0.1', retries = 40, delayMs = 500): Promise<void> => {
+    console.log(`[Backend] Waiting for port ${host}:${port} to become available...`);
     return new Promise((resolve, reject) => {
       const tryOnce = (attempt: number) => {
+        if (attempt > 0 && attempt % 5 === 0) {
+          console.log(`[Backend] Still waiting for port ${host}:${port}... (attempt ${attempt}/${retries})`);
+        }
         const socket = net.connect({ port, host });
         socket.once('connect', () => {
+          console.log(`[Backend] Port ${host}:${port} is now available!`);
           socket.end();
           resolve();
         });
         socket.once('error', () => {
           socket.destroy();
           if (attempt >= retries) {
+            console.error(`[Backend] Failed: Port ${host}:${port} not responding after ${retries} attempts`);
             reject(new Error(`Backend port ${host}:${port} not responding`));
           } else {
             setTimeout(() => tryOnce(attempt + 1), delayMs);
@@ -56,24 +58,52 @@ async function startBackend(): Promise<void> {
 
   return new Promise(async (resolve, reject) => {
     try {
-      // In development, assume backend is running separately
+      console.log('[Backend] isDev:', isDev);
+      console.log('[Backend] NODE_ENV:', process.env.NODE_ENV);
+
+      // Always use port 5555
+      BACKEND_PORT = 5555;
+      console.log('[Backend] Using fixed port:', BACKEND_PORT);
+
+      // Check if port is already in use
+      const portInUse = await checkPortInUse(BACKEND_PORT);
+
       if (isDev) {
-        console.log('Development mode: assuming backend is running on port', BACKEND_PORT);
-        // In dev mode, just resolve immediately since backend runs separately
+        console.log('[Backend] Development mode');
+        if (portInUse) {
+          console.log('[Backend] Port 5555 already in use (likely dev server running), skipping backend start');
+          resolve();
+          return;
+        }
+        console.log('[Backend] Port 5555 is free, but in dev mode we expect external backend');
         resolve();
         return;
       }
 
-      // In production, start the packaged backend binary (PyInstaller output)
-      // Allow forcing a fixed port via env, otherwise pick a free localhost port
-      const forced = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT, 10) : undefined;
-      BACKEND_PORT = Number.isFinite(forced!) ? forced! : await findFreePort();
+      console.log('[Backend] Production mode');
+
+      // In production, check if backend is already running
+      if (portInUse) {
+        console.log('[Backend] Port 5555 already in use, assuming backend is running');
+        resolve();
+        return;
+      }
+
+      console.log('[Backend] Port 5555 is free, starting packaged backend...');
+      console.log('[Backend] resourcesPath:', process.resourcesPath);
+
       const backendPath = join(process.resourcesPath, 'backend');
       const binaryName = process.platform === 'win32' ? 'photo-search-backend.exe' : 'photo-search-backend';
       const backendExecutable = join(backendPath, binaryName);
 
+      console.log('[Backend] Backend path:', backendPath);
+      console.log('[Backend] Binary name:', binaryName);
+      console.log('[Backend] Backend executable:', backendExecutable);
+      console.log('[Backend] Executable exists:', existsSync(backendExecutable));
+
       if (!existsSync(backendExecutable)) {
-        console.error('Backend executable not found:', { backendExecutable });
+        console.error('[Backend] Backend executable not found:', { backendExecutable });
+        console.error('[Backend] Directory contents:', existsSync(backendPath) ? require('fs').readdirSync(backendPath) : 'Directory does not exist');
         reject(new Error('Backend executable not found'));
         return;
       }
@@ -82,6 +112,11 @@ async function startBackend(): Promise<void> {
       const userDataDir = app.getPath('userData');
       const dataDir = join(userDataDir, 'data');
       const cacheDir = join(userDataDir, 'cache');
+
+      console.log('[Backend] User data dir:', userDataDir);
+      console.log('[Backend] Data dir:', dataDir);
+      console.log('[Backend] Cache dir:', cacheDir);
+
       // Ensure directories exist
       mkdirSync(dataDir, { recursive: true });
       mkdirSync(cacheDir, { recursive: true });
@@ -91,54 +126,79 @@ async function startBackend(): Promise<void> {
       // Models directory packaged with app (optional ML features)
       const modelsDir = join(process.resourcesPath, 'models');
 
+      console.log('[Backend] Database URL:', databaseUrl);
+      console.log('[Backend] Models dir:', modelsDir);
+
       // Prepare logging
       const logsDir = join(userDataDir, 'logs');
       mkdirSync(logsDir, { recursive: true });
       const logFile = join(logsDir, 'backend.log');
       const logStream = createWriteStream(logFile, { flags: 'a' });
 
+      console.log('[Backend] Log file:', logFile);
+
+      const backendEnv = {
+        ...process.env,
+        PORT: '5555', // Always use port 5555
+        DATA_DIR: dataDir,
+        CACHE_DIR: cacheDir,
+        THUMBNAILS_DIR: join(cacheDir, 'thumbs'),
+        DATABASE_URL: databaseUrl,
+        MODELS_DIR: modelsDir,
+      };
+
+      console.log('[Backend] Spawning backend process with env:', {
+        PORT: backendEnv.PORT,
+        DATA_DIR: backendEnv.DATA_DIR,
+        CACHE_DIR: backendEnv.CACHE_DIR,
+        THUMBNAILS_DIR: backendEnv.THUMBNAILS_DIR,
+        DATABASE_URL: backendEnv.DATABASE_URL,
+        MODELS_DIR: backendEnv.MODELS_DIR,
+      });
+
       backendProcess = spawn(backendExecutable, [], {
         cwd: backendPath,
-        env: {
-          ...process.env,
-          PORT: BACKEND_PORT.toString(),
-          DATA_DIR: dataDir,
-          CACHE_DIR: cacheDir,
-          THUMBNAILS_DIR: join(cacheDir, 'thumbs'),
-          DATABASE_URL: databaseUrl,
-          MODELS_DIR: modelsDir,
-        },
+        env: backendEnv,
       });
+
+      console.log('[Backend] Backend process spawned with PID:', backendProcess.pid);
 
       backendProcess.stdout?.on('data', (data) => {
         const msg = data.toString();
-        console.log('Backend stdout:', msg);
+        console.log('[Backend STDOUT]:', msg);
         logStream.write(`[STDOUT] ${msg}`);
       });
 
       backendProcess.stderr?.on('data', (data) => {
         const msg = data.toString();
-        console.error('Backend stderr:', msg);
+        console.error('[Backend STDERR]:', msg);
         logStream.write(`[STDERR] ${msg}`);
       });
 
       backendProcess.on('close', (code) => {
-        console.log('Backend process exited with code:', code);
+        console.log('[Backend] Process exited with code:', code);
         backendProcess = null;
       });
 
       backendProcess.on('error', (error) => {
-        console.error('Backend process error:', error);
+        console.error('[Backend] Process spawn error:', error);
         reject(error);
       });
 
       // Wait until the backend port is responsive
+      console.log('[Backend] Starting port wait...');
       waitForPort(BACKEND_PORT)
-        .then(() => resolve())
-        .catch((err) => reject(err));
+        .then(() => {
+          console.log('[Backend] Successfully connected to backend!');
+          resolve();
+        })
+        .catch((err) => {
+          console.error('[Backend] Failed to connect to backend:', err);
+          reject(err);
+        });
 
     } catch (error) {
-      console.error('Failed to start backend:', error);
+      console.error('[Backend] Failed to start backend:', error);
       reject(error);
     }
   });
@@ -180,7 +240,7 @@ function createWindow(): void {
   // Load the app
   const startUrl = isDev
     ? 'http://localhost:3333'  // Vite dev server (configured in vite.config.ts)
-    : `file://${join(__dirname, '../frontend/dist/index.html')}#/`;
+    : `file://${join(__dirname, '../../frontend/dist/index.html')}#/`;
 
   mainWindow.loadURL(startUrl);
 
@@ -323,28 +383,40 @@ function setupIpcHandlers(): void {
 
 // App event handlers
 app.whenReady().then(async () => {
+  console.log('[App] Application ready, starting initialization...');
+  console.log('[App] Platform:', process.platform);
+  console.log('[App] Electron version:', process.versions.electron);
+  console.log('[App] Node version:', process.versions.node);
+
   try {
     // Start backend first
+    console.log('[App] Starting backend...');
     await startBackend();
+    console.log('[App] Backend started successfully!');
 
     // Setup IPC handlers
+    console.log('[App] Setting up IPC handlers...');
     setupIpcHandlers();
 
     // Expose the selected port to renderer via global shared object BEFORE creating the window,
     // so preload can read it and expose window.BACKEND_PORT properly.
     (global as any).BACKEND_PORT = BACKEND_PORT;
+    console.log('[App] Backend port exposed to global:', BACKEND_PORT);
 
     // Create main window
+    console.log('[App] Creating main window...');
     createWindow();
+    console.log('[App] Main window created!');
 
     app.on('activate', () => {
       // On macOS, re-create window when dock icon is clicked
       if (BrowserWindow.getAllWindows().length === 0) {
+        console.log('[App] Recreating window on activate...');
         createWindow();
       }
     });
   } catch (error) {
-    console.error('Failed to start application:', error);
+    console.error('[App] Failed to start application:', error);
 
     // Show error dialog and quit
     dialog.showErrorBox(
