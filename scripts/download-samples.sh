@@ -14,7 +14,7 @@ download() {
   local url="$1"; shift
   local out="$1"; shift
   echo "- $out"
-  curl -L --fail --silent --show-error "$url" -o "$DEST_DIR/$out"
+  curl -k -L --fail --silent --show-error "$url" -o "$DEST_DIR/$out"
 }
 
 # EXIF-rich JPEGs (camera make/model, exposure)

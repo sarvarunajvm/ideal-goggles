@@ -102,10 +102,13 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'cd ../backend && python3 -m src.main',
+      command: 'cd ../backend && python3 init_test_db.py && DATABASE_URL=sqlite+aiosqlite:///test_data/photos.db python3 -m src.main',
       port: 5555,
       timeout: 120 * 1000,
       reuseExistingServer: !process.env.CI,
+      env: {
+        DATABASE_URL: 'sqlite+aiosqlite:///test_data/photos.db'
+      }
     }
   ],
 

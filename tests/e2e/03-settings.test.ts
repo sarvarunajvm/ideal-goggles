@@ -148,6 +148,10 @@ test.describe('Settings and Configuration', () => {
     });
 
     test('validates batch size limits', async () => {
+      // Navigate to Search Features tab first
+      await settingsPage.page.locator('button:has-text("Search Features")').click();
+      await settingsPage.page.waitForTimeout(500);
+
       const invalidSizes = [-1, 0, 10000];
 
       for (const size of invalidSizes) {
@@ -238,9 +242,16 @@ test.describe('Settings and Configuration', () => {
       await settingsPage.toggleOCR(true);
       await settingsPage.setBatchSize(75);
 
+      // Wait for saves to complete
+      await page.waitForTimeout(1000);
+
       // Reload page
       await page.reload();
       await settingsPage.waitForApp();
+
+      // Navigate back to settings
+      await page.goto('/settings');
+      await page.waitForLoadState('networkidle');
 
       // Settings should persist
       const config = await settingsPage.getConfiguration();

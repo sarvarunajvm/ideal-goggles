@@ -28,9 +28,9 @@ export class SettingsPage extends BasePage {
     this.progressBar = page.locator('.h-2').first(); // Progress bar
     this.ocrToggle = page.locator('#ocr-eng'); // English OCR checkbox
     this.faceSearchToggle = page.locator('#face-search'); // Face search switch
-    this.semanticSearchToggle = page.locator('#semantic-search'); // May not exist in new UI
-    this.batchSizeInput = page.locator('input[type="number"]').first();
-    this.thumbnailSizeSelect = page.locator('select').first();
+    this.semanticSearchToggle = page.locator('#semantic-search');
+    this.batchSizeInput = page.locator('#batch-size');
+    this.thumbnailSizeSelect = page.locator('#thumbnail-size');
   }
 
   async addRootFolder(path: string) {
@@ -70,13 +70,17 @@ export class SettingsPage extends BasePage {
   }
 
   async getIndexingStatus() {
+    // Navigate to Storage & Indexing tab first
+    await this.page.locator('button:has-text("Storage & Indexing")').click();
+    await this.page.waitForTimeout(500);
+
     const statusBadge = this.page.locator('text=Current Status').locator('..').locator('.capitalize');
-    const status = await statusBadge.textContent();
+    const status = await statusBadge.textContent().catch(() => 'idle');
 
     // Try to get progress if visible
     let progress = 0;
     const progressBar = this.page.locator('.h-2').first();
-    if (await progressBar.isVisible()) {
+    if (await progressBar.isVisible().catch(() => false)) {
       const value = await progressBar.getAttribute('aria-valuenow');
       progress = value ? parseInt(value) : 0;
     }
@@ -136,18 +140,39 @@ export class SettingsPage extends BasePage {
   }
 
   async toggleSemanticSearch(enable: boolean) {
-    // Semantic search not in new UI, just return
-    return;
+    // Navigate to Features tab first
+    await this.page.locator('button:has-text("Search Features")').click();
+    await this.page.waitForTimeout(500);
+
+    const isChecked = await this.semanticSearchToggle.isChecked();
+    if (isChecked !== enable) {
+      await this.semanticSearchToggle.click();
+      // Save manually since toggle doesn't auto-save
+      await this.saveButton.click();
+      await this.waitForSaveComplete();
+    }
   }
 
   async setBatchSize(size: number) {
-    // Batch size not in new UI, just return
-    return;
+    // Navigate to Features tab first
+    await this.page.locator('button:has-text("Search Features")').click();
+    await this.page.waitForTimeout(500);
+
+    await this.batchSizeInput.fill(size.toString());
+    // Save manually
+    await this.saveButton.click();
+    await this.waitForSaveComplete();
   }
 
   async setThumbnailSize(size: string) {
-    // Thumbnail size not in new UI, just return
-    return;
+    // Navigate to Features tab first
+    await this.page.locator('button:has-text("Search Features")').click();
+    await this.page.waitForTimeout(500);
+
+    await this.thumbnailSizeSelect.selectOption(size);
+    // Save manually
+    await this.saveButton.click();
+    await this.waitForSaveComplete();
   }
 
   async resetConfiguration() {
@@ -173,12 +198,16 @@ export class SettingsPage extends BasePage {
     await this.page.locator('button:has-text("Search Features")').click();
     await this.page.waitForTimeout(500);
 
+    const semanticSearchEnabled = await this.semanticSearchToggle.isChecked().catch(() => false);
+    const batchSize = await this.batchSizeInput.inputValue().catch(() => '50');
+    const thumbnailSize = await this.thumbnailSizeSelect.inputValue().catch(() => 'medium');
+
     return {
       ocrEnabled: await this.ocrToggle.isChecked(),
       faceSearchEnabled: await this.faceSearchToggle.isChecked(),
-      semanticSearchEnabled: false, // Not in new UI
-      batchSize: '50', // Default value
-      thumbnailSize: 'medium' // Default value
+      semanticSearchEnabled,
+      batchSize,
+      thumbnailSize
     };
   }
 }
