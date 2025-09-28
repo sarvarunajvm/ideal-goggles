@@ -53,6 +53,9 @@ export default function SettingsPage() {
   const [newFolderPath, setNewFolderPath] = useState('');
   const [ocrLanguages, setOcrLanguages] = useState<string[]>([]);
   const [faceSearchEnabled, setFaceSearchEnabled] = useState(false);
+  const [semanticSearchEnabled, setSemanticSearchEnabled] = useState(true);
+  const [batchSize, setBatchSize] = useState(50);
+  const [thumbnailSize, setThumbnailSize] = useState('medium');
 
   const loadData = useCallback(async () => {
     try {
@@ -67,9 +70,12 @@ export default function SettingsPage() {
       setIndexStats(statsData as unknown as IndexStats);
 
       // Update form state
-      setRootFolders(configData.roots);
-      setOcrLanguages(configData.ocr_languages);
-      setFaceSearchEnabled(configData.face_search_enabled);
+      setRootFolders(configData.roots || []);
+      setOcrLanguages(configData.ocr_languages || []);
+      setFaceSearchEnabled(configData.face_search_enabled || false);
+      setSemanticSearchEnabled(configData.semantic_search_enabled !== false);
+      setBatchSize(configData.batch_size || 50);
+      setThumbnailSize(configData.thumbnail_size || 'medium');
     } catch (err) {
       toast({
         title: "Error",
@@ -96,6 +102,9 @@ export default function SettingsPage() {
       await apiService.updateConfig({
         ocr_languages: ocrLanguages,
         face_search_enabled: faceSearchEnabled,
+        semantic_search_enabled: semanticSearchEnabled,
+        batch_size: batchSize,
+        thumbnail_size: thumbnailSize,
       });
 
       toast({
@@ -396,6 +405,34 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
+              {/* Semantic Search */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Search className="h-5 w-5 text-blue-600" />
+                    <span>Semantic Search</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Enable AI-powered semantic search capabilities.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label htmlFor="semantic-search" className="font-medium">Enable Semantic Search</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Use AI embeddings for natural language photo search.
+                      </p>
+                    </div>
+                    <Switch
+                      id="semantic-search"
+                      checked={semanticSearchEnabled}
+                      onCheckedChange={setSemanticSearchEnabled}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Face Search */}
               <Card className="transition-all duration-200 hover:shadow-md">
                 <CardHeader>
@@ -420,6 +457,58 @@ export default function SettingsPage() {
                       checked={faceSearchEnabled}
                       onCheckedChange={setFaceSearchEnabled}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Processing Settings */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings2 className="h-5 w-5 text-purple-600" />
+                    <span>Processing Settings</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Configure batch processing and thumbnail generation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Batch Size */}
+                  <div className="space-y-2">
+                    <Label htmlFor="batch-size" className="font-medium">Batch Size</Label>
+                    <div className="flex items-center space-x-3">
+                      <Input
+                        id="batch-size"
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={batchSize}
+                        onChange={(e) => setBatchSize(parseInt(e.target.value) || 50)}
+                        className="w-32"
+                      />
+                      <span className="text-sm text-muted-foreground">photos per batch</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Number of photos to process in each batch during indexing.
+                    </p>
+                  </div>
+
+                  {/* Thumbnail Size */}
+                  <div className="space-y-2">
+                    <Label htmlFor="thumbnail-size" className="font-medium">Thumbnail Size</Label>
+                    <select
+                      id="thumbnail-size"
+                      value={thumbnailSize}
+                      onChange={(e) => setThumbnailSize(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="small">Small (150x150)</option>
+                      <option value="medium">Medium (300x300)</option>
+                      <option value="large">Large (600x600)</option>
+                    </select>
+                    <p className="text-sm text-muted-foreground">
+                      Size of generated thumbnails for photo previews.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

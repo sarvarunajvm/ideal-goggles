@@ -3,11 +3,10 @@
  */
 
 export const getApiBaseUrl = (): string => {
-  // In Electron production, backend runs at a dynamic localhost port (spawned by main)
+  // In Electron, backend always runs on port 5555
   // In web dev, Vite proxy rewrites '/api' -> backend
-  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
-    const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 5555;
-    return `http://127.0.0.1:${port}`;
+  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: any }).electronAPI) {
+    return 'http://127.0.0.1:5555';
   }
   return '/api';
 };
@@ -45,6 +44,9 @@ export interface ConfigResponse {
   roots: string[];
   ocr_languages: string[];
   face_search_enabled: boolean;
+  semantic_search_enabled?: boolean;
+  batch_size?: number;
+  thumbnail_size?: string;
   index_version: string;
 }
 
@@ -62,7 +64,8 @@ export interface IndexStatus {
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${getApiBaseUrl()}${endpoint}`;
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
 
     const response = await fetch(url, {
       headers: {
@@ -99,7 +102,9 @@ class ApiService {
   async updateConfig(config: Partial<{
     ocr_languages: string[];
     face_search_enabled: boolean;
-    thumbnail_size: number;
+    semantic_search_enabled: boolean;
+    batch_size: number;
+    thumbnail_size: string;
     thumbnail_quality: number;
   }>): Promise<void> {
     return this.request('/config', {

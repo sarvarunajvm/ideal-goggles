@@ -18,6 +18,9 @@ class ConfigurationResponse(BaseModel):
     roots: list[str] = Field(description="Configured root folders")
     ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
+    semantic_search_enabled: bool = Field(description="Whether semantic search is enabled")
+    batch_size: int = Field(description="Batch size for processing")
+    thumbnail_size: str = Field(description="Thumbnail size preset")
     index_version: str = Field(description="Current index version")
 
 
@@ -54,8 +57,14 @@ class UpdateConfigRequest(BaseModel):
     face_search_enabled: bool | None = Field(
         None, description="Enable/disable face search"
     )
-    thumbnail_size: int | None = Field(
-        None, ge=128, le=1024, description="Thumbnail size"
+    semantic_search_enabled: bool | None = Field(
+        None, description="Enable/disable semantic search"
+    )
+    batch_size: int | None = Field(
+        None, ge=1, le=500, description="Batch size for processing"
+    )
+    thumbnail_size: str | None = Field(
+        None, description="Thumbnail size preset (small/medium/large)"
     )
     thumbnail_quality: int | None = Field(
         None, ge=50, le=100, description="Thumbnail quality"
@@ -95,6 +104,9 @@ async def get_configuration() -> ConfigurationResponse:
             roots=config_data.get("roots", []),
             ocr_languages=config_data.get("ocr_languages", ["eng"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
+            semantic_search_enabled=config_data.get("semantic_search_enabled", True),
+            batch_size=config_data.get("batch_size", 50),
+            thumbnail_size=config_data.get("thumbnail_size", "medium"),
             index_version=config_data.get("index_version", "1"),
         )
 
@@ -176,6 +188,18 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
             )
             updated_fields.append("face_search_enabled")
 
+        # Update semantic search setting if provided
+        if request.semantic_search_enabled is not None:
+            _update_config_in_db(
+                db_manager, "semantic_search_enabled", request.semantic_search_enabled
+            )
+            updated_fields.append("semantic_search_enabled")
+
+        # Update batch size if provided
+        if request.batch_size is not None:
+            _update_config_in_db(db_manager, "batch_size", request.batch_size)
+            updated_fields.append("batch_size")
+
         # Update thumbnail settings if provided
         if request.thumbnail_size is not None:
             _update_config_in_db(db_manager, "thumbnail_size", request.thumbnail_size)
@@ -229,7 +253,9 @@ async def get_default_configuration() -> dict[str, Any]:
         "roots": [],
         "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
-        "thumbnail_size": 512,
+        "semantic_search_enabled": True,
+        "batch_size": 50,
+        "thumbnail_size": "medium",
         "thumbnail_quality": 85,
         "index_version": "1",
         "supported_ocr_languages": [
@@ -237,8 +263,9 @@ async def get_default_configuration() -> dict[str, Any]:
             "tam",
         ],
         "supported_image_formats": [".jpg", ".jpeg", ".png", ".tiff", ".tif"],
-        "max_thumbnail_size": 1024,
-        "min_thumbnail_size": 128,
+        "thumbnail_size_options": ["small", "medium", "large"],
+        "max_batch_size": 500,
+        "min_batch_size": 1,
     }
 
 
