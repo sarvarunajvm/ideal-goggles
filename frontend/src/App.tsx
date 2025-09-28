@@ -12,7 +12,7 @@ function App() {
   const [backendPort, setBackendPort] = useState<number | null>(null)
   const backendBaseDisplay = useMemo(() => {
     const isElectron = typeof window !== 'undefined' && (window as unknown as { electronAPI?: ElectronAPI }).electronAPI
-    const port = backendPort ?? (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT ?? 8000
+    const port = backendPort ?? (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT ?? 55555
     return isElectron ? `http://127.0.0.1:${port}` : '/api'
   }, [backendPort])
 
@@ -28,6 +28,8 @@ function App() {
         }
         if (api?.getBackendPort) {
           const port = await api.getBackendPort()
+          // Make port available to other modules that compute API base URL
+          ;(window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT = port
           if (!cancelled) setBackendPort(port)
         }
         // Use shared API client so Electron dynamic port and web proxy are handled

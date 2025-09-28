@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService, IndexStatus } from '../services/apiClient';
+import { apiService, IndexStatus, getApiBaseUrl } from '../services/apiClient';
 
 export default function StatusBar() {
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
@@ -107,7 +107,7 @@ export default function StatusBar() {
         {/* Quick Actions */}
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => window.open('http://localhost:8000/docs', '_blank')}
+            onClick={() => window.open(`${getApiBaseUrl()}/docs`, '_blank')}
             className="text-blue-600 hover:text-blue-800 transition-colors"
             title="Open API Documentation"
           >

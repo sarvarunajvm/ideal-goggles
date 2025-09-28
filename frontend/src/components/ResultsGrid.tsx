@@ -1,4 +1,4 @@
-import { SearchResult } from '../services/apiClient';
+import { SearchResult, getApiBaseUrl } from '../services/apiClient';
 
 interface ResultsGridProps {
   results: SearchResult[];
@@ -52,7 +52,7 @@ export default function ResultsGrid({ results, onItemClick, onRevealInFolder }: 
           <div className="aspect-square bg-gray-100 flex items-center justify-center">
             {item.thumb_path ? (
               <img
-                src={`http://localhost:8000${item.thumb_path}`}
+                src={`${getApiBaseUrl()}${item.thumb_path}`}
                 alt={item.filename}
                 className="w-full h-full object-cover"
                 onError={(e) => {

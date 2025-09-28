@@ -2,16 +2,17 @@
  * API service for photo search backend
  */
 
-const API_BASE_URL = (() => {
+export const getApiBaseUrl = (): string => {
   // In Electron production, backend runs at a dynamic localhost port (spawned by main)
   // In web dev, Vite proxy rewrites '/api' -> backend
-  if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
-    // Port is injected by main process via preload on window.BACKEND_PORT
-    const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 8000;
-    return `http://127.0.0.1:${port}`;
-  }
+  try {
+    if (typeof window !== 'undefined' && (window as unknown as { electronAPI?: unknown }).electronAPI) {
+      const port = (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT || 55555;
+      return `http://127.0.0.1:${port}`;
+    }
+  } catch {}
   return '/api';
-})();
+};
 
 export interface SearchResult {
   file_id: number;
@@ -63,7 +64,7 @@ export interface IndexStatus {
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${getApiBaseUrl()}${endpoint}`;
 
     const response = await fetch(url, {
       headers: {

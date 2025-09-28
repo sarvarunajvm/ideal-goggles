@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SearchResult } from '../services/apiClient';
+import { SearchResult, getApiBaseUrl } from '../services/apiClient';
 
 interface PreviewDrawerProps {
   item: SearchResult | null;
@@ -110,7 +110,7 @@ export default function PreviewDrawer({
           <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
             {!imageError && item.thumb_path ? (
               <img
-                src={`http://localhost:8000${item.thumb_path}`}
+                src={`${getApiBaseUrl()}${item.thumb_path}`}
                 alt={item.filename}
                 className="max-w-full max-h-full object-contain"
                 onError={() => setImageError(true)}
