@@ -1,429 +1,219 @@
-# Photo Search and Navigation System
+# 📸 Ideal Googles - Photo Search Desktop App
 
 [![CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
 
-A local-first photo search system with multi-modal search capabilities including text, semantic, image similarity, and face recognition.
+A privacy-focused desktop application for intelligent photo search and organization. Search your photos using natural language, faces, and text within images - all processed locally on your machine.
 
-## Features
+## ✨ Features
 
-- **Multi-modal Search**: Text, semantic, image similarity, and face-based search
-- **Local-First**: All processing happens locally, no external services
-- **High Performance**: Handles 1M+ photos with sub-2s search times
-- **Privacy Focused**: No data leaves your machine
-- **Studio-Ready**: Designed for photo studios and professional workflows
+- 🔍 **Smart Search**: Find photos using natural language descriptions
+- 👤 **Face Recognition**: Group and search photos by people
+- 📝 **OCR Text Search**: Find photos containing specific text
+- 🖼️ **Similar Image Search**: Find visually similar photos
+- 🔒 **100% Private**: All processing happens locally - no cloud uploads
+- ⚡ **Fast Performance**: Handles 1M+ photos with sub-2s search times
+- 🖥️ **Cross-Platform**: Works on macOS, Windows, and Linux
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- 16GB RAM recommended for large photo libraries
-- SSD storage recommended
+- **Node.js** 18+
+- **PNPM** 10+ (install with `npm install -g pnpm`)
+- **Python** 3.11+
+- **Git**
 
-### Automatic Setup
-
-Run the setup script to automatically configure everything:
-
-```bash
-python setup.py
-```
-
-This will:
-- Create a Python virtual environment
-- Install required dependencies
-- Optionally install advanced features (OCR, vector search, etc.)
-- Create sample directory structure
-- Generate start scripts
-
-### Manual Setup
-
-If you prefer manual setup:
-
-1. **Create virtual environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-
-3. **Optional: Install advanced features**:
-   ```bash
-   # For OCR (requires Tesseract)
-   pip install pytesseract
-
-   # For vector search
-   pip install faiss-cpu
-
-   # For semantic search
-   pip install torch torchvision
-   pip install git+https://github.com/openai/CLIP.git
-   ```
-
-## Running the System
-
-### Start the API Server (dev)
-
-From `backend/`:
-```bash
-make install
-make dev
-```
-
-The API will be available at: http://localhost:55555
-
-### API Documentation
-
-- **Interactive docs**: http://localhost:55555/docs
-- **OpenAPI spec**: http://localhost:55555/openapi.json
-
-## Basic Usage
-
-### 1. Configure Root Folders
+### Installation
 
 ```bash
-curl -X POST "http://localhost:55555/config/roots" \
-  -H "Content-Type: application/json" \
-  -d '{"roots": ["/path/to/your/photos"]}'
+# Clone the repository
+git clone https://github.com/sarvarunajvm/ideal-goggles.git
+cd ideal-goggles
+
+# Install all dependencies (no lock files)
+pnpm install --no-lockfile
+
+# Install backend dependencies
+cd backend && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+cd ..
+
+# Start development environment
+pnpm run dev
 ```
 
-### 2. Start Indexing
+The app will launch with:
+- Backend API on http://localhost:5555
+- Frontend on http://localhost:3333
+- Electron desktop app
+
+## 📁 Project Structure
+
+```
+ideal-goggles/
+├── backend/              # Python FastAPI backend
+│   ├── src/             # Backend source code
+│   │   ├── api/         # API endpoints
+│   │   ├── core/        # Core functionality
+│   │   └── models/      # Data models
+│   └── pyproject.toml   # Python dependencies
+│
+├── frontend/            # React frontend
+│   ├── src/            # Frontend source code
+│   │   ├── components/ # React components
+│   │   ├── pages/     # Application pages
+│   │   └── services/  # API services
+│   └── vite.config.ts # Vite configuration
+│
+├── electron/           # Electron desktop wrapper
+│   ├── main.ts        # Main process
+│   └── preload.ts     # Preload scripts
+│
+├── package.json       # Single package.json for all Node.js deps
+├── Makefile          # Build automation commands
+└── .gitignore        # Includes lock files (not tracked)
+```
+
+## 🛠️ Development
+
+### Available Commands
 
 ```bash
-curl -X POST "http://localhost:55555/index/start" \
-  -H "Content-Type: application/json" \
-  -d '{"full": false}'
+# Development
+pnpm run dev              # Start full dev environment
+pnpm run dev:backend      # Start backend only
+pnpm run dev:frontend     # Start frontend only
+
+# Testing
+pnpm run test            # Run frontend tests
+make backend-test        # Run backend tests
+
+# Linting & Formatting
+pnpm run lint           # Lint frontend
+make backend-lint       # Lint backend (ruff)
+make backend-format     # Format backend (black)
+
+# Building
+pnpm run build          # Build frontend
+make backend-package    # Package backend with PyInstaller
 ```
 
-### 3. Check Indexing Status
+### Using Make Commands
+
+The project includes a comprehensive Makefile:
 
 ```bash
-curl "http://localhost:55555/index/status"
+make help              # Show all available commands
+make install          # Install all dependencies
+make dev              # Start development environment
+make test             # Run all tests
+make clean            # Clean build artifacts
+
+# Distribution builds
+make dist-mac         # Build macOS DMG
+make dist-win         # Build Windows installer
+make dist-all         # Build for all platforms
 ```
 
-### 4. Search Photos
+## 📦 Building for Production
 
-**Text Search**:
-```bash
-curl "http://localhost:55555/search?q=wedding&limit=10"
-```
-
-**Semantic Search**:
-```bash
-curl -X POST "http://localhost:55555/search/semantic" \
-  -H "Content-Type: application/json" \
-  -d '{"text": "sunset over mountains", "top_k": 10}'
-```
-
-**Image Search** (upload a photo):
-```bash
-curl -X POST "http://localhost:55555/search/image" \
-  -F "file=@/path/to/query/image.jpg" \
-  -F "top_k=10"
-```
-
-## Configuration
-
-### Database Location
-
-By default, the database is stored at: `~/.photo-search/photos.db`
-
-### Cache Directory
-
-Thumbnails and indexes are stored at: `~/.photo-search/`
-
-### Supported Image Formats
-
-- JPEG (.jpg, .jpeg)
-- PNG (.png)
-- TIFF (.tiff, .tif)
-
-## Advanced Features
-
-### OCR (Text Extraction)
-
-To enable OCR, install Tesseract:
-
-**macOS**:
-```bash
-brew install tesseract
-```
-
-**Ubuntu/Debian**:
-```bash
-sudo apt-get install tesseract-ocr
-```
-
-**Windows**: Download from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki)
-
-### Face Recognition
-
-Face recognition is optional and requires additional setup:
+### Build for your platform:
 
 ```bash
-pip install insightface onnxruntime
+# macOS (.dmg)
+pnpm run dist:mac
+
+# Windows (.exe installer)
+pnpm run dist:win
+
+# All platforms
+pnpm run dist:all
 ```
 
-Enable in configuration:
-```bash
-curl -X PUT "http://localhost:8000/config" \
-  -H "Content-Type: application/json" \
-  -d '{"face_search_enabled": true}'
-```
+Built installers will be in the `dist-electron/` directory.
 
-### Vector Search Optimization
+## 🔧 Configuration
 
-For large collections (200k+ photos), the system automatically upgrades to optimized FAISS indexes for better performance.
+### Package Management
+- **PNPM only**: No npm or yarn
+- **No lock files**: Dependencies stay fresh, `.gitignore` excludes all lock files
+- **Single package.json**: All Node.js dependencies in root
 
-## Development
+### Technology Stack
 
-### Project Structure
+| Component | Technology |
+|-----------|-----------|
+| Frontend | React + TypeScript + Vite + TailwindCSS |
+| Backend | Python + FastAPI + SQLAlchemy |
+| Desktop | Electron |
+| AI/ML | ONNX Runtime (CLIP, ArcFace models) |
+| OCR | Tesseract |
+| Database | SQLite (local) |
+| Package Manager | PNPM (no lock files) |
 
-```
-backend/
-├── src/
-│   ├── api/          # FastAPI endpoints
-│   ├── db/           # Database and migrations
-│   ├── models/       # Data models
-│   ├── services/     # Business logic
-│   └── workers/      # Background processing
-├── tests/            # Test files
-└── src/main.py      # Application entry point
-```
+## 🤝 Contributing
 
-### Running Tests
+We welcome contributions!
 
-```bash
-pytest backend/tests/
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`make test`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-### API Endpoints
+See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed development guidelines.
 
-- `GET /health` - Health check
-- `GET /config` - Get configuration
-- `POST /config/roots` - Update root folders
-- `GET /search` - Text search
-- `POST /search/semantic` - Semantic search
-- `POST /search/image` - Image similarity search
-- `POST /search/faces` - Face search
-- `POST /index/start` - Start indexing
-- `GET /index/status` - Indexing status
-- `GET /people` - List enrolled people
-- `POST /people` - Enroll person
+## 📚 Documentation
 
-## Packaging & Installers (one click)
+- [USER_MANUAL.md](USER_MANUAL.md) - End user guide
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Developer documentation
+- [API Documentation](http://localhost:5555/docs) - When backend is running
 
-From the repo root, use the Makefile targets:
-
-```bash
-# Install frontend deps (set registry/proxy if needed)
-make frontend-install FRONTEND_PM=pnpm
-
-# Build backend binary
-make package-backend PYTHON=python3
-
-# Build installers
-make dist-mac FRONTEND_PM=pnpm     # macOS DMG (on macOS)
-make dist-win FRONTEND_PM=pnpm     # Windows NSIS (on Windows)
-make dist-all FRONTEND_PM=pnpm     # mac/win/linux (host-dependent)
-```
-
-Notes:
-- Electron auto-starts the bundled backend and stores data in the OS app data folder.
-- If you see a white screen, open DevTools and check Network (backend at http://127.0.0.1:55555).
-
-## Release Checklist
-
-- Confirm app name and IDs match branding (`frontend/package.json:1`, build `appId`, `productName`).
-- Bump versions where needed (frontend `version`, backend `pyproject.toml:7`).
-- Build backend binary: `make package-backend PYTHON=python3`.
-- Install frontend deps (set registry/proxy if required): `make frontend-install FRONTEND_PM=pnpm`.
-- Build installers locally: `make dist-mac`, `make dist-win` (on Windows), `make dist-all`.
-- Smoke test DMG/EXE: launch app, verify backend starts (health OK), routes render, search works.
-- Provide signing assets:
-  - macOS: Apple Developer ID cert; configure electron-builder for hardened runtime + entitlements; notarize.
-  - Windows: Code-signing `.pfx` cert + password.
-- Tag and push release: `git tag v1.0.0 && git push --tags` to trigger CI matrix build.
-- Attach artifacts or let CI publish via GitHub Releases.
-- Update docs/screenshots as needed; record known limitations and system requirements.
-
-Build one‑click desktop installers that bundle the backend:
-
-- macOS: `cd frontend && pnpm dist:mac`
-- Windows: `cd frontend && pnpm dist:win`
-- All (on host OS): `cd frontend && pnpm dist:all`
-
-Notes:
-- The backend is packaged with PyInstaller and auto‑started by Electron.
-- App data (database, cache) is stored under the OS app data folder (e.g., `~/Library/Application Support/Photo Search`, `%AppData%/Photo Search`).
-
-## Performance Tuning
-
-### For Large Libraries (1M+ photos)
-
-1. **Use SSD storage** for better I/O performance
-2. **Increase memory** - 16GB+ recommended
-3. **Batch processing** - The system automatically uses optimal batch sizes
-4. **Index optimization** - FAISS indexes automatically upgrade for large collections
-
-### Search Performance
-
-- **Text search**: <2s for most queries
-- **Semantic search**: <5s for most queries
-- **Index building**: ~100k photos/day on typical hardware
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-**Import errors**: Make sure virtual environment is activated and dependencies are installed
-
-**Tesseract not found**: Install Tesseract and ensure it's in your PATH
-
-**Out of memory**: Reduce batch sizes or increase system memory
-
-**Slow indexing**: Check disk I/O and consider using SSD storage
-
-### Logs
-
-Application logs are stored at: `~/.photo-search/app.log`
-
-### Database Issues
-
-To reset the database:
+**Backend won't start:**
 ```bash
-rm ~/.photo-search/photos.db
-# Restart the application to recreate
+# Check Python version (needs 3.11+)
+python3 --version
+
+# Reinstall backend dependencies
+cd backend && rm -rf .venv && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 ```
 
-## Contributing
-
-Thank you for considering contributing! This repository contains:
-- Python FastAPI backend in `backend/`
-- React + Vite + Electron frontend in `frontend/`
-- Shared TypeScript types in `packages/shared/`
-- Product specs in `specs/`
-
-Please follow the guidelines below to set up your environment, run tests, and submit changes.
-
-### Developer Setup
-
-Backend (Python 3.11+):
-1. Create and activate a virtualenv
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\\Scripts\\activate
-   ```
-2. Install deps
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-3. Optional extras (OCR, vector, semantics, faces) are noted in `backend/requirements.txt` and in the Advanced Features section above.
-
-Frontend (Node 18+ recommended):
-1. Install Node dependencies
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Start dev environment (Vite + Electron)
-   ```bash
-   npm run dev
-   ```
-
-Shared package:
+**Frontend build fails:**
 ```bash
-cd packages/shared
-npm install
-npm run build
+# Clear cache and reinstall
+rm -rf node_modules dist
+pnpm install --no-lockfile
 ```
 
-### Running Locally
+**Electron app won't launch:**
+```bash
+# Rebuild Electron
+pnpm run build:electron:main
+```
 
-- Start backend API (from `backend/`):
-  ```bash
-  make install
-  make dev
-  ```
-- Start frontend app:
-  ```bash
-  cd frontend && npm run dev
-  ```
+## 📄 License
 
-### Coding Standards
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- Python: Ruff + Black + Mypy are configured via `backend/pyproject.toml`.
-  - Format: `ruff --fix backend && black backend`
-  - Type-check: `mypy backend`
-- TypeScript/React: ESLint + Prettier are configured under `frontend/`.
-  - Lint: `npm run lint` (in `frontend/`)
-  - Format: follow `frontend/prettier.config.js`
-- Commit messages: Use clear, imperative style (e.g., "Add face search endpoint").
+## 🙏 Acknowledgments
 
-### Tests
+- CLIP model by OpenAI for semantic image search
+- ArcFace for face recognition capabilities
+- Tesseract OCR for text extraction
+- The amazing open-source community
 
-- Backend tests:
-  ```bash
-  pytest backend/tests
-  ```
-- Frontend unit/integration tests:
-  ```bash
-  cd frontend
-  npm test
-  ```
-- Frontend E2E (Playwright):
-  ```bash
-  cd frontend
-  npm run test:e2e
-  ```
+## 📧 Support
 
-### Branching & PRs
+For issues or questions:
+- Open an issue on [GitHub](https://github.com/sarvarunajvm/ideal-goggles/issues)
+- Check existing issues for solutions
 
-- Create feature branches from `main`.
-- Keep PRs focused and small; include a brief description and screenshots for UI changes.
-- Ensure all tests pass and linters are clean before requesting review.
-- Link the relevant spec/task from `specs/` when applicable.
+---
 
-### Environment and Secrets
-
-- Do not commit real secrets. Use environment files and keep `.env` files out of Git (see `.gitignore`).
-- If needed, add `.env.example` with safe placeholders and document variables in this README.
-
-### Project Scripts Quick Reference
-
-- Backend: see `backend/pyproject.toml` for tool config; dependencies are managed via `backend/requirements.txt`.
-- Frontend scripts (run inside `frontend/`):
-  - `npm run dev` – Run Vite + Electron in development
-  - `npm run build` – Build React app
-  - `npm run build:electron` – Package Electron app
-  - `npm run test` – Run unit tests
-  - `npm run test:e2e` – Run Playwright tests
-  - `npm run lint` – Lint code
-
-### Architecture Overview
-
-- Backend exposes REST API (FastAPI) for search, indexing, and people management. See `backend/src/api/` for routes and `backend/tests/` for expected behavior.
-- Workers in `backend/src/workers/` handle long-running tasks (indexing, OCR, embeddings, thumbnails).
-- Frontend communicates with backend via `frontend/src/services/api.ts`.
-- Shared TypeScript types live in `packages/shared/` and can be built and consumed by the frontend.
-
-### Spec-Driven Development
-
-This implementation follows the specification under `specs/001-core-features-mandatory/`. When adding new features, consider adding or updating specs under `specs/` and aligning tests accordingly.
-
-### Reporting Issues
-
-- Include OS, Python/Node versions, steps to reproduce, logs (see `~/.photo-search/app.log`), and screenshots where helpful.
-
-
-## License
-
-See LICENSE file for details.
-
-## Support
-
-For issues and questions, check the logs and API documentation first. The system is designed to be self-contained and work offline.
+Made with ❤️ by the Photo Search Team

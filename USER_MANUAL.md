@@ -1,4 +1,6 @@
-# Photo Search & Navigation - User Manual
+# 📖 User Manual - Ideal Googles
+
+Welcome to Ideal Googles! This guide will help you get started with your privacy-focused photo search and organization app.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -7,389 +9,263 @@
 4. [Search Features](#search-features)
 5. [Navigation & Organization](#navigation--organization)
 6. [Settings & Configuration](#settings--configuration)
-7. [Troubleshooting](#troubleshooting)
-8. [Privacy & Security](#privacy--security)
-
----
+7. [Tips & Tricks](#tips--tricks)
+8. [Troubleshooting](#troubleshooting)
+9. [FAQ](#faq)
 
 ## Overview
 
-Photo Search & Navigation is a powerful desktop application that helps you organize, search, and navigate your photo collection using AI-powered search capabilities. The application processes all photos locally on your computer, ensuring complete privacy of your personal photos.
+Ideal Googles is a desktop application that helps you search and organize your photos using:
+- **Natural language search** ("sunset at the beach")
+- **Face recognition** (find all photos of specific people)
+- **Text in images** (OCR - find photos containing text)
+- **Similar images** (find visually similar photos)
 
-### Key Features
-- **Text Search**: Find photos using natural language descriptions
-- **Semantic Search**: AI-powered image understanding for content-based search
-- **Face Recognition**: Identify and group photos by people (optional)
-- **OCR Text Search**: Search text content within photos (documents, signs, etc.)
-- **Metadata Search**: Search by camera settings, date, location, and file properties
-- **Smart Organization**: Automatic categorization and tagging
-- **Fast Navigation**: Keyboard shortcuts and intuitive UI for quick browsing
-
-### System Requirements
-- **Operating System**: Windows 10/11, macOS 10.15+, or Linux (Ubuntu 18.04+)
-- **Memory**: 8GB RAM minimum, 16GB recommended
-- **Storage**: 2GB free space + photo storage
-- **Hardware**: Modern CPU with support for machine learning (recommended)
-
----
+All processing happens locally on your computer - your photos never leave your machine!
 
 ## Installation
 
-### Windows Installation
-1. Download the installer from the releases page
-2. Run `PhotoSearchSetup.exe` as administrator
-3. Follow the installation wizard
-4. Launch from Start Menu or desktop shortcut
+### System Requirements
 
-### macOS Installation
-1. Download the `.dmg` file
-2. Open the disk image and drag the app to Applications folder
-3. First launch: Right-click → Open (to bypass Gatekeeper)
-4. Grant necessary permissions when prompted
+- **Operating System**: macOS 10.14+, Windows 10+, or Ubuntu 20.04+
+- **RAM**: 8GB minimum, 16GB recommended
+- **Storage**: SSD recommended for best performance
+- **Processor**: Intel i5 or AMD Ryzen 5 (or better)
 
-### Linux Installation
-1. Download the `.AppImage` or `.deb` file
-2. For AppImage: Make executable and run directly
-3. For Debian/Ubuntu: `sudo dpkg -i photo-search.deb`
+### Download & Install
 
-### First-Time Setup
-1. **Welcome Screen**: Configure initial settings
-2. **Photo Directories**: Add folders containing your photos
-3. **Privacy Settings**: Choose which AI features to enable
-4. **Initial Indexing**: Wait for the app to process your photos (this may take time)
+1. **Download the installer** from [Releases](https://github.com/sarvarunajvm/ideal-goggles/releases)
+   - macOS: `ideal-googles-1.0.x.dmg`
+   - Windows: `ideal-googles-1.0.x.exe`
+   - Linux: `ideal-googles-1.0.x.AppImage`
 
----
+2. **Install the application**:
+
+   **macOS:**
+   - Open the DMG file
+   - Drag Ideal Googles to Applications folder
+   - First time: Right-click and select "Open" (security prompt)
+
+   **Windows:**
+   - Run the installer EXE
+   - Follow the installation wizard
+   - Choose installation directory (default recommended)
+
+   **Linux:**
+   - Make AppImage executable: `chmod +x ideal-googles-*.AppImage`
+   - Double-click to run or execute from terminal
 
 ## Getting Started
 
-### Adding Photo Directories
-1. Open **Settings** → **Photo Directories**
-2. Click **Add Directory**
-3. Select folders containing your photos
-4. Choose indexing options:
-   - **Full Indexing**: Complete AI analysis (recommended)
-   - **Basic Indexing**: Metadata and thumbnails only
-   - **Watch for Changes**: Automatically detect new photos
+### First Launch
 
-### Understanding the Interface
+1. **Open Ideal Googles** from your Applications/Programs
+2. The app will start with:
+   - Main search interface
+   - Empty photo library (no photos indexed yet)
 
-#### Main Window
-- **Search Bar**: Enter search queries at the top
-- **Results Grid**: Displays matching photos in a grid layout
-- **Preview Panel**: Shows larger preview and metadata (can be toggled)
-- **Navigation Bar**: Quick access to filters and sorting options
-- **Status Bar**: Shows indexing progress and system status
+### Adding Photos
 
-#### Keyboard Shortcuts
-- `Ctrl/Cmd + F`: Focus search bar
-- `Space`: Quick preview current photo
-- `Arrow Keys`: Navigate between photos
-- `Enter`: Open photo in full-screen viewer
-- `Ctrl/Cmd + D`: Open folder containing selected photo
-- `Esc`: Close preview or modal dialogs
-
----
+1. Click **"Add Photos"** button or use `File → Add Folder`
+2. Select a folder containing your photos
+3. Choose indexing options:
+   - ✅ **Basic indexing** (fast, metadata only)
+   - ✅ **Semantic search** (AI-powered descriptions)
+   - ✅ **Face detection** (group by people)
+   - ✅ **Text extraction** (OCR)
+4. Click **"Start Indexing"**
+5. Wait for indexing to complete (progress bar shows status)
 
 ## Search Features
 
-### Text Search
-Search using natural language descriptions of what you're looking for:
+### 1. Natural Language Search
 
-**Examples:**
-- `"sunset beach"` - Photos taken at sunset on a beach
-- `"birthday party kids"` - Children's birthday party photos
-- `"red car vintage"` - Vintage red car photos
-- `"mountain hiking"` - Mountain hiking photos
+Type naturally in the search bar:
+- "sunset at the beach"
+- "birthday party with cake"
+- "red car in parking lot"
+- "mountains with snow"
 
-**Search Tips:**
-- Use quotes for exact phrases: `"golden gate bridge"`
-- Combine multiple terms: `wedding flowers white`
-- Use dates: `Christmas 2022` or `vacation July`
+Press **Enter** or click 🔍 to search.
 
-### Advanced Search Filters
+### 2. Face Search
 
-#### Date Filters
-- **Date Range**: Select specific date ranges
-- **Quick Filters**: Today, This Week, This Month, This Year
-- **Special Events**: Christmas, New Year, Summer, etc.
+1. Go to **People** tab
+2. Browse detected faces
+3. Click on a face to see all photos of that person
+4. Name people by clicking "Add Name"
 
-#### Metadata Filters
-- **Camera**: Filter by camera make/model
-- **Settings**: ISO, aperture, shutter speed ranges
-- **File Type**: JPEG, PNG, RAW files
-- **File Size**: Small, medium, large files
-- **Orientation**: Portrait, landscape, square
+### 3. Text Search (OCR)
 
-#### Location Filters (if GPS data available)
-- **City/Country**: Filter by location
-- **Map Selection**: Select areas on a map
-- **Distance**: Within X miles of a location
+Find photos containing specific text:
+- Put quotes for exact match: `"Happy Birthday"`
+- Search for signs, documents, screenshots
+- Supports multiple languages
 
-### Semantic Search
-AI-powered search that understands image content:
+### 4. Similar Image Search
 
-**Examples:**
-- `dogs playing` - Finds photos of dogs playing, even without text tags
-- `food on table` - Identifies meal photos
-- `people smiling` - Detects happy expressions
-- `outdoor landscape` - Natural scenes and landscapes
+1. Right-click any photo
+2. Select **"Find Similar"**
+3. View visually similar images
 
-### Face Search (Optional)
-If enabled, the app can recognize and group photos by people:
+### 5. Advanced Filters
 
-1. **Face Detection**: Automatically finds faces in photos
-2. **Face Grouping**: Groups similar faces together
-3. **Name Assignment**: Manually assign names to face groups
-4. **Privacy**: All face data stored locally, never uploaded
-
-**Note**: Face recognition is optional and can be disabled in Settings.
-
-### OCR Text Search
-Searches text content found within photos:
-
-**Examples:**
-- `"stop sign"` - Photos containing stop signs
-- `restaurant menu` - Photos of restaurant menus
-- `business card` - Photos of business cards with text
-- `street signs` - Photos with street signage
-
----
+Click **Filter** button to refine results:
+- **Date Range**: From/To dates
+- **File Type**: JPG, PNG, HEIC, etc.
+- **Size**: Minimum/Maximum file size
+- **Location**: If GPS data available
 
 ## Navigation & Organization
 
-### Viewing Photos
+### Photo Grid View
 
-#### Grid View
-- Adjustable thumbnail sizes (Small, Medium, Large)
-- Batch selection with Ctrl/Cmd + Click
-- Quick actions: Delete, Copy, Move, Tag
+- **Thumbnail Size**: Slider at bottom right
+- **Sort By**: Date, Name, Size (dropdown menu)
+- **View Mode**: Grid/List toggle
 
-#### Preview Mode
-- Large preview with metadata panel
-- Navigation arrows or keyboard controls
-- Zoom and pan for detailed viewing
-- EXIF data display
+### Keyboard Shortcuts
 
-#### Full-Screen Viewer
-- Immersive viewing experience
-- Slideshow mode with customizable timing
-- Zoom up to 100% for pixel-perfect viewing
-- Basic editing tools (rotate, crop)
+| Action | Windows/Linux | macOS |
+|--------|--------------|-------|
+| Search | `Ctrl+F` | `⌘+F` |
+| Add Folder | `Ctrl+O` | `⌘+O` |
+| Settings | `Ctrl+,` | `⌘+,` |
+| Fullscreen | `F11` | `⌘+Ctrl+F` |
+| Next Photo | `→` | `→` |
+| Previous Photo | `←` | `←` |
+| Select All | `Ctrl+A` | `⌘+A` |
 
-### Organization Tools
+### Photo Actions
 
-#### Smart Collections
-Automatically created collections based on:
-- **Recent**: Recently added or modified photos
-- **Favorites**: Starred or highly-rated photos
-- **Similar**: Visually similar photo groups
-- **Events**: Automatically detected events/occasions
-
-#### Manual Organization
-- **Tags**: Add custom tags to photos
-- **Ratings**: 1-5 star rating system
-- **Folders**: Virtual folders for organization
-- **Albums**: Create themed photo albums
-
-#### Batch Operations
-Select multiple photos to:
-- Apply tags or ratings
-- Move to folders
-- Export in different formats
-- Delete or archive
-
----
+Right-click on any photo for:
+- **Open** - View in default app
+- **Show in Folder** - Reveal in file explorer
+- **Find Similar** - Search for similar images
+- **Copy Path** - Copy file path to clipboard
+- **Properties** - View metadata
 
 ## Settings & Configuration
 
+Access via **Settings** button or `File → Preferences`
+
 ### General Settings
-- **Theme**: Light, Dark, or System theme
-- **Language**: Interface language selection
-- **Startup**: Launch on system startup
-- **Updates**: Automatic update checking
 
-### Photo Directories
-- **Add/Remove**: Manage indexed directories
-- **Watch Folders**: Automatically detect new photos
-- **Include/Exclude**: File type and folder filtering
-- **Scan Frequency**: How often to check for changes
+- **Theme**: Light/Dark mode
+- **Language**: English (more coming soon)
+- **Startup**: Launch at system startup
 
-### AI & Privacy Settings
-- **Semantic Search**: Enable/disable AI image analysis
-- **Face Recognition**: Enable/disable face detection
-- **OCR Processing**: Enable/disable text recognition
-- **Data Storage**: Choose where AI models are stored
-- **Processing Priority**: Balance between speed and system resources
+### Search Settings
+
+- **Results per page**: 25/50/100
+- **Default search mode**: Semantic/Text/Face
+- **Thumbnail quality**: Low/Medium/High
 
 ### Performance Settings
-- **Thumbnail Quality**: Balance between quality and storage
-- **Cache Size**: How much disk space to use for caches
-- **Background Processing**: When to run AI analysis
-- **Memory Usage**: Limit memory usage for large collections
 
-### Import/Export Settings
-- **File Naming**: How to handle duplicate filenames
-- **Metadata Preservation**: Keep original EXIF data
-- **Format Conversion**: Automatic format conversion options
-- **Backup Settings**: Backup configuration and indexes
+- **Max memory usage**: Limit RAM usage
+- **Concurrent processing**: Number of parallel tasks
+- **Cache size**: Thumbnail cache limit
 
----
+### Privacy Settings
+
+- **Analytics**: Disable all telemetry (off by default)
+- **Crash reports**: Send anonymous crash data
+- **Clear cache**: Remove temporary files
+
+## Tips & Tricks
+
+### 🚀 Performance Tips
+
+1. **Index in batches**: Add folders with <10,000 photos at a time
+2. **Use SSD**: Store photo library on SSD for faster access
+3. **Close other apps**: Free up RAM during initial indexing
+
+### 🔍 Search Tips
+
+1. **Be specific**: "golden retriever playing" vs just "dog"
+2. **Combine terms**: "beach AND sunset" for better results
+3. **Use filters**: Narrow down by date/size after searching
+
+### 📸 Organization Tips
+
+1. **Name faces early**: Makes future searches easier
+2. **Keep originals**: App works with copies but keep originals safe
+3. **Regular folders**: Organize photos in dated folders
 
 ## Troubleshooting
 
-### Common Issues
+### App Won't Start
 
-#### Application Won't Start
-1. Check system requirements are met
-2. Ensure sufficient disk space (2GB minimum)
-3. Try running as administrator (Windows) or with elevated permissions
-4. Check system logs for error messages
+1. **Check system requirements** (see above)
+2. **Restart computer** and try again
+3. **Run as administrator** (Windows) or with permissions (macOS)
+4. **Check antivirus** - may need to whitelist app
 
-#### Photos Not Appearing in Search
-1. Verify photo directories are correctly added in Settings
-2. Check if indexing is complete (see status bar)
-3. Ensure file formats are supported (JPEG, PNG, TIFF, RAW)
-4. Try refreshing the index: Settings → Advanced → Rebuild Index
+### Search Not Working
 
-#### Slow Performance
-1. Check available RAM and disk space
-2. Reduce thumbnail quality in Settings
-3. Limit concurrent processing in Performance settings
-4. Close other resource-intensive applications
-5. Consider upgrading hardware for large photo collections
+1. **Wait for indexing** to complete fully
+2. **Re-index folder**: Settings → Manage Folders → Re-index
+3. **Clear cache**: Settings → Privacy → Clear Cache
+4. **Check disk space**: Need 10% free space minimum
 
-#### Search Results Inaccurate
-1. Allow time for complete indexing of all photos
-2. Update search terms - try more specific descriptions
-3. Use multiple search terms for better results
-4. Check if AI features are enabled in Settings
+### Slow Performance
 
-### Getting Help
-- **Built-in Help**: Help menu → User Guide
-- **Log Files**: Help → Open Log Folder (for technical support)
-- **Report Issues**: Help → Report Bug (opens issue tracker)
-- **Community**: Access community forums and documentation
+1. **Reduce thumbnail quality**: Settings → Performance
+2. **Limit results per page**: Settings → Search
+3. **Close background apps** to free RAM
+4. **Update graphics drivers** for better rendering
 
-### System Logs
-Log files are stored in:
-- **Windows**: `%APPDATA%\PhotoSearch\logs`
-- **macOS**: `~/Library/Logs/PhotoSearch`
-- **Linux**: `~/.local/share/PhotoSearch/logs`
+### Photos Not Found
 
----
+1. **Check file formats**: Supports JPG, PNG, HEIC, TIFF, BMP
+2. **Verify permissions**: App needs read access to folders
+3. **Re-add folder**: Remove and add folder again
+4. **Check file corruption**: Try opening in another app
+
+## FAQ
+
+**Q: Are my photos uploaded anywhere?**
+A: No! All processing happens locally on your computer. Nothing is uploaded.
+
+**Q: How much disk space do I need?**
+A: The app itself needs ~500MB. Thumbnails cache uses ~1GB per 10,000 photos.
+
+**Q: Can I use network drives?**
+A: Yes, but performance depends on network speed. Local drives recommended.
+
+**Q: Does it work offline?**
+A: Yes! The app works completely offline. No internet required.
+
+**Q: Can I index RAW files?**
+A: Basic support for common RAW formats (CR2, NEF, ARW). Full support coming.
+
+**Q: How do I backup my index?**
+A: Copy the folder: `~/Library/Application Support/ideal-googles` (macOS) or `%APPDATA%/ideal-googles` (Windows)
+
+**Q: Can multiple users share an index?**
+A: Each user has their own index. Sharing planned for future version.
+
+**Q: Is there a mobile app?**
+A: Not yet, but it's on our roadmap!
+
+## Support
+
+Need more help?
+
+- 📧 **Email**: Open an issue on [GitHub](https://github.com/sarvarunajvm/ideal-goggles/issues)
+- 📚 **Documentation**: Check [README](README.md) and [Developer Guide](DEVELOPER_GUIDE.md)
+- 🐛 **Report Bugs**: [GitHub Issues](https://github.com/sarvarunajvm/ideal-goggles/issues/new)
 
 ## Privacy & Security
 
-### Local Processing
-Photo Search & Navigation is designed with privacy as a core principle:
-
-- **No Cloud Processing**: All AI analysis happens on your computer
-- **No Data Upload**: Your photos never leave your device
-- **Offline Operation**: Works completely offline
-- **Local Storage**: All indexes and metadata stored locally
-
-### Data Storage
-The application stores the following data locally:
-
-#### Photo Metadata
-- Thumbnails for fast display
-- EXIF data extracted from photos
-- AI-generated descriptions and tags
-- User-added tags and ratings
-
-#### AI Models
-- Image recognition models (downloaded once)
-- Face recognition models (if enabled)
-- OCR text recognition models
-- Natural language processing models
-
-#### Application Data
-- User settings and preferences
-- Search history (optional, can be disabled)
-- Application logs for troubleshooting
-
-### Privacy Controls
-- **Disable Face Recognition**: Completely disable face detection
-- **Clear Search History**: Remove all search history
-- **Export Data**: Export your metadata and settings
-- **Data Deletion**: Completely remove all application data
-
-### Security Features
-- **No Network Access**: Application can run completely offline
-- **File Permissions**: Only accesses directories you explicitly add
-- **Secure Storage**: Application data encrypted at rest
-- **No Analytics**: No usage tracking or analytics collection
-
-### Data Portability
-- Export settings and metadata to JSON format
-- Backup and restore configuration
-- Move installation to different computers
-- Open format for future compatibility
+Your privacy is our priority:
+- ✅ **100% local processing**
+- ✅ **No cloud uploads**
+- ✅ **No account required**
+- ✅ **No tracking or analytics** (unless you opt-in)
+- ✅ **Open source** - audit the code yourself!
 
 ---
 
-## Advanced Features
-
-### Command Line Interface
-For power users, Photo Search includes CLI tools:
-
-```bash
-# Search from command line
-photo-search search "vacation photos"
-
-# Bulk operations
-photo-search tag --add "vacation" --path "/Photos/2023"
-
-# Export operations
-photo-search export --format json --output metadata.json
-```
-
-### API Integration
-Local REST API for integration with other tools:
-- **Search API**: Programmatic search capabilities
-- **Metadata API**: Access photo metadata
-- **Import API**: Automate photo import workflows
-
-### Scripting and Automation
-- **Watch Folders**: Automatic processing of new photos
-- **Batch Processing**: Custom scripts for bulk operations
-- **Scheduled Tasks**: Automatic maintenance and optimization
-
----
-
-## Appendix
-
-### Supported File Formats
-- **Images**: JPEG, PNG, TIFF, BMP, GIF, WebP
-- **RAW Formats**: CR2, NEF, ARW, DNG, RAF, ORF
-- **Video**: MP4, MOV, AVI (basic support)
-
-### Keyboard Shortcuts Reference
-| Action | Windows/Linux | macOS |
-|--------|---------------|-------|
-| Search | Ctrl + F | Cmd + F |
-| Open Photo | Enter | Enter |
-| Delete | Delete | Delete |
-| Select All | Ctrl + A | Cmd + A |
-| Copy | Ctrl + C | Cmd + C |
-| Show in Folder | Ctrl + D | Cmd + D |
-| Fullscreen | F11 | Ctrl + Cmd + F |
-| Settings | Ctrl + , | Cmd + , |
-
-### Performance Recommendations
-
-#### For Large Collections (50,000+ photos):
-- 16GB+ RAM recommended
-- SSD storage for application and cache
-- Dedicated graphics card (optional but helpful)
-- Regular index optimization
-
-#### For Slow Computers:
-- Reduce thumbnail quality
-- Disable real-time processing
-- Process photos during off-hours
-- Increase cache cleanup frequency
-
----
-
-*This user manual covers version 1.0 of Photo Search & Navigation. For the latest updates and features, check the application's Help menu or visit our documentation website.*
+Thank you for using Ideal Googles! We hope it makes finding your photos a breeze. 📸

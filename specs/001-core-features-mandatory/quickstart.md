@@ -263,7 +263,7 @@ npm run test:integration
 
 **Application Won't Start**:
 - Check Python backend service status
-- Verify port 55555 not in use by other apps
+- Verify port 5555 not in use by other apps
 - Review application logs for errors
 
 ## Next Steps
