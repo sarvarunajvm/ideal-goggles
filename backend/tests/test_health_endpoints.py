@@ -2,14 +2,15 @@
 Tests for health check endpoints.
 """
 
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-import sys
-import os
 
 # Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.main import app
 
@@ -70,7 +71,7 @@ class TestHealthEndpoints:
         assert "timestamp" in data
         assert data["service"] == "photo-search-api"
 
-    @patch('src.api.health.get_database_manager')
+    @patch("src.api.health.get_database_manager")
     def test_health_with_database_failure(self, mock_db_manager, client):
         """Test health check when database is unavailable."""
         mock_db = MagicMock()
