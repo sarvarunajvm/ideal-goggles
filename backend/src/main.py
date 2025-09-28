@@ -54,7 +54,16 @@ app = FastAPI(
 # CORS middleware for Electron frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "file://"],
+    # Electron renderer in production loads from file:// which presents
+    # as Origin "null" for CORS. Allow common local dev origins and
+    # permit any origin via regex to avoid startup issues.
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "file://",
+        "null",
+    ],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
