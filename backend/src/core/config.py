@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Server configuration
     HOST: str = Field(default="127.0.0.1", env="HOST")
-    PORT: int = Field(default=8000, env="PORT")
+    PORT: int = Field(default=55555, env="PORT")
     DEBUG: bool = Field(default=False, env="DEBUG")
 
     # Database configuration
