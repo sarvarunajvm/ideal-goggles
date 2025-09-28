@@ -1,7 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiService, IndexStatus } from '../services/apiClient';
 import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  FolderOpen,
+  Settings2,
+  Database,
+  Zap,
+  Languages,
+  Search,
+  Plus,
+  Trash2,
+  Play,
+  Square,
+  RotateCcw,
+  Loader2,
+  Image,
+  Users,
+  FileText,
+  Activity
+} from 'lucide-react';
 
 interface IndexStats {
   database: {
@@ -13,12 +42,11 @@ interface IndexStats {
 }
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
   const [indexStats, setIndexStats] = useState<IndexStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   // Form state
   const [rootFolders, setRootFolders] = useState<string[]>([]);
@@ -26,11 +54,7 @@ export default function SettingsPage() {
   const [ocrLanguages, setOcrLanguages] = useState<string[]>([]);
   const [faceSearchEnabled, setFaceSearchEnabled] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [configData, statusData, statsData] = await Promise.all([
@@ -46,19 +70,24 @@ export default function SettingsPage() {
       setRootFolders(configData.roots);
       setOcrLanguages(configData.ocr_languages);
       setFaceSearchEnabled(configData.face_search_enabled);
-
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to load configuration',
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const saveConfig = async () => {
     try {
       setSaving(true);
-      setError(null);
 
       // Update root folders
       await apiService.updateRoots(rootFolders);
@@ -69,13 +98,19 @@ export default function SettingsPage() {
         face_search_enabled: faceSearchEnabled,
       });
 
-      setSuccess('Configuration saved successfully!');
-      setTimeout(() => setSuccess(null), 3000);
+      toast({
+        title: "Success",
+        description: "Configuration saved successfully!",
+      });
 
       // Reload data
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save configuration');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to save configuration',
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -95,35 +130,47 @@ export default function SettingsPage() {
   const startIndexing = async (full = false) => {
     try {
       await apiService.startIndexing(full);
-      setSuccess(`${full ? 'Full' : 'Incremental'} indexing started!`);
-      setTimeout(() => setSuccess(null), 3000);
+      toast({
+        title: "Success",
+        description: `${full ? 'Full' : 'Incremental'} indexing started!`,
+      });
       // Reload status
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start indexing');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to start indexing',
+        variant: "destructive",
+      });
     }
   };
 
   const stopIndexing = async () => {
     try {
       await apiService.stopIndexing();
-      setSuccess('Indexing stopped!');
-      setTimeout(() => setSuccess(null), 3000);
+      toast({
+        title: "Success",
+        description: "Indexing stopped!",
+      });
       // Reload status
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop indexing');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to stop indexing',
+        variant: "destructive",
+      });
     }
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50">
+      <div className="flex flex-col h-screen bg-background">
         <Navigation />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading settings...</p>
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Loading settings...</p>
           </div>
         </div>
         <StatusBar />
@@ -132,254 +179,327 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-background">
       <Navigation />
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Settings</h1>
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="flex items-center space-x-3 mb-8">
+            <Settings2 className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">Settings</h1>
+          </div>
 
-          {/* Status Messages */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <span className="text-red-600 mr-2">❌</span>
-                <span className="text-red-700">{error}</span>
-              </div>
-            </div>
-          )}
+          <Tabs defaultValue="storage" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="storage" className="flex items-center space-x-2">
+                <Database className="h-4 w-4" />
+                <span>Storage & Indexing</span>
+              </TabsTrigger>
+              <TabsTrigger value="features" className="flex items-center space-x-2">
+                <Search className="h-4 w-4" />
+                <span>Search Features</span>
+              </TabsTrigger>
+              <TabsTrigger value="status" className="flex items-center space-x-2">
+                <Activity className="h-4 w-4" />
+                <span>System Status</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <span className="text-green-600 mr-2">✅</span>
-                <span className="text-green-700">{success}</span>
-              </div>
-            </div>
-          )}
+            <TabsContent value="storage" className="space-y-6">
+              {/* Root Folders Section */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FolderOpen className="h-5 w-5 text-blue-600" />
+                    <span>Photo Directories</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Configure which folders to scan for photos. The system will recursively search these directories.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Current Folders */}
+                  <div className="space-y-2">
+                    {rootFolders.map((folder, index) => (
+                      <div key={index} className="group flex items-center justify-between p-3 bg-muted/50 rounded-lg border transition-all duration-200 hover:bg-muted">
+                        <span className="font-mono text-sm flex-1 truncate">{folder}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeRootFolder(index)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
-          <div className="space-y-8">
-            {/* Root Folders Section */}
-            <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                📁 Root Folders
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Configure which folders to scan for photos. The system will recursively search these directories.
-              </p>
-
-              {/* Current Folders */}
-              <div className="space-y-2 mb-4">
-                {rootFolders.map((folder, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="font-mono text-sm">{folder}</span>
-                    <button
-                      onClick={() => removeRootFolder(index)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
+                  {/* Add New Folder */}
+                  <div className="flex space-x-2">
+                    <Input
+                      value={newFolderPath}
+                      onChange={(e) => setNewFolderPath(e.target.value)}
+                      placeholder="/path/to/your/photos"
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={addRootFolder}
+                      disabled={!newFolderPath.trim()}
+                      className="flex items-center space-x-2"
                     >
-                      🗑️ Remove
-                    </button>
+                      <Plus className="h-4 w-4" />
+                      <span>Add</span>
+                    </Button>
                   </div>
-                ))}
-              </div>
+                </CardContent>
+              </Card>
 
-              {/* Add New Folder */}
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newFolderPath}
-                  onChange={(e) => setNewFolderPath(e.target.value)}
-                  placeholder="/path/to/your/photos"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  onClick={addRootFolder}
-                  disabled={!newFolderPath.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
-                >
-                  Add Folder
-                </button>
-              </div>
-            </section>
+              {/* Indexing Controls */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-orange-600" />
+                    <span>Indexing Controls</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Manage photo indexing and processing operations.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Current Status */}
+                  {indexStatus && (
+                    <div className="p-4 border rounded-lg bg-card">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="font-medium">Current Status</Label>
+                        <Badge
+                          variant={
+                            indexStatus.status === 'indexing' ? 'default' :
+                            indexStatus.status === 'error' ? 'destructive' :
+                            'secondary'
+                          }
+                          className="capitalize"
+                        >
+                          {indexStatus.status}
+                        </Badge>
+                      </div>
 
-            {/* Indexing Section */}
-            <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                ⚡ Indexing
-              </h2>
+                      {indexStatus.status === 'indexing' && (
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">
+                            Phase: <span className="font-medium">{indexStatus.progress.current_phase}</span>
+                          </div>
+                          {indexStatus.progress.total_files > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress</span>
+                                <span>{indexStatus.progress.processed_files}/{indexStatus.progress.total_files} files</span>
+                              </div>
+                              <Progress
+                                value={(indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100}
+                                className="h-2"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-              {/* Current Status */}
-              {indexStatus && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">Status:</span>
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      indexStatus.status === 'indexing' ? 'bg-blue-100 text-blue-800' :
-                      indexStatus.status === 'error' ? 'bg-red-100 text-red-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {indexStatus.status}
-                    </span>
-                  </div>
-
-                  {indexStatus.status === 'indexing' && (
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div>Phase: {indexStatus.progress.current_phase}</div>
-                      {indexStatus.progress.total_files > 0 && (
-                        <div>
-                          Progress: {indexStatus.progress.processed_files}/{indexStatus.progress.total_files} files
+                      {indexStatus.errors.length > 0 && (
+                        <div className="mt-3 p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+                          <details className="text-sm">
+                            <summary className="text-destructive cursor-pointer font-medium">
+                              {indexStatus.errors.length} error(s) encountered
+                            </summary>
+                            <div className="mt-2 space-y-1 max-h-24 overflow-y-auto">
+                              {indexStatus.errors.map((error: string, index: number) => (
+                                <div key={index} className="text-destructive font-mono text-xs p-1 bg-background rounded">
+                                  {error}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {indexStatus.errors.length > 0 && (
-                    <div className="mt-2">
-                      <details className="text-sm">
-                        <summary className="text-red-600 cursor-pointer">
-                          {indexStatus.errors.length} error(s)
-                        </summary>
-                        <div className="mt-2 space-y-1">
-                          {indexStatus.errors.map((error: string, index: number) => (
-                            <div key={index} className="text-red-600 font-mono text-xs">
-                              {error}
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Index Actions */}
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => startIndexing(false)}
-                  disabled={indexStatus?.status === 'indexing'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
-                >
-                  Start Incremental Index
-                </button>
-                <button
-                  onClick={() => startIndexing(true)}
-                  disabled={indexStatus?.status === 'indexing'}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 transition-colors"
-                >
-                  Start Full Re-Index
-                </button>
-                {indexStatus?.status === 'indexing' && (
-                  <button
-                    onClick={stopIndexing}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    Stop Indexing
-                  </button>
-                )}
-              </div>
-
-              {/* Database Stats */}
-              {indexStats && (
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {indexStats.database.total_photos.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Photos</div>
+                  {/* Index Actions */}
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => startIndexing(false)}
+                      disabled={indexStatus?.status === 'indexing'}
+                      className="flex items-center space-x-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      <span>Start Incremental</span>
+                    </Button>
+                    <Button
+                      onClick={() => startIndexing(true)}
+                      disabled={indexStatus?.status === 'indexing'}
+                      variant="secondary"
+                      className="flex items-center space-x-2"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      <span>Full Re-Index</span>
+                    </Button>
+                    {indexStatus?.status === 'indexing' && (
+                      <Button
+                        onClick={stopIndexing}
+                        variant="destructive"
+                        className="flex items-center space-x-2"
+                      >
+                        <Square className="h-4 w-4" />
+                        <span>Stop</span>
+                      </Button>
+                    )}
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {indexStats.database.indexed_photos.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-600">Indexed</div>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {indexStats.database.photos_with_embeddings.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-600">With Embeddings</div>
-                  </div>
-                  <div className="text-center p-3 bg-orange-50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {indexStats.database.total_faces.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-600">Faces</div>
-                  </div>
-                </div>
-              )}
-            </section>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-            {/* Advanced Features */}
-            <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                🔧 Advanced Features
-              </h2>
-
-              <div className="space-y-4">
-                {/* OCR Languages */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    OCR Languages
-                  </label>
-                  <p className="text-sm text-gray-600 mb-2">
+            <TabsContent value="features" className="space-y-6">
+              {/* Advanced Features */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Languages className="h-5 w-5 text-purple-600" />
+                    <span>OCR Languages</span>
+                  </CardTitle>
+                  <CardDescription>
                     Select languages for text extraction from images (requires Tesseract).
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {['eng', 'spa', 'fra', 'deu', 'ita', 'por', 'rus', 'chi_sim', 'jpn', 'kor'].map((lang) => (
-                      <label key={lang} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={ocrLanguages.includes(lang)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setOcrLanguages([...ocrLanguages, lang]);
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { code: 'eng', name: 'English' },
+                      { code: 'tam', name: 'Tamil' }
+                    ].map(({ code, name }) => (
+                      <div key={code} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id={`ocr-${code}`}
+                          checked={ocrLanguages.includes(code)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setOcrLanguages([...ocrLanguages, code]);
                             } else {
-                              setOcrLanguages(ocrLanguages.filter(l => l !== lang));
+                              setOcrLanguages(ocrLanguages.filter(l => l !== code));
                             }
                           }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">{lang}</span>
-                      </label>
+                        <Label htmlFor={`ocr-${code}`} className="font-medium cursor-pointer">
+                          {name}
+                        </Label>
+                      </div>
                     ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Face Search */}
-                <div>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={faceSearchEnabled}
-                      onChange={(e) => setFaceSearchEnabled(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+              {/* Face Search */}
+              <Card className="transition-all duration-200 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-green-600" />
+                    <span>Face Recognition</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Enable face detection and recognition capabilities.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <span className="text-sm font-medium text-gray-700">Enable Face Search</span>
-                      <p className="text-sm text-gray-600">
-                        Enable face detection and recognition (requires additional dependencies).
+                      <Label htmlFor="face-search" className="font-medium">Enable Face Search</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Detect and recognize faces in photos (requires additional dependencies).
                       </p>
                     </div>
-                  </label>
-                </div>
-              </div>
-            </section>
+                    <Switch
+                      id="face-search"
+                      checked={faceSearchEnabled}
+                      onCheckedChange={setFaceSearchEnabled}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-            {/* Save Button */}
-            <div className="flex justify-end">
-              <button
+            <TabsContent value="status" className="space-y-6">
+              {/* Database Statistics */}
+              {indexStats && (
+                <Card className="transition-all duration-200 hover:shadow-md">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      <span>Database Statistics</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Overview of your photo library and indexing progress.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 transition-all duration-200 hover:shadow-sm">
+                        <Image className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                        <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                          {indexStats.database.total_photos.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-blue-600 dark:text-blue-400">Total Photos</div>
+                      </div>
+                      <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 transition-all duration-200 hover:shadow-sm">
+                        <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                        <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                          {indexStats.database.indexed_photos.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-green-600 dark:text-green-400">Indexed</div>
+                      </div>
+                      <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 transition-all duration-200 hover:shadow-sm">
+                        <Search className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                        <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                          {indexStats.database.photos_with_embeddings.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-purple-600 dark:text-purple-400">With Embeddings</div>
+                      </div>
+                      <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 transition-all duration-200 hover:shadow-sm">
+                        <Users className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                        <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                          {indexStats.database.total_faces.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-orange-600 dark:text-orange-400">Faces Detected</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Save Configuration */}
+            <div className="flex justify-end pt-6 border-t">
+              <Button
                 onClick={saveConfig}
                 disabled={saving}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors font-medium"
+                className="px-8 py-3 text-base font-medium"
               >
-                {saving ? 'Saving...' : 'Save Configuration'}
-              </button>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Save Configuration
+                  </>
+                )}
+              </Button>
             </div>
-          </div>
+          </Tabs>
         </div>
       </div>
 
       <StatusBar />
+      <Toaster />
     </div>
   );
 }

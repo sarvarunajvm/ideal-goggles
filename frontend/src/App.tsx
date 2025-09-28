@@ -12,7 +12,7 @@ function App() {
   const [backendPort, setBackendPort] = useState<number | null>(null)
   const backendBaseDisplay = useMemo(() => {
     const isElectron = typeof window !== 'undefined' && (window as unknown as { electronAPI?: ElectronAPI }).electronAPI
-    const port = backendPort ?? (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT ?? 55555
+    const port = backendPort ?? (window as unknown as { BACKEND_PORT?: number }).BACKEND_PORT ?? 5555
     return isElectron ? `http://127.0.0.1:${port}` : '/api'
   }, [backendPort])
 
