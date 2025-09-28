@@ -43,8 +43,10 @@ const electronAPI = {
 
 // Security: Only expose specific API methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
-// Also expose dynamic backend port selected by main process
-contextBridge.exposeInMainWorld('BACKEND_PORT', (global as any).BACKEND_PORT);
+// In development, backend always runs on port 5555
+// In production, the port is determined dynamically
+const isDev = process.env.NODE_ENV === 'development';
+contextBridge.exposeInMainWorld('BACKEND_PORT', isDev ? 5555 : (global as any).BACKEND_PORT);
 
 // Additionally expose the dynamic backend port for renderer API client
 declare global {

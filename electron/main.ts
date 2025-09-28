@@ -59,6 +59,7 @@ async function startBackend(): Promise<void> {
       // In development, assume backend is running separately
       if (isDev) {
         console.log('Development mode: assuming backend is running on port', BACKEND_PORT);
+        // In dev mode, just resolve immediately since backend runs separately
         resolve();
         return;
       }
