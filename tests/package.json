@@ -1,6 +1,6 @@
 {
   "name": "ideal-goggles-integration-tests",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "Playwright integration tests for Photo Search application",
   "private": true,
   "scripts": {

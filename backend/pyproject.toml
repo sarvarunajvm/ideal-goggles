@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "photo-search-backend"
-version = "1.0.7"
+version = "1.0.8"
 description = "Backend API for photo search and navigation system"
 authors = [{name = "Photo Search Team"}]
 license = {text = "MIT"}

@@ -26,7 +26,7 @@ async def health_check() -> dict[str, Any]:
         health_data = {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "version": "1.0.0",
+            "version": "1.0.8",
             "service": "photo-search-api",
         }
 
