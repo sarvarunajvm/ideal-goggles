@@ -57,7 +57,8 @@ test-results/
 frontend/electron/dist/
 
 # Shared package build artifacts
-packages/shared/dist/
+electron/dist/
+tests/fixtures/images/
 
 # Vite/Electron misc
 *.asar
