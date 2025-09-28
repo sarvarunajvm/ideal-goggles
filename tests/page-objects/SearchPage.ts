@@ -15,13 +15,14 @@ export class SearchPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.searchInput = page.locator('input[placeholder*="Search"]');
+    this.searchInput = page.locator('input[placeholder*="Search"], input[placeholder*="Describe"]');
     this.searchButton = page.locator('button[type="submit"]');
-    this.textSearchButton = page.locator('button:has-text("Text Search")');
-    this.semanticSearchButton = page.locator('button:has-text("Semantic Search")');
-    this.imageSearchButton = page.locator('button:has-text("Image Search")');
-    this.filterButton = page.locator('button:has-text("Filters")');
-    this.resultsContainer = page.locator('[data-testid="search-results"]');
+    // Updated to use TabsTrigger buttons with proper selectors
+    this.textSearchButton = page.locator('button[role="tab"]:has-text("Text Search")');
+    this.semanticSearchButton = page.locator('button[role="tab"]:has-text("Semantic")');
+    this.imageSearchButton = page.locator('button[role="tab"]:has-text("Image")');
+    this.filterButton = page.locator('text=Filters');
+    this.resultsContainer = page.locator('.grid').first(); // Grid of results
     this.emptyState = page.locator('text=Search Your Photos');
     this.uploadArea = page.locator('text=Upload an image to search');
     this.loadingSpinner = page.locator('.animate-spin');
@@ -49,21 +50,22 @@ export class SearchPage extends BasePage {
   }
 
   async waitForSearchComplete() {
-    // Wait for loading to start
-    await this.loadingSpinner.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    // Wait for loading to complete
-    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
+    // Wait for any network activity to complete
+    await this.page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+    // Small buffer for UI updates
     await this.page.waitForTimeout(500);
   }
 
   async getSearchResults(): Promise<number> {
-    const results = await this.page.locator('[data-testid="search-result-item"]').count();
+    // Count Card elements in the results grid
+    const results = await this.page.locator('.grid > div.group').count();
     return results;
   }
 
   async getActiveSearchMode(): Promise<string | null> {
-    const activeButton = await this.page.locator('button.bg-blue-600').textContent();
-    return activeButton;
+    // Find the active tab using aria-selected attribute
+    const activeTab = await this.page.locator('button[role="tab"][aria-selected="true"]').textContent();
+    return activeTab?.trim() || null;
   }
 
   async toggleFilters() {

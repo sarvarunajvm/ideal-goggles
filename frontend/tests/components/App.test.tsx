@@ -126,7 +126,7 @@ describe('App Component', () => {
 
     const mockElectronAPI = {
       getBackendLogPath: jest.fn().mockResolvedValue('/logs/backend.log'),
-      getBackendPort: jest.fn().mockResolvedValue(55555)
+      getBackendPort: jest.fn().mockResolvedValue(5555)
     };
 
     // Mock window.electronAPI

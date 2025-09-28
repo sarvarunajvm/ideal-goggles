@@ -95,6 +95,9 @@ test.describe('Smoke Tests', () => {
 
   test('error handling when backend is unavailable', async ({ page }) => {
     // Intercept API calls and simulate backend failure
+    await page.route('**/health', route => {
+      route.abort('failed');
+    });
     await page.route('**/api/**', route => {
       route.abort('failed');
     });
@@ -102,11 +105,13 @@ test.describe('Smoke Tests', () => {
     // Reload page
     await page.reload();
 
-    // App should still load but show disconnected status
-    await expect(basePage.navBar).toBeVisible();
+    // App should show loading/waiting screen when backend is unavailable
+    await expect(page.locator('text=Starting local backend')).toBeVisible();
 
-    // Connection status should show disconnected
-    const statusClass = await basePage.connectionStatus.first().getAttribute('class');
-    expect(statusClass).toContain('bg-red-500');
+    // Should show the backend URL it's trying to connect to
+    await expect(page.locator('code')).toContainText('/api');
+
+    // Should show helpful message about waiting
+    await expect(page.locator('text=/If this persists/')).toBeVisible();
   });
 });

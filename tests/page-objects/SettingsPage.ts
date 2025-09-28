@@ -18,61 +18,72 @@ export class SettingsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.rootFoldersSection = page.locator('[data-testid="root-folders"]');
-    this.addFolderButton = page.locator('button:has-text("Add Folder")');
-    this.folderInput = page.locator('input[placeholder*="folder path"]');
-    this.saveButton = page.locator('button:has-text("Save")');
-    this.resetButton = page.locator('button:has-text("Reset")');
-    this.indexingButton = page.locator('button:has-text("Start Indexing")');
-    this.indexingStatus = page.locator('[data-testid="indexing-status"]');
-    this.progressBar = page.locator('[role="progressbar"]');
-    this.ocrToggle = page.locator('input[name="ocr_enabled"]');
-    this.faceSearchToggle = page.locator('input[name="face_search_enabled"]');
-    this.semanticSearchToggle = page.locator('input[name="semantic_search_enabled"]');
-    this.batchSizeInput = page.locator('input[name="batch_size"]');
-    this.thumbnailSizeSelect = page.locator('select[name="thumbnail_size"]');
+    this.rootFoldersSection = page.locator('text=Photo Directories').locator('..');
+    this.addFolderButton = page.locator('button:has-text("Add")');
+    this.folderInput = page.locator('input[placeholder*="path/to/your/photos"]');
+    this.saveButton = page.locator('button:has-text("Save Changes")');
+    this.resetButton = page.locator('button:has-text("Reset to Defaults")');
+    this.indexingButton = page.locator('button:has-text("Start Incremental")');
+    this.indexingStatus = page.locator('text=Current Status').locator('..');
+    this.progressBar = page.locator('.h-2').first(); // Progress bar
+    this.ocrToggle = page.locator('text=OCR Text Extraction').locator('..').locator('button[role="switch"]');
+    this.faceSearchToggle = page.locator('text=Face Recognition').locator('..').locator('button[role="switch"]');
+    this.semanticSearchToggle = page.locator('text=Semantic Search').locator('..').locator('button[role="switch"]');
+    this.batchSizeInput = page.locator('input[type="number"]').first();
+    this.thumbnailSizeSelect = page.locator('select').first();
   }
 
   async addRootFolder(path: string) {
-    await this.addFolderButton.click();
     await this.folderInput.fill(path);
-    await this.saveButton.click();
-    await this.waitForSaveComplete();
+    await this.addFolderButton.click();
+    await this.page.waitForTimeout(500);
   }
 
   async removeRootFolder(index: number) {
-    const removeButton = await this.page.locator(`[data-testid="remove-folder-${index}"]`);
+    // Click the trash icon for the folder at the given index
+    const folderItems = this.page.locator('.font-mono.text-sm');
+    const folder = folderItems.nth(index);
+    const removeButton = folder.locator('..').locator('button').first();
     await removeButton.click();
-    await this.page.locator('button:has-text("Confirm")').click();
-    await this.waitForSaveComplete();
+    await this.page.waitForTimeout(500);
   }
 
   async getRootFolders(): Promise<string[]> {
-    const folders = await this.page.locator('[data-testid="folder-item"]').allTextContents();
-    return folders;
+    const folders = await this.page.locator('.font-mono.text-sm').allTextContents();
+    return folders.map(f => f.trim());
   }
 
   async startIndexing(fullIndex: boolean = false) {
     if (fullIndex) {
-      const fullIndexCheckbox = await this.page.locator('input[name="full_index"]');
-      await fullIndexCheckbox.check();
+      const fullIndexButton = this.page.locator('button:has-text("Full Re-Index")');
+      await fullIndexButton.click();
+    } else {
+      await this.indexingButton.click();
     }
-    await this.indexingButton.click();
-    await this.waitForIndexingStart();
+    await this.page.waitForTimeout(1000);
   }
 
   async stopIndexing() {
-    const stopButton = await this.page.locator('button:has-text("Stop Indexing")');
+    const stopButton = this.page.locator('button:has-text("Stop")');
     await stopButton.click();
     await this.page.waitForTimeout(1000);
   }
 
   async getIndexingStatus() {
-    const status = await this.indexingStatus.textContent();
-    const progress = await this.progressBar.getAttribute('aria-valuenow');
+    const statusBadge = this.page.locator('text=Current Status').locator('..').locator('.capitalize');
+    const status = await statusBadge.textContent();
+
+    // Try to get progress if visible
+    let progress = 0;
+    const progressBar = this.page.locator('.h-2').first();
+    if (await progressBar.isVisible()) {
+      const value = await progressBar.getAttribute('aria-valuenow');
+      progress = value ? parseInt(value) : 0;
+    }
+
     return {
-      status,
-      progress: progress ? parseInt(progress) : 0
+      status: status?.trim() || 'idle',
+      progress
     };
   }
 

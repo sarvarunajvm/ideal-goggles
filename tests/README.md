@@ -165,7 +165,7 @@ npm run trace trace.zip
 Create a `.env` file for test configuration:
 ```env
 BASE_URL=http://localhost:3000
-API_URL=http://localhost:55555
+API_URL=http://localhost:5555
 TEST_TIMEOUT=60000
 HEADLESS=true
 ```
@@ -250,7 +250,7 @@ npm test -- --grep "Feature Name"
 ## 🚨 Troubleshooting
 
 ### Tests Failing
-- Check backend is running: `http://localhost:55555/health`
+- Check backend is running: `http://localhost:5555/health`
 - Check frontend is running: `http://localhost:3000`
 - Clear test data: `rm -rf /tmp/test-*`
 - Update Playwright: `npm update @playwright/test`

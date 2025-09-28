@@ -94,7 +94,7 @@ fi
 
 # Check if backend is running
 echo -e "${YELLOW}🔍 Checking backend status...${NC}"
-if curl -s http://localhost:55555/health > /dev/null 2>&1; then
+if curl -s http://localhost:5555/health > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Backend is running${NC}"
 else
     echo -e "${YELLOW}⚠️  Backend is not running. Starting it...${NC}"
@@ -107,7 +107,7 @@ fi
 
 # Check if frontend is running
 echo -e "${YELLOW}🔍 Checking frontend status...${NC}"
-if curl -s http://localhost:3000 > /dev/null 2>&1; then
+if curl -s http://localhost:3333 > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Frontend is running${NC}"
 else
     echo -e "${YELLOW}⚠️  Frontend is not running. Starting it...${NC}"

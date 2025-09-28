@@ -7,7 +7,7 @@ export class APIClient {
   private context: APIRequestContext;
   private baseURL: string;
 
-  constructor(baseURL: string = 'http://localhost:55555') {
+  constructor(baseURL: string = 'http://localhost:5555') {
     this.baseURL = baseURL;
   }
 

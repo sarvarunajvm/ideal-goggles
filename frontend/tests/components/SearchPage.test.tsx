@@ -85,20 +85,19 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    // Click semantic search tab - get first if multiple
-    const semanticButtons = screen.getAllByText('Semantic Search')
-    const semanticButton = semanticButtons[0]
-    await user.click(semanticButton)
+    // Click semantic search tab - find by role
+    const semanticTab = screen.getByRole('tab', { name: /semantic/i })
+    await user.click(semanticTab)
 
-    // Button should be active (has different style)
-    expect(semanticButton.closest('button')).toHaveClass('bg-blue-600')
+    // Tab should be selected
+    expect(semanticTab).toHaveAttribute('data-state', 'active')
   })
 
   test('renders search input field', () => {
     renderSearchPage()
 
-    // The SearchBar component should have an input
-    const searchInput = screen.getByRole('textbox')
+    // The SearchBar component should have an input - get the main search input
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     expect(searchInput).toBeInTheDocument()
   })
 
@@ -106,7 +105,7 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'vacation photos')
 
     expect(searchInput).toHaveValue('vacation photos')
@@ -116,7 +115,7 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'test query{Enter}')
 
     // Wait for search to be called
@@ -142,12 +141,13 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'test{Enter}')
 
-    // Should show loading indicator
+    // Should show loading indicator - look for skeleton grid instead of "searching" text
     await waitFor(() => {
-      expect(screen.getByText(/searching/i)).toBeInTheDocument()
+      const skeletons = document.querySelectorAll('[data-testid="skeleton"], .animate-pulse')
+      expect(skeletons.length).toBeGreaterThan(0)
     })
   })
 
@@ -161,13 +161,15 @@ describe('SearchPage Component', () => {
         {
           file_id: 1,
           path: '/photos/photo1.jpg',
-          thumbnail: 'thumb1',
+          filename: 'photo1.jpg',
+          thumb_path: '/thumbs/photo1.jpg',
           score: 0.9
         },
         {
           file_id: 2,
           path: '/photos/photo2.jpg',
-          thumbnail: 'thumb2',
+          filename: 'photo2.jpg',
+          thumb_path: '/thumbs/photo2.jpg',
           score: 0.8
         }
       ],
@@ -177,13 +179,12 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'test{Enter}')
 
-    // Wait for results to appear
+    // Wait for results to appear - look for the results header text
     await waitFor(() => {
-      const resultsElements = screen.getAllByText(/results/i)
-      expect(resultsElements.length).toBeGreaterThan(0)
+      expect(screen.getByText(/2 photos found/)).toBeInTheDocument()
     })
   })
 
@@ -191,12 +192,11 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'nonexistent{Enter}')
 
     await waitFor(() => {
-      const noResultsElements = screen.getAllByText(/no results/i)
-      expect(noResultsElements.length).toBeGreaterThan(0)
+      expect(screen.getByText(/0 photo found/)).toBeInTheDocument()
     })
   })
 
@@ -204,15 +204,13 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    // Click image search tab - get first if multiple
-    const imageButtons = screen.getAllByText('Image Search')
-    const imageButton = imageButtons[0]
-    await user.click(imageButton)
+    // Click image search tab - find by role
+    const imageTab = screen.getByRole('tab', { name: /image/i })
+    await user.click(imageTab)
 
     // Should show upload area
     await waitFor(() => {
-      const uploadElements = screen.queryAllByText(/upload/i)
-      expect(uploadElements.length).toBeGreaterThan(0)
+      expect(screen.getByText(/Upload an image to search/)).toBeInTheDocument()
     })
   })
 
@@ -220,20 +218,23 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    // Switch to image search - get first if multiple
-    const imageButtons = screen.getAllByText('Image Search')
-    const imageButton = imageButtons[0]
-    await user.click(imageButton)
+    // Switch to image search - find by role
+    const imageTab = screen.getByRole('tab', { name: /image/i })
+    await user.click(imageTab)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Upload an image to search/)).toBeInTheDocument()
+    })
 
     // Create a test file
     const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
 
-    // Find file input (it might be hidden)
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-
-    if (fileInput) {
+    // Find file input
+    const fileInput = screen.getByRole('button', { hidden: true })
+    if (fileInput.querySelector('input[type="file"]')) {
       // Simulate file selection
-      fireEvent.change(fileInput, { target: { files: [file] } })
+      const input = fileInput.querySelector('input[type="file"]') as HTMLInputElement
+      fireEvent.change(input, { target: { files: [file] } })
 
       await waitFor(() => {
         const { apiService } = require('../../src/services/apiClient')
@@ -252,11 +253,11 @@ describe('SearchPage Component', () => {
     const user = userEvent.setup()
     renderSearchPage()
 
-    const searchInput = screen.getByRole('textbox')
+    const searchInput = screen.getByPlaceholderText(/Search photos by filename/)
     await user.type(searchInput, 'test{Enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument()
+      expect(screen.getByText(/Search Error/)).toBeInTheDocument()
     })
   })
 
