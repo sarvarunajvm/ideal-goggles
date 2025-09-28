@@ -49,7 +49,7 @@ pnpm-debug.log*
 
 # Frontend build artifacts
 frontend/dist/
-frontend/dist-electron/
+dist-electron/
 frontend/test-results/
 frontend/playwright-report/
 playwright-report/
