@@ -8,12 +8,10 @@ import { apiService } from './services/apiClient'
 function App() {
   const [backendOk, setBackendOk] = useState<boolean | null>(null)
   const [logPath, setLogPath] = useState<string>('')
-  const [backendPort, setBackendPort] = useState<number | null>(null)
   const backendBaseDisplay = useMemo(() => {
     const isElectron = typeof window !== 'undefined' && window.electronAPI
-    const port = backendPort ?? window.BACKEND_PORT ?? 5555
-    return isElectron ? `http://127.0.0.1:${port}` : '/api'
-  }, [backendPort])
+    return isElectron ? 'http://127.0.0.1:5555' : '/api'
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -25,13 +23,7 @@ function App() {
           const p = await api.getBackendLogPath()
           if (!cancelled) setLogPath(p)
         }
-        if (api?.getBackendPort) {
-          const port = await api.getBackendPort()
-          // Make port available to other modules that compute API base URL
-          window.BACKEND_PORT = port
-          if (!cancelled) setBackendPort(port)
-        }
-        // Use shared API client so Electron dynamic port and web proxy are handled
+        // Use shared API client with fixed port 5555
         const res = await apiService.getHealth()
         if (!cancelled) setBackendOk(!!res)
       } catch {

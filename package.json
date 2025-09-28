@@ -11,7 +11,7 @@
     "dev:frontend": "vite --config frontend/vite.config.ts",
     "dev:electron": "cross-env NODE_ENV=development wait-on http://localhost:3333 tcp:127.0.0.1:5555 && pnpm run build:electron:main && cross-env NODE_ENV=development electron .",
     "build": "pnpm run build:frontend && pnpm run build:electron:main",
-    "build:frontend": "vite build --config frontend/vite.config.ts",
+    "build:frontend": "cd frontend && vite build",
     "build:electron:main": "tsc -p electron/tsconfig.json",
     "build:electron": "pnpm run build:frontend && pnpm run build:electron:main && electron-builder",
     "preview": "vite preview --config frontend/vite.config.ts",
