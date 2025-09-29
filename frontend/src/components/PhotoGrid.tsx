@@ -123,14 +123,6 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
     }
   }, [photos, focusedIndex, columns, handlePhotoClick]);
 
-  const handleDownload = useCallback((photo: Photo, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const link = document.createElement('a');
-    link.href = photo.thumbnail || photo.url || photo.path;
-    link.download = photo.name || `photo-${photo.id}`;
-    link.click();
-  }, []);
-
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '';
     const sizes = ['B', 'KB', 'MB', 'GB'];
