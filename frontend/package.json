@@ -1,6 +1,6 @@
 {
-  "name": "ideal-googles-frontend",
-  "version": "1.0.8",
+  "name": "frontend",
+  "version": "1.0.9",
   "description": "Frontend for Photo search and navigation application",
   "author": "Photo Search Team",
   "homepage": "./",
