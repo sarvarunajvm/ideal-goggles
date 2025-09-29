@@ -49,8 +49,8 @@ export default function ResultsGrid({
         setFocusedIndex(prev => Math.max(prev - columns, 0));
         break;
       case 'Enter':
-        if (results[focusedIndex] && onItemClick) {
-          onItemClick(results[focusedIndex]);
+        if (results[focusedIndex] && onItemDoubleClick) {
+          onItemDoubleClick(results[focusedIndex]);
         }
         break;
     }
@@ -99,10 +99,10 @@ export default function ResultsGrid({
   }
 
   return (
-    <div className="results-grid-container">
+    <div className="results-grid-container" data-testid="results-grid">
       {totalMatches !== undefined && (
         <div className="mb-4 text-sm text-gray-600">
-          Total matches: {totalMatches}
+          {totalMatches} photos found
         </div>
       )}
 
