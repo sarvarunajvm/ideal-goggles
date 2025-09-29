@@ -5,6 +5,9 @@ import Navigation from '../components/Navigation';
 import StatusBar from '../components/StatusBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, AlertCircle, Search as SearchIcon } from 'lucide-react';
 
 type Person = {
@@ -116,9 +119,9 @@ export default function PeoplePage() {
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-gray-900">People</h1>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onClick={openAddForm}>
+            <Button onClick={openAddForm}>
               ➕ Add Person
-            </button>
+            </Button>
           </div>
 
           {/* Search */}
@@ -129,58 +132,67 @@ export default function PeoplePage() {
 
           {/* Add/Edit Form */}
           {showForm && (
-            <div className="border rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Name</label>
-                  <Input placeholder="Enter person name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Photos</label>
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="person-name">Name</Label>
+                    <Input id="person-name" placeholder="Enter person name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Photos</Label>
                   <div className="relative">
                     <Button type="button" variant="secondary" className="mr-2" onClick={() => document.getElementById('new-person-file')?.click()}>
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Photos
                     </Button>
-                    <input id="new-person-file" type="file" multiple className="" onChange={(e) => handleFileSelect(e.target.files)} />
+                    <input id="new-person-file" type="file" multiple className="hidden" onChange={(e) => handleFileSelect(e.target.files)} />
                   </div>
                 </div>
               </div>
-              {error && (
-                <div role="alert" className="mt-3 flex items-center text-red-700 text-sm"><AlertCircle className="w-4 h-4 mr-2" />{error}</div>
-              )}
-              <div className="mt-4 flex gap-2">
-                <Button onClick={savePerson} disabled={!nameInput.trim() || formPhotos.length === 0}>Save Person</Button>
-                <Button variant="ghost" onClick={() => { setShowForm(false); resetForm(); }}>Cancel</Button>
-              </div>
-              {formPhotos.length > 0 && (
-                <div className="mt-4" data-testid="photo-gallery">
-                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                    {formPhotos.map((src, idx) => (
-                      <img key={idx} src={src} alt="preview" className="w-full aspect-square object-cover rounded" />
-                    ))}
-                  </div>
+                {error && (
+                  <div role="alert" className="mt-3 flex items-center text-red-700 text-sm"><AlertCircle className="w-4 h-4 mr-2" />{error}</div>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <Button onClick={savePerson} disabled={!nameInput.trim() || formPhotos.length === 0}>Save Person</Button>
+                  <Button variant="ghost" onClick={() => { setShowForm(false); resetForm(); }}>Cancel</Button>
                 </div>
-              )}
-            </div>
+                {formPhotos.length > 0 && (
+                  <div className="mt-4" data-testid="photo-gallery">
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                      {formPhotos.map((src, idx) => (
+                        <img key={idx} src={src} alt="preview" className="w-full aspect-square object-cover rounded" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* People List */}
           <div data-testid="people-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPeople.map((person) => (
-              <div key={person.id} data-testid="person-item" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" onClick={() => setSelectedId(person.id)}>
-                <div className="flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4">
-                  <span className="text-2xl">👤</span>
-                </div>
-                <div className="text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{person.name}</h3>
-                  <p className="text-sm text-gray-600 mb-1" data-testid="photo-count">{person.photos.length} sample photo{person.photos.length !== 1 ? 's' : ''}</p>
-                  <p className="text-xs text-gray-500 mb-4" data-testid="enrolled-date">Added {new Date(person.createdAt).toLocaleDateString()}</p>
+              <Card key={person.id} data-testid="person-item" className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedId(person.id)}>
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4">
+                    <span className="text-2xl">👤</span>
+                  </div>
+                  <CardTitle className="text-lg">{person.name}</CardTitle>
+                  <CardDescription>
+                    <span data-testid="photo-count">{person.photos.length} sample photo{person.photos.length !== 1 ? 's' : ''}</span>
+                    <br />
+                    <span data-testid="enrolled-date">Added {new Date(person.createdAt).toLocaleDateString()}</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
                   <div className="flex justify-center mb-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${person.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{person.active ? 'Active' : 'Inactive'}</span>
+                    <Badge variant={person.active ? 'default' : 'secondary'}>
+                      {person.active ? 'Active' : 'Inactive'}
+                    </Badge>
                   </div>
                   <div className="space-y-2">
-                    <button
+                    <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedId(person.id);
@@ -188,41 +200,44 @@ export default function PeoplePage() {
                           navigate(`/?face=${person.id}`);
                         }
                       }}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                      className="w-full"
+                      size="sm"
                       disabled={!faceSearchEnabled}
                     >
                       Search Photos of this Person
-                    </button>
+                    </Button>
                     <div className="flex space-x-2">
-                      <button className="flex-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm" onClick={(e) => {
+                      <Button variant="outline" size="sm" className="flex-1" onClick={(e) => {
                         e.stopPropagation(); setSelectedId(person.id); setShowForm(true); setNameInput(person.name); setFormPhotos(person.photos);
-                      }}>Edit</button>
-                      <button className="flex-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm" onClick={(e) => { e.stopPropagation(); setSelectedId(person.id); }}>Delete</button>
+                      }}>Edit</Button>
+                      <Button variant="destructive" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); setSelectedId(person.id); }}>Delete</Button>
                     </div>
                   </div>
-                </div>
+                </CardContent>
 
                 {selectedId === person.id && (
-                  <div className="mt-4 border-t pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-medium">Photos</div>
-                      <div>
-                        <Button variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${person.id}`)?.click(); }}>
-                          <Upload className="w-4 h-4 mr-2" /> Upload Photos
-                        </Button>
-                        <input id={`file-${person.id}`} type="file" multiple className="" onChange={(e) => {
-                          const files = e.target.files; if (!files) return; const urls: string[] = [];
-                          for (const f of Array.from(files)) { const url = URL.createObjectURL(f); urls.push(url); }
-                          updateSelected((p) => ({ ...p, photos: [...p.photos, ...urls] }));
-                        }} />
-                        <Button className="ml-2" onClick={(e) => { e.stopPropagation(); setToast({ kind: 'Saved', id: person.id }); setTimeout(() => setToast(null), 1200); }}>Save Person</Button>
+                  <CardFooter className="flex-col items-start border-t pt-4">
+                    <div className="w-full">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label>Photos</Label>
+                        <div>
+                          <Button variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${person.id}`)?.click(); }}>
+                            <Upload className="w-4 h-4 mr-2" /> Upload Photos
+                          </Button>
+                          <input id={`file-${person.id}`} type="file" multiple className="hidden" onChange={(e) => {
+                            const files = e.target.files; if (!files) return; const urls: string[] = [];
+                            for (const f of Array.from(files)) { const url = URL.createObjectURL(f); urls.push(url); }
+                            updateSelected((p) => ({ ...p, photos: [...p.photos, ...urls] }));
+                          }} />
+                          <Button className="ml-2" onClick={(e) => { e.stopPropagation(); setToast({ kind: 'Saved', id: person.id }); setTimeout(() => setToast(null), 1200); }}>Save Person</Button>
+                        </div>
                       </div>
                     </div>
-                    <div data-testid="photo-gallery" className="grid grid-cols-3 gap-2">
+                    <div data-testid="photo-gallery" className="grid grid-cols-3 gap-2 w-full">
                       {person.photos.map((src, idx) => (
                         <div key={idx} className="relative group">
                           <img src={src} alt="photo" className="w-full aspect-square object-cover rounded" />
-                          <button data-testid="remove-photo" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition bg-white/80 border rounded px-2 py-0.5 text-xs" onClick={(e) => {
+                          <Button data-testid="remove-photo" variant="secondary" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition h-auto py-0.5 px-2 text-xs" onClick={(e) => {
                             e.stopPropagation();
                             const confirmBtn = document.getElementById('confirm-remove-btn');
                             const dialog = document.getElementById('confirm-remove');
@@ -231,25 +246,27 @@ export default function PeoplePage() {
                               updateSelected((p) => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
                               if (dialog) dialog.classList.add('hidden');
                             }, { once: true });
-                          }}>Remove</button>
+                          }}>Remove</Button>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </CardFooter>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
 
           {/* Delete confirmation */}
           {selected && (
-            <div className="mt-6 border rounded p-4">
-              <div className="font-medium mb-2">Delete {selected.name}?</div>
-              <div className="flex gap-2">
-                <Button variant="destructive" onClick={deleteSelected}>Confirm Delete</Button>
-                <Button variant="ghost" onClick={() => setSelectedId(null)}>Cancel</Button>
-              </div>
-            </div>
+            <Card className="mt-6">
+              <CardContent className="pt-4">
+                <div className="font-medium mb-2">Delete {selected.name}?</div>
+                <div className="flex gap-2">
+                  <Button variant="destructive" onClick={deleteSelected}>Confirm Delete</Button>
+                  <Button variant="ghost" onClick={() => setSelectedId(null)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Hidden confirm overlay for photo removal */}
