@@ -210,7 +210,7 @@ pytest tests/integration/
 ### Continuous Validation
 ```bash
 # Daily smoke tests
-npm run test:integration
+pnpm run test:integration
 # Verifies core functionality
 # Alerts on performance regressions
 # Validates with fresh test data
