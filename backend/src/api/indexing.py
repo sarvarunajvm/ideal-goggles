@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,10 +11,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..core.config import settings
+from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
+from ..core.middleware import get_request_id
 from ..db.connection import get_database_manager
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class IndexStatus(BaseModel):
@@ -104,7 +107,14 @@ async def start_indexing(
         # Start indexing in background
         background_tasks.add_task(_run_indexing_process, request.full)
 
-        logger.info(f"Indexing started (full: {request.full})")
+        logger.info(
+            "Indexing started successfully",
+            extra={
+                "request_id": get_request_id(),
+                "full_reindex": request.full,
+                "started_at": _indexing_state["started_at"].isoformat(),
+            },
+        )
 
         return {
             "message": "Indexing started successfully",
@@ -251,6 +261,7 @@ async def _setup_indexing_workers():
 async def _run_discovery_phase(workers, config, full_reindex):
     """Run file discovery phase."""
     global _indexing_state
+    from ..db.connection import get_database_manager
 
     _indexing_state["progress"]["current_phase"] = "discovery"
     logger.info("Phase 1: File discovery")
@@ -265,6 +276,39 @@ async def _run_discovery_phase(workers, config, full_reindex):
     if crawl_result.errors > 0:
         _indexing_state["errors"].extend(crawl_result.error_details)
 
+    # Save discovered photos to database
+    db_manager = get_database_manager()
+    inserted_count = 0
+
+    # Process the crawled files
+    for file_info in crawl_result.files:
+        if file_info.get("status") in ["new", "modified"]:
+            try:
+                photo = file_info.get("photo")
+                if photo:
+                    # Insert or update photo in database
+                    query = """
+                        INSERT OR REPLACE INTO photos
+                        (path, folder, filename, ext, size, created_ts, modified_ts, sha1, phash, indexed_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                    """
+                    params = (
+                        photo.path,
+                        photo.folder,
+                        photo.filename,
+                        photo.ext,
+                        photo.size,
+                        photo.created_ts,
+                        photo.modified_ts,
+                        photo.sha1 or "",
+                        photo.phash or "",
+                    )
+                    db_manager.execute_update(query, params)
+                    inserted_count += 1
+            except Exception as e:
+                logger.exception(f"Failed to insert photo {file_info.get('path')}: {e}")
+
+    logger.info(f"Inserted/updated {inserted_count} photos in database")
     return crawl_result
 
 
@@ -278,19 +322,30 @@ async def _run_processing_phases(workers, config, photos_to_process):
     exif_pipeline = workers["EXIFExtractionPipeline"]()
     await exif_pipeline.process_photos(photos_to_process)
 
-    # Phase 3: OCR processing
+    # Phase 3: OCR processing (optional - skip if Tesseract not available)
     _indexing_state["progress"]["current_phase"] = "ocr"
     logger.info("Phase 3: OCR text extraction")
-    ocr_worker = workers["SmartOCRWorker"](
-        languages=config.get("ocr_languages", ["eng"])
-    )
-    await ocr_worker.extract_batch(photos_to_process)
+    try:
+        ocr_worker = workers["SmartOCRWorker"](
+            languages=config.get("ocr_languages", ["eng"])
+        )
+        await ocr_worker.extract_batch(photos_to_process)
+    except RuntimeError as e:
+        if "Tesseract" in str(e):
+            logger.warning(f"OCR skipped: {e}")
+            logger.info("Continuing without OCR text extraction")
+        else:
+            raise
 
-    # Phase 4: Embedding generation
+    # Phase 4: Embedding generation (optional - skip if dependencies missing)
     _indexing_state["progress"]["current_phase"] = "embeddings"
     logger.info("Phase 4: Embedding generation")
-    embedding_worker = workers["OptimizedCLIPWorker"]()
-    await embedding_worker.generate_batch_optimized(photos_to_process)
+    try:
+        embedding_worker = workers["OptimizedCLIPWorker"]()
+        await embedding_worker.generate_batch_optimized(photos_to_process)
+    except Exception as e:
+        logger.warning(f"Embedding generation skipped: {e}")
+        logger.info("Continuing without embeddings")
 
     # Phase 5: Thumbnail generation
     _indexing_state["progress"]["current_phase"] = "thumbnails"

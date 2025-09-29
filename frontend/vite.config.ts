@@ -14,17 +14,17 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5555',
+        target: 'http://127.0.0.1:5555',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       // Proxy backend OpenAPI + docs directly so Swagger UI works under Vite dev
       '/openapi.json': {
-        target: 'http://localhost:5555',
+        target: 'http://127.0.0.1:5555',
         changeOrigin: true,
       },
       '/docs': {
-        target: 'http://localhost:5555',
+        target: 'http://127.0.0.1:5555',
         changeOrigin: true,
       },
     },

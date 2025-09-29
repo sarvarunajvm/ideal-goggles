@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
 import PeoplePage from './pages/PeoplePage'
+import Layout from './components/Layout'
 import { apiService } from './services/apiClient'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
+    let intervalId: NodeJS.Timeout | null = null
 
     async function check() {
       try {
@@ -25,15 +27,27 @@ function App() {
         }
         // Use shared API client with fixed port 5555
         const res = await apiService.getHealth()
-        if (!cancelled) setBackendOk(!!res)
+        if (!cancelled) {
+          setBackendOk(!!res)
+          // Once backend is ready, stop the frequent polling
+          if (res && intervalId) {
+            clearInterval(intervalId)
+            intervalId = null
+          }
+        }
       } catch {
         if (!cancelled) setBackendOk(false)
       }
     }
 
     check()
-    const id = setInterval(check, 1000)
-    return () => { cancelled = true; clearInterval(id) }
+    // Only poll frequently while backend is not ready
+    // Once ready, StatusBar components handle periodic health checks
+    intervalId = setInterval(check, 1000)
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [])
 
   // Show loading screen until backend becomes ready
@@ -56,13 +70,13 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Layout>
       <Routes>
         <Route path="/" element={<SearchPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/people" element={<PeoplePage />} />
       </Routes>
-    </div>
+    </Layout>
   )
 }
 

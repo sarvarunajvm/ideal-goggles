@@ -2,6 +2,8 @@
  * API service for photo search backend
  */
 
+import { logger } from '../utils/logger';
+
 export const getApiBaseUrl = (): string => {
   // In Electron, backend always runs on port 5555
   // In web dev, Vite proxy rewrites '/api' -> backend
@@ -66,20 +68,79 @@ class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const baseUrl = getApiBaseUrl();
     const url = `${baseUrl}${endpoint}`;
+    const requestId = logger.generateRequestId();
+    const startTime = performance.now();
 
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-      ...options,
-    });
+    // Log the request
+    logger.logApiCall(
+      options?.method || 'GET',
+      endpoint,
+      requestId,
+      options?.body ? (
+        typeof options.body === 'string' ?
+          (options.body.length > 1000 ? options.body.substring(0, 1000) + '...' : options.body) :
+          undefined
+      ) : undefined,
+      options?.headers as Record<string, string>
+    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+          ...options?.headers,
+        },
+        ...options,
+      });
+
+      const duration = performance.now() - startTime;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.logApiResponse(
+          options?.method || 'GET',
+          endpoint,
+          requestId,
+          response.status,
+          duration,
+          errorText
+        );
+
+        const error = new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        logger.error(`API request failed: ${endpoint}`, error, {
+          requestId,
+          status: response.status,
+          endpoint,
+        });
+        throw error;
+      }
+
+      const data = await response.json();
+
+      // Log successful response
+      logger.logApiResponse(
+        options?.method || 'GET',
+        endpoint,
+        requestId,
+        response.status,
+        duration,
+        data
+      );
+
+      return data;
+    } catch (error) {
+      const duration = performance.now() - startTime;
+
+      // Log network or other errors
+      logger.error(`API request exception: ${endpoint}`, error as Error, {
+        requestId,
+        endpoint,
+        duration,
+      });
+
+      throw error;
     }
-
-    return await response.json();
   }
 
   // Health and system endpoints
@@ -122,6 +183,8 @@ class ApiService {
     limit?: number;
     offset?: number;
   }): Promise<SearchResponse> {
+    logger.startPerformance('searchPhotos');
+
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -130,7 +193,19 @@ class ApiService {
       }
     });
 
-    return this.request<SearchResponse>(`/search?${searchParams}`);
+    try {
+      const result = await this.request<SearchResponse>(`/search?${searchParams}`);
+
+      logger.info('Search completed', {
+        query: params.q,
+        resultCount: result.items.length,
+        took_ms: result.took_ms,
+      });
+
+      return result;
+    } finally {
+      logger.endPerformance('searchPhotos');
+    }
   }
 
   async semanticSearch(text: string, topK = 50): Promise<SearchResponse> {
@@ -158,6 +233,8 @@ class ApiService {
   }
 
   async startIndexing(full = false): Promise<Record<string, unknown>> {
+    logger.info('Starting indexing', { full });
+
     return this.request('/index/start', {
       method: 'POST',
       body: JSON.stringify({ full }),

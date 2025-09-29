@@ -29,10 +29,13 @@ class CrawlResult:
     errors: int = 0
     duration_seconds: float = 0.0
     error_details: list[str] = None
+    files: list[dict] = None  # Added to store discovered files
 
     def __post_init__(self):
         if self.error_details is None:
             self.error_details = []
+        if self.files is None:
+            self.files = []
 
 
 class PhotoFileHandler(FileSystemEventHandler):
@@ -165,6 +168,7 @@ class FileCrawler:
                     root_path, force_full_crawl
                 ):
                     result.total_files += 1
+                    result.files.append(file_result)  # Store the file info
 
                     if file_result["status"] == "new":
                         result.new_files += 1

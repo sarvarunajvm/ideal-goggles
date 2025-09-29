@@ -3,15 +3,19 @@
 import contextlib
 import os
 import tempfile
+import time
 from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 
+from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
+from ..core.middleware import get_request_id
 from ..db.connection import get_database_manager
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 class SearchResultItem(BaseModel):
@@ -82,7 +86,21 @@ async def search_photos(
     Returns:
         Search results matching the query and filters
     """
-    start_time = datetime.now()
+    start_time = time.time()
+    request_id = get_request_id()
+
+    logger.info(
+        "Text search request received",
+        extra={
+            "request_id": request_id,
+            "query": q,
+            "from_date": str(from_date) if from_date else None,
+            "to_date": str(to_date) if to_date else None,
+            "folder": folder,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
 
     try:
         db_manager = get_database_manager()
@@ -93,16 +111,40 @@ async def search_photos(
         )
 
         # Calculate execution time
-        execution_time = (datetime.now() - start_time).total_seconds() * 1000
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Text search completed successfully",
+            extra={
+                "request_id": request_id,
+                "query": q,
+                "results_count": len(search_results),
+                "duration_ms": execution_time_ms,
+            },
+        )
+
+        # Log slow search operations
+        log_slow_operation(logger, "text_search", execution_time_ms, threshold_ms=2000)
 
         return SearchResults(
             query=q or "",
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time),
+            took_ms=int(execution_time_ms),
         )
 
     except Exception as e:
+        log_error_with_context(
+            logger,
+            e,
+            "text_search",
+            request_id=request_id,
+            query=q,
+            from_date=str(from_date) if from_date else None,
+            to_date=str(to_date) if to_date else None,
+            folder=folder,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {e!s}",

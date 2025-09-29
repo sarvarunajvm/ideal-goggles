@@ -15,13 +15,13 @@ export class PeoplePage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.addPersonButton = page.locator('button:has-text("Add Person")');
-    this.personNameInput = page.locator('input[placeholder*="name"]');
+    this.personNameInput = page.locator('input#person-name');
     this.uploadPhotoButton = page.locator('button:has-text("Upload Photos")');
-    this.savePersonButton = page.locator('button:has-text("Save Person")');
+    this.savePersonButton = page.locator('button:has-text("Save Person")').first();
     this.peopleList = page.locator('[data-testid="people-list"]');
     this.searchInput = page.locator('input[placeholder*="Search people"]');
-    this.deleteButton = page.locator('button:has-text("Delete")');
-    this.editButton = page.locator('button:has-text("Edit")');
+    this.deleteButton = page.locator('[data-testid="person-item"] button:has-text("Delete")').first();
+    this.editButton = page.locator('[data-testid="person-item"] button:has-text("Edit")').first();
     this.photoGallery = page.locator('[data-testid="photo-gallery"]');
   }
 
@@ -29,8 +29,8 @@ export class PeoplePage extends BasePage {
     await this.addPersonButton.click();
     await this.personNameInput.fill(name);
 
-    // Upload photos
-    const fileInput = await this.page.locator('input[type="file"]');
+    // Upload photos - use the file input that appears after clicking upload button
+    const fileInput = this.page.locator('input#new-person-file');
     await fileInput.setInputFiles(photoPaths);
 
     await this.savePersonButton.click();
@@ -50,10 +50,16 @@ export class PeoplePage extends BasePage {
   async editPerson(oldName: string, newName: string) {
     await this.selectPerson(oldName);
     await this.editButton.click();
-    await this.personNameInput.clear();
-    await this.personNameInput.fill(newName);
-    await this.savePersonButton.click();
+    // Wait for the form to appear and find the name input
+    await this.page.waitForTimeout(500);
+    const nameInput = this.page.locator('input#person-name');
+    await nameInput.clear();
+    await nameInput.fill(newName);
+    // Click the first Save Person button (in the form)
+    await this.page.locator('button:has-text("Save Person")').first().click();
     await this.waitForSaveComplete();
+    // Wait for the list to refresh
+    await this.page.waitForTimeout(1000);
   }
 
   async deletePerson(name: string) {
@@ -87,10 +93,13 @@ export class PeoplePage extends BasePage {
 
   async addPhotosToExistingPerson(name: string, photoPaths: string[]) {
     await this.selectPerson(name);
-    await this.uploadPhotoButton.click();
-    const fileInput = await this.page.locator('input[type="file"]');
+    // The file input is specific to the selected person - find it first
+    const fileInputs = await this.page.locator('input[type="file"]').all();
+    // Use the last file input which should be for the selected person
+    const fileInput = fileInputs[fileInputs.length - 1];
     await fileInput.setInputFiles(photoPaths);
-    await this.savePersonButton.click();
+    // Click the Save Person button for that specific person
+    await this.page.locator('[data-testid="person-item"] button:has-text("Save Person")').click();
     await this.waitForSaveComplete();
   }
 
@@ -100,7 +109,8 @@ export class PeoplePage extends BasePage {
     await photo.hover();
     const removeButton = await this.page.locator('[data-testid="remove-photo"]').nth(photoIndex);
     await removeButton.click();
-    await this.page.locator('button:has-text("Confirm")').click();
+    // Click the specific Confirm button (not Confirm Delete)
+    await this.page.locator('button#confirm-remove-btn').click();
     await this.waitForSaveComplete();
   }
 
@@ -126,7 +136,7 @@ export class PeoplePage extends BasePage {
   }
 
   async getAllPeople(): Promise<string[]> {
-    const people = await this.page.locator('[data-testid="person-item"]').allTextContents();
-    return people;
+    const peopleElements = await this.page.locator('[data-testid="person-item"] h3').allTextContents();
+    return peopleElements;
   }
 }

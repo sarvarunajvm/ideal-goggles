@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/apiClient';
-import Navigation from '../components/Navigation';
-import StatusBar from '../components/StatusBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -112,8 +110,7 @@ export default function PeoplePage() {
   }, [people, search]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <Navigation />
+    <>
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
@@ -137,7 +134,7 @@ export default function PeoplePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="person-name">Name</Label>
-                    <Input id="person-name" placeholder="Enter person name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="mt-1" />
+                    <Input id="person-name" placeholder="name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="mt-1" />
                   </div>
                   <div>
                     <Label>Photos</Label>
@@ -283,7 +280,6 @@ export default function PeoplePage() {
         </div>
       </div>
 
-      <StatusBar />
-    </div>
+    </>
   );
 }

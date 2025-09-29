@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService, IndexStatus } from '../services/apiClient';
-import Navigation from '../components/Navigation';
-import StatusBar from '../components/StatusBar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -174,22 +172,17 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-background">
-        <Navigation />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Loading settings...</p>
-          </div>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading settings...</p>
         </div>
-        <StatusBar />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <Navigation />
+    <>
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
@@ -587,8 +580,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <StatusBar />
       <Toaster />
-    </div>
+    </>
   );
 }

@@ -1,13 +1,66 @@
 openapi: 3.0.3
 info:
   title: Photo Search API
-  version: 1.0.0
-  description: Local API for photo search and navigation system
+  version: 1.0.8
+  description: Local API for photo search and navigation system with production logging
+  contact:
+    name: API Support
+    email: support@photosearch.app
+  license:
+    name: MIT
+
+servers:
+  - url: http://127.0.0.1:5555
+    description: Local backend server
+  - url: /api
+    description: Proxied through frontend (development)
+
+tags:
+  - name: System
+    description: System health and monitoring
+  - name: Configuration
+    description: Application configuration
+  - name: Search
+    description: Photo search operations
+  - name: Indexing
+    description: Photo indexing operations
+  - name: People
+    description: People management for face search
+  - name: Logs
+    description: Logging and debugging endpoints
 
 paths:
+  /:
+    get:
+      summary: Root endpoint
+      tags: [System]
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Photo Search API
+                  version:
+                    type: string
+                    example: 1.0.8
+                  ui:
+                    type: string
+                    nullable: true
+                    description: Path to UI if available
+                  docs:
+                    type: string
+                    nullable: true
+                    description: Path to API documentation
+
   /health:
     get:
       summary: Health check endpoint
+      tags: [System]
       responses:
         '200':
           description: Service is healthy
@@ -18,14 +71,48 @@ paths:
                 properties:
                   status:
                     type: string
-                    enum: [healthy]
+                    enum: [healthy, degraded, unhealthy]
                   timestamp:
                     type: string
                     format: date-time
+                  version:
+                    type: string
+                    example: 1.0.8
+                  service:
+                    type: string
+                    example: photo-search-api
+                  system:
+                    type: object
+                    properties:
+                      cpu_percent:
+                        type: number
+                      memory_percent:
+                        type: number
+                      disk_usage_percent:
+                        type: number
+                  database:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      size_mb:
+                        type: number
+                      photo_count:
+                        type: integer
+                  dependencies:
+                    type: object
+                    properties:
+                      tesseract:
+                        type: boolean
+                      faiss:
+                        type: boolean
+                      onnx:
+                        type: boolean
 
   /config:
     get:
       summary: Get current configuration
+      tags: [Configuration]
       responses:
         '200':
           description: Current configuration
@@ -34,9 +121,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Configuration'
 
+  /config:
+    put:
+      summary: Update configuration
+      tags: [Configuration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ocr_languages:
+                  type: array
+                  items:
+                    type: string
+                face_search_enabled:
+                  type: boolean
+                semantic_search_enabled:
+                  type: boolean
+                batch_size:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                thumbnail_size:
+                  type: string
+                  enum: [256, 512]
+                thumbnail_quality:
+                  type: integer
+                  minimum: 50
+                  maximum: 100
+      responses:
+        '200':
+          description: Configuration updated
+        '400':
+          description: Invalid configuration
+
   /config/roots:
     post:
       summary: Update root folders for indexing
+      tags: [Configuration]
       requestBody:
         required: true
         content:
@@ -59,6 +183,7 @@ paths:
   /index/start:
     post:
       summary: Start indexing process
+      tags: [Indexing]
       requestBody:
         content:
           application/json:
@@ -78,6 +203,7 @@ paths:
   /index/status:
     get:
       summary: Get indexing status
+      tags: [Indexing]
       responses:
         '200':
           description: Current indexing status
@@ -86,9 +212,82 @@ paths:
               schema:
                 $ref: '#/components/schemas/IndexStatus'
 
+  /index/stop:
+    post:
+      summary: Stop indexing process
+      tags: [Indexing]
+      responses:
+        '200':
+          description: Indexing stopped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  stopped_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: No indexing process running
+
+  /index/stats:
+    get:
+      summary: Get indexing statistics
+      tags: [Indexing]
+      responses:
+        '200':
+          description: Indexing statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  database:
+                    type: object
+                    properties:
+                      total_photos:
+                        type: integer
+                      indexed_photos:
+                        type: integer
+                      photos_with_exif:
+                        type: integer
+                      photos_with_ocr:
+                        type: integer
+                      photos_with_embeddings:
+                        type: integer
+                      total_faces:
+                        type: integer
+                      enrolled_people:
+                        type: integer
+                      thumbnails:
+                        type: integer
+                  current_indexing:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      progress:
+                        type: object
+                      started_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      errors_count:
+                        type: integer
+                  database_info:
+                    type: object
+                    properties:
+                      size_mb:
+                        type: number
+                      schema_version:
+                        type: string
+
   /search:
     get:
       summary: Search photos by text and filters
+      tags: [Search]
       parameters:
         - name: q
           in: query
@@ -138,6 +337,7 @@ paths:
   /search/semantic:
     post:
       summary: Semantic search using text description
+      tags: [Search]
       requestBody:
         required: true
         content:
@@ -165,6 +365,7 @@ paths:
   /search/image:
     post:
       summary: Reverse image search using uploaded photo
+      tags: [Search]
       requestBody:
         required: true
         content:
@@ -195,6 +396,7 @@ paths:
   /search/faces:
     post:
       summary: Search photos by enrolled person
+      tags: [Search]
       requestBody:
         required: true
         content:
@@ -224,6 +426,7 @@ paths:
   /people:
     get:
       summary: List enrolled people
+      tags: [People]
       responses:
         '200':
           description: List of enrolled people
@@ -236,6 +439,7 @@ paths:
 
     post:
       summary: Enroll new person for face search
+      tags: [People]
       requestBody:
         required: true
         content:
@@ -265,6 +469,7 @@ paths:
   /people/{id}:
     delete:
       summary: Delete enrolled person
+      tags: [People]
       parameters:
         - name: id
           in: path
@@ -277,7 +482,95 @@ paths:
         '404':
           description: Person not found
 
+  /logs:
+    post:
+      summary: Submit client-side logs
+      tags: [Logs]
+      description: Endpoint for frontend to send error logs and telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                level:
+                  type: string
+                  enum: [DEBUG, INFO, WARN, ERROR]
+                message:
+                  type: string
+                context:
+                  type: object
+                timestamp:
+                  type: string
+                  format: date-time
+                userAgent:
+                  type: string
+                url:
+                  type: string
+                error:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                    stack:
+                      type: string
+              required: [level, message, timestamp]
+      responses:
+        '204':
+          description: Log received
+        '400':
+          description: Invalid log format
+
+  /logs/errors:
+    post:
+      summary: Submit error reports
+      tags: [Logs]
+      description: Dedicated endpoint for error reporting from error boundaries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                stack:
+                  type: string
+                componentStack:
+                  type: string
+                componentName:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+                userAgent:
+                  type: string
+                url:
+                  type: string
+              required: [message, timestamp]
+      responses:
+        '204':
+          description: Error report received
+        '400':
+          description: Invalid error format
+
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Optional API key for future authentication
+
+  headers:
+    X-Request-ID:
+      description: Unique request identifier for tracing
+      schema:
+        type: string
+        format: uuid
+
   schemas:
     Configuration:
       type: object
@@ -295,6 +588,15 @@ components:
         face_search_enabled:
           type: boolean
           description: Whether face search is enabled
+        semantic_search_enabled:
+          type: boolean
+          description: Whether semantic search is enabled
+        batch_size:
+          type: integer
+          description: Batch size for processing
+        thumbnail_size:
+          type: string
+          description: Thumbnail dimensions
         index_version:
           type: string
           description: Current index version
@@ -314,7 +616,7 @@ components:
               type: integer
             current_phase:
               type: string
-              enum: [discovery, metadata, ocr, embeddings, faces]
+              enum: [discovery, metadata, ocr, embeddings, thumbnails, faces, completed]
         errors:
           type: array
           items:
@@ -394,3 +696,24 @@ components:
         active:
           type: boolean
           description: Whether person search is enabled
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        detail:
+          type: string
+          description: Detailed error information
+        request_id:
+          type: string
+          description: Request ID for tracing
+        timestamp:
+          type: string
+          format: date-time
+      required: [error, timestamp]
+
+security:
+  - {}
+  - ApiKeyAuth: []

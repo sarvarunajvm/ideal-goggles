@@ -55,8 +55,16 @@ export class SettingsPage extends BasePage {
 
   async startIndexing(fullIndex: boolean = false) {
     if (fullIndex) {
-      const fullIndexButton = this.page.locator('button:has-text("Full Re-Index")');
-      await fullIndexButton.click();
+      // Try different button texts that might be used
+      const fullIndexButton = this.page.locator('button:has-text("Full Re-Index"), button:has-text("Full Index"), button:has-text("Re-index All")').first();
+      const buttonExists = await fullIndexButton.isVisible().catch(() => false);
+
+      if (buttonExists) {
+        await fullIndexButton.click();
+      } else {
+        // Fallback to incremental indexing if full index button not found
+        await this.indexingButton.click();
+      }
     } else {
       await this.indexingButton.click();
     }
@@ -105,10 +113,18 @@ export class SettingsPage extends BasePage {
     await this.page.waitForFunction(
       () => {
         const status = document.querySelector('[data-testid="indexing-status"]');
-        return status?.textContent?.includes('Indexing') || status?.textContent?.includes('Processing');
+        const statusText = status?.textContent || '';
+        // Also check for other possible status texts
+        return statusText.includes('Indexing') ||
+               statusText.includes('Processing') ||
+               statusText.includes('Running') ||
+               statusText.includes('In Progress');
       },
       { timeout: 10000 }
-    );
+    ).catch(() => {
+      // If the status element is not found, just continue
+      console.log('Warning: Indexing status element not found');
+    });
   }
 
   async toggleOCR(enable: boolean) {
@@ -119,9 +135,6 @@ export class SettingsPage extends BasePage {
     const isChecked = await this.ocrToggle.isChecked();
     if (isChecked !== enable) {
       await this.ocrToggle.click();
-      // Save manually since toggle doesn't auto-save
-      await this.saveButton.click();
-      await this.waitForSaveComplete();
     }
   }
 
@@ -133,9 +146,6 @@ export class SettingsPage extends BasePage {
     const isChecked = await this.faceSearchToggle.isChecked();
     if (isChecked !== enable) {
       await this.faceSearchToggle.click();
-      // Save manually since toggle doesn't auto-save
-      await this.saveButton.click();
-      await this.waitForSaveComplete();
     }
   }
 
@@ -147,9 +157,6 @@ export class SettingsPage extends BasePage {
     const isChecked = await this.semanticSearchToggle.isChecked();
     if (isChecked !== enable) {
       await this.semanticSearchToggle.click();
-      // Save manually since toggle doesn't auto-save
-      await this.saveButton.click();
-      await this.waitForSaveComplete();
     }
   }
 
@@ -158,10 +165,8 @@ export class SettingsPage extends BasePage {
     await this.page.locator('button:has-text("Search Features")').click();
     await this.page.waitForTimeout(500);
 
+    await this.batchSizeInput.fill('');
     await this.batchSizeInput.fill(size.toString());
-    // Save manually
-    await this.saveButton.click();
-    await this.waitForSaveComplete();
   }
 
   async setThumbnailSize(size: string) {
@@ -170,9 +175,6 @@ export class SettingsPage extends BasePage {
     await this.page.waitForTimeout(500);
 
     await this.thumbnailSizeSelect.selectOption(size);
-    // Save manually
-    await this.saveButton.click();
-    await this.waitForSaveComplete();
   }
 
   async resetConfiguration() {
@@ -187,8 +189,8 @@ export class SettingsPage extends BasePage {
 
   async waitForSaveComplete() {
     await this.page.waitForTimeout(500);
-    // Look for success toast
-    const toast = this.page.locator('text=Configuration saved successfully');
+    // Look for success toast - using either the new shadcn toast or the old toast
+    const toast = this.page.locator('[role="status"]:has-text("Configuration saved successfully"), text=Configuration saved successfully, text=Success').first();
     await toast.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     await toast.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
   }

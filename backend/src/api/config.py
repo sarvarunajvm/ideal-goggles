@@ -35,21 +35,27 @@ class UpdateRootsRequest(BaseModel):
     @classmethod
     def validate_roots(cls, v):
         """Validate root folder paths."""
+        validated_roots = []
         for root_path in v:
             # Check for empty strings
             if not root_path or not root_path.strip():
                 msg = "Root path cannot be empty"
                 raise ValueError(msg)
 
-            path = Path(root_path)
+            # Expand home directory and resolve path
+            path = Path(root_path).expanduser().resolve()
+
             if not path.exists():
-                msg = f"Path does not exist: {root_path}"
+                msg = f"Path does not exist: {root_path} (resolved to {path})"
                 raise ValueError(msg)
             if not path.is_dir():
-                msg = f"Path is not a directory: {root_path}"
+                msg = f"Path is not a directory: {root_path} (resolved to {path})"
                 raise ValueError(msg)
 
-        return v
+            # Store the expanded/resolved path
+            validated_roots.append(str(path))
+
+        return validated_roots
 
 
 class UpdateConfigRequest(BaseModel):

@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { apiService, SearchResponse, SearchResult } from '../services/apiClient';
-import Navigation from '../components/Navigation';
-import StatusBar from '../components/StatusBar';
 import PreviewDrawer from '../components/PreviewDrawer';
 import { osIntegration } from '../services/osIntegration';
 
@@ -356,10 +354,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Navigation */}
-      <Navigation />
-
+    <>
       {/* Search Header */}
       <div className="bg-card shadow-sm border-b p-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -553,9 +548,6 @@ export default function SearchPage() {
         </ScrollArea>
       </div>
 
-      {/* Status Bar */}
-      <StatusBar />
-
       {/* Preview Drawer */}
       <PreviewDrawer
         item={selectedItem}
@@ -565,6 +557,6 @@ export default function SearchPage() {
         onNext={searchResults?.items && searchResults.items.length > 1 ? handleNextItem : undefined}
         onPrevious={searchResults?.items && searchResults.items.length > 1 ? handlePreviousItem : undefined}
       />
-    </div>
+    </>
   );
 }

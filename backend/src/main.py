@@ -11,6 +11,22 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api import config, health, indexing, people, search
 from src.core.config import settings
+from src.core.logging_config import get_logger, setup_logging
+from src.core.middleware import (
+    ErrorLoggingMiddleware,
+    PerformanceMonitoringMiddleware,
+    RequestLoggingMiddleware,
+)
+
+# Initialize logging
+setup_logging(
+    log_level="DEBUG" if settings.DEBUG else "INFO",
+    enable_file_logging=True,
+    enable_console_logging=True,
+    app_name="photo-search-api",
+)
+
+logger = get_logger(__name__)
 
 # Detect whether a bundled UI directory exists before creating the app,
 # so we can enable the interactive docs by default when no UI is present.
@@ -51,6 +67,11 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
+# Add custom middleware for logging and monitoring
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(ErrorLoggingMiddleware)
+app.add_middleware(PerformanceMonitoringMiddleware, threshold_ms=1000)
+
 # CORS middleware for Electron frontend
 app.add_middleware(
     CORSMiddleware,
@@ -88,6 +109,7 @@ if _UI_AVAILABLE and _UI_DIR is not None:
 @app.get("/")
 async def root() -> dict[str, Any]:
     """Root endpoint."""
+    logger.info("Root endpoint accessed")
     return {
         "message": "Photo Search API",
         "version": "1.0.8",
@@ -104,13 +126,22 @@ def main() -> None:
     the module structure isn't importable in the frozen environment.
     Passing the in-memory `app` object avoids that issue.
     """
-    uvicorn.run(
-        app,
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        access_log=settings.DEBUG,
-    )
+    logger.info(f"Starting Photo Search API on {settings.HOST}:{settings.PORT}")
+    logger.info(f"Debug mode: {settings.DEBUG}")
+    logger.info(f"UI available: {_UI_AVAILABLE}")
+    logger.info(f"Docs enabled: {_DOCS_ENABLED}")
+
+    try:
+        uvicorn.run(
+            app,
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=settings.DEBUG,
+            access_log=settings.DEBUG,
+        )
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

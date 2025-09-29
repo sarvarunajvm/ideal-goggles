@@ -48,7 +48,7 @@ describe('PhotoGrid Component', () => {
     render(<PhotoGrid photos={mockPhotos} />);
 
     mockPhotos.forEach(photo => {
-      const img = screen.getByAlt(photo.name);
+      const img = screen.getByAltText(photo.name);
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', photo.thumbnail);
     });
@@ -63,7 +63,7 @@ describe('PhotoGrid Component', () => {
       />
     );
 
-    const firstPhoto = screen.getByAlt('Beach sunset');
+    const firstPhoto = screen.getByAltText('Beach sunset');
     await user.click(firstPhoto);
 
     expect(mockOnPhotoClick).toHaveBeenCalledWith(mockPhotos[0]);
@@ -110,7 +110,7 @@ describe('PhotoGrid Component', () => {
     const user = userEvent.setup();
     render(<PhotoGrid photos={mockPhotos} />);
 
-    const firstPhoto = screen.getByAlt('Beach sunset');
+    const firstPhoto = screen.getByAltText('Beach sunset');
 
     // Use act to properly wrap state updates
     await user.hover(firstPhoto);
@@ -184,7 +184,7 @@ describe('PhotoGrid Component', () => {
     const user = userEvent.setup();
     render(<PhotoGrid photos={mockPhotos} />);
 
-    const firstPhoto = screen.getByAlt('Beach sunset');
+    const firstPhoto = screen.getByAltText('Beach sunset');
     await user.dblClick(firstPhoto);
 
     // The zoomed photo should appear in a modal
@@ -217,23 +217,28 @@ describe('PhotoGrid Component', () => {
   test('handles photo download', async () => {
     const user = userEvent.setup();
 
-    // Mock document.createElement
-    const mockLink = {
-      href: '',
-      download: '',
-      click: jest.fn()
-    };
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+    // Mock anchor creation safely, preserving DOM for other elements
+    const originalCreateElement = document.createElement.bind(document);
+    const clickSpy = jest.fn();
+    jest.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
+      if (tagName === 'a') {
+        const anchor = originalCreateElement(tagName) as HTMLAnchorElement;
+        Object.assign(anchor, { href: '', download: '' });
+        jest.spyOn(anchor, 'click').mockImplementation(clickSpy);
+        return anchor as any;
+      }
+      return originalCreateElement(tagName);
+    });
 
     render(<PhotoGrid photos={mockPhotos} />);
 
-    const firstPhoto = screen.getByAlt('Beach sunset');
+    const firstPhoto = screen.getByAltText('Beach sunset');
     await user.hover(firstPhoto);
 
     await waitFor(async () => {
       const downloadButton = screen.getByLabelText(/download/i);
       await user.click(downloadButton);
-      expect(mockLink.click).toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalled();
     });
   });
 

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     HOST: str = Field(default="127.0.0.1", env="HOST")
     PORT: int = Field(default=5555, env="PORT")
     DEBUG: bool = Field(default=False, env="DEBUG")
+    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
 
     # Database configuration
     DATABASE_URL: str = Field(
