@@ -1,6 +1,6 @@
 {
   "name": "tests",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Playwright integration tests for Photo Search application",
   "private": true,
   "scripts": {
