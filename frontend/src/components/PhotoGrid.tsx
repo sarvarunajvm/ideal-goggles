@@ -209,7 +209,18 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
               <input
                 type="checkbox"
                 checked={selectedPhotos.has(photo.id)}
-                onChange={() => {}}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setSelectedPhotos(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(photo.id)) {
+                      newSet.delete(photo.id);
+                    } else {
+                      newSet.add(photo.id);
+                    }
+                    return newSet;
+                  });
+                }}
                 onClick={(e) => e.stopPropagation()}
                 className="absolute top-2 left-2 z-10"
                 aria-label={`Select ${photo.name || `photo ${photo.id}`}`}
@@ -223,6 +234,8 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
                 layout === 'list' ? 'w-20 h-20' : ''
               }`}
               loading="lazy"
+              onMouseEnter={() => setHoveredPhoto(photo.id)}
+              onMouseLeave={() => setHoveredPhoto(null)}
             />
 
             {hoveredPhoto === photo.id && (
