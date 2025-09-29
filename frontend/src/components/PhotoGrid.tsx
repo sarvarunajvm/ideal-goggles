@@ -245,13 +245,15 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
                   <p>{photo.date}</p>
                   <p>{formatFileSize(photo.size)}</p>
                 </div>
-                <button
-                  onClick={(e) => handleDownload(photo, e)}
+                <a
+                  href={photo.thumbnail || photo.url || photo.path}
+                  download={photo.name || `photo-${photo.id}`}
+                  onClick={(e) => e.stopPropagation()}
                   className="self-end bg-white text-gray-800 px-2 py-1 rounded text-sm hover:bg-gray-200"
                   aria-label={`Download ${photo.name || `photo ${photo.id}`}`}
                 >
                   Download
-                </button>
+                </a>
               </div>
             )}
 
