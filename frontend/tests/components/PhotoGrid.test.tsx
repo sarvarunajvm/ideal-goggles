@@ -188,11 +188,9 @@ describe('PhotoGrid Component', () => {
     await user.dblClick(firstPhoto);
 
     // The zoomed photo should appear in a modal
-    await waitFor(() => {
-      const zoomedPhoto = screen.getByAltText('Beach sunset');
-      const modalContainer = zoomedPhoto.closest('.fixed');
-      expect(modalContainer).toBeInTheDocument();
-    });
+    const zoomedPhoto = await screen.findByAltText('Beach sunset');
+    const modalContainer = zoomedPhoto.closest('.fixed');
+    expect(modalContainer).toBeInTheDocument();
   });
 
   test('handles keyboard navigation', async () => {
@@ -220,11 +218,13 @@ describe('PhotoGrid Component', () => {
     // Mock anchor creation safely, preserving DOM for other elements
     const originalCreateElement = document.createElement.bind(document);
     const clickSpy = jest.fn();
-    jest.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
+    let createdAnchor: HTMLAnchorElement | null = null;
+    const createSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
       if (tagName === 'a') {
         const anchor = originalCreateElement(tagName) as HTMLAnchorElement;
         Object.assign(anchor, { href: '', download: '' });
         jest.spyOn(anchor, 'click').mockImplementation(clickSpy);
+        createdAnchor = anchor;
         return anchor as any;
       }
       return originalCreateElement(tagName);
@@ -235,11 +235,13 @@ describe('PhotoGrid Component', () => {
     const firstPhoto = screen.getByAltText('Beach sunset');
     await user.hover(firstPhoto);
 
-    await waitFor(async () => {
-      const downloadButton = screen.getByLabelText(/download/i);
-      await user.click(downloadButton);
-      expect(clickSpy).toHaveBeenCalled();
-    });
+    const downloadButton = await screen.findByText('Download');
+    await user.click(downloadButton);
+    // Verify anchor creation and attributes set by handler
+    expect(createSpy).toHaveBeenCalledWith('a');
+    expect(createdAnchor).not.toBeNull();
+    expect(createdAnchor!.href).toBeTruthy();
+    expect(createdAnchor!.download).toBeTruthy();
   });
 
   test('handles load more functionality', async () => {

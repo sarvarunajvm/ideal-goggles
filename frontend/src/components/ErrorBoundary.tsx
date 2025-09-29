@@ -75,7 +75,8 @@ export class ErrorBoundary extends Component<Props, State> {
         url: window.location.href,
       }),
     }).catch(err => {
-      // Silently fail to avoid infinite loop
+      // Silently fail to avoid infinite loop - using logger would risk infinite loop
+      // eslint-disable-next-line no-console
       console.error('Failed to report error to backend:', err);
     });
   }

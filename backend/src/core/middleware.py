@@ -79,9 +79,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            logger.error(
+            logger.exception(
                 f"Request failed: {request.method} {request.url.path} - {e.__class__.__name__}",
-                exc_info=True,
                 extra={
                     **logger_extra,
                     "duration_ms": duration_ms,
@@ -104,9 +103,8 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
             request_id = request_id_var.get()
 
             # Log error with full context
-            logger.error(
+            logger.exception(
                 f"Unhandled exception in request {request_id}",
-                exc_info=True,
                 extra={
                     "request_id": request_id,
                     "method": request.method,

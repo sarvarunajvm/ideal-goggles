@@ -140,7 +140,7 @@ def main() -> None:
             access_log=settings.DEBUG,
         )
     except Exception as e:
-        logger.error(f"Failed to start server: {e}", exc_info=True)
+        logger.exception(f"Failed to start server: {e}")
         raise
 
 
