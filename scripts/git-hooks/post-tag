@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Post-tag hook: Updates version in all package.json and pyproject.toml files
+# This hook runs after a tag is created
+
+# Get the latest tag
+TAG=$(git describe --tags --abbrev=0)
+
+if [ -z "$TAG" ]; then
+  echo "No tag found"
+  exit 0
+fi
+
+echo "🏷️  New tag detected: $TAG"
+echo "📝 Updating project versions..."
+
+# Run the version update script
+node scripts/update-version.js "$TAG"
+
+if [ $? -eq 0 ]; then
+  # Check if there are changes
+  if ! git diff --quiet; then
+    echo "📦 Committing version updates..."
+
+    # Stage all version file changes
+    git add package.json frontend/package.json tests/package.json backend/pyproject.toml
+
+    # Create commit with version update
+    git commit -m "chore: update version to $TAG
+
+Updated versions in:
+- package.json
+- frontend/package.json
+- tests/package.json
+- backend/pyproject.toml
+
+[skip ci]"
+
+    echo "✅ Version updated and committed"
+    echo ""
+    echo "⚠️  Note: You may want to push this commit:"
+    echo "    git push origin $(git branch --show-current)"
+  else
+    echo "ℹ️  All files already at version $TAG"
+  fi
+else
+  echo "❌ Failed to update versions"
+  exit 1
+fi

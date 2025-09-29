@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Pre-push hook: Ensures versions are synchronized when pushing tags
+
+while read local_ref local_sha remote_ref remote_sha
+do
+  # Check if we're pushing a tag
+  if [[ "$local_ref" =~ ^refs/tags/ ]]; then
+    TAG="${local_ref#refs/tags/}"
+    VERSION="${TAG#v}"  # Remove 'v' prefix if present
+
+    echo "🏷️  Pushing tag: $TAG"
+    echo "🔍 Checking version consistency..."
+
+    # Check package.json versions
+    ROOT_VERSION=$(node -e "console.log(require('./package.json').version)")
+    FRONTEND_VERSION=$(node -e "console.log(require('./frontend/package.json').version)")
+    TESTS_VERSION=$(node -e "console.log(require('./tests/package.json').version)")
+
+    # Check pyproject.toml version
+    BACKEND_VERSION=$(grep -E '^version = ' backend/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+
+    # Check if all versions match the tag
+    ERRORS=0
+
+    if [ "$ROOT_VERSION" != "$VERSION" ]; then
+      echo "❌ package.json version ($ROOT_VERSION) doesn't match tag ($VERSION)"
+      ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ "$FRONTEND_VERSION" != "$VERSION" ]; then
+      echo "❌ frontend/package.json version ($FRONTEND_VERSION) doesn't match tag ($VERSION)"
+      ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ "$TESTS_VERSION" != "$VERSION" ]; then
+      echo "❌ tests/package.json version ($TESTS_VERSION) doesn't match tag ($VERSION)"
+      ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ "$BACKEND_VERSION" != "$VERSION" ]; then
+      echo "❌ backend/pyproject.toml version ($BACKEND_VERSION) doesn't match tag ($VERSION)"
+      ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ $ERRORS -gt 0 ]; then
+      echo ""
+      echo "⚠️  Version mismatch detected!"
+      echo "Run the following command to fix:"
+      echo "  pnpm run version:update $VERSION"
+      echo ""
+      echo "Or to automatically update and commit:"
+      echo "  pnpm run version:sync"
+      exit 1
+    else
+      echo "✅ All versions match tag $TAG"
+    fi
+  fi
+done
+
+exit 0
