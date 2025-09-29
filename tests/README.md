@@ -12,20 +12,20 @@ Comprehensive Playwright-based integration tests for the Photo Search and Naviga
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Install Playwright browsers
-npm run install
+pnpm run install
 
 # Run all tests
-npm test
+pnpm test
 
 # Run specific test suites
-npm run test:smoke      # Quick smoke tests
-npm run test:search     # Search functionality
-npm run test:settings   # Settings & configuration
-npm run test:people     # People management
-npm run test:workflows  # End-to-end workflows
+pnpm run test:smoke      # Quick smoke tests
+pnpm run test:search     # Search functionality
+pnpm run test:settings   # Settings & configuration
+pnpm run test:people     # People management
+pnpm run test:workflows  # End-to-end workflows
 ```
 
 ## 📁 Test Structure
@@ -96,44 +96,44 @@ tests/
 ### Interactive Mode
 ```bash
 # Run tests with UI (great for debugging)
-npm run test:ui
+pnpm run test:ui
 
 # Run tests in headed browser
-npm run test:headed
+pnpm run test:headed
 
 # Debug specific test
-npm run test:debug
+pnpm run test:debug
 ```
 
 ### Different Browsers
 ```bash
 # Chrome only
-npm run test:chrome
+pnpm run test:chrome
 
 # Firefox only
-npm run test:firefox
+pnpm run test:firefox
 
 # Safari only
-npm run test:webkit
+pnpm run test:webkit
 
 # Mobile browsers
-npm run test:mobile
+pnpm run test:mobile
 ```
 
 ### Performance
 ```bash
 # Run tests in parallel (faster)
-npm run test:parallel
+pnpm run test:parallel
 
 # Run tests serially (more stable)
-npm run test:serial
+pnpm run test:serial
 ```
 
 ## 📊 Test Reports
 
 After running tests, view the HTML report:
 ```bash
-npm run test:report
+pnpm run test:report
 ```
 
 Reports include:
@@ -146,17 +146,17 @@ Reports include:
 
 ### Using Playwright Inspector
 ```bash
-npm run test:debug
+pnpm run test:debug
 ```
 
 ### Generate Test Code
 ```bash
-npm run codegen
+pnpm run codegen
 ```
 
 ### View Traces
 ```bash
-npm run trace trace.zip
+pnpm run trace trace.zip
 ```
 
 ## ⚙️ Configuration
@@ -185,13 +185,13 @@ Edit `playwright.config.ts` to customize:
 - name: Install dependencies
   run: |
     cd tests
-    npm ci
+    pnpm ci
     npx playwright install
 
 - name: Run tests
   run: |
     cd tests
-    npm test
+    pnpm test
 
 - name: Upload artifacts
   uses: actions/upload-artifact@v3
@@ -233,7 +233,7 @@ export class YourPage extends BasePage {
 
 ### 3. Run Your Test
 ```bash
-npm test -- --grep "Feature Name"
+pnpm test -- --grep "Feature Name"
 ```
 
 ## 🧪 Best Practices
@@ -253,10 +253,10 @@ npm test -- --grep "Feature Name"
 - Check backend is running: `http://localhost:5555/health`
 - Check frontend is running: `http://localhost:3000`
 - Clear test data: `rm -rf /tmp/test-*`
-- Update Playwright: `npm update @playwright/test`
+- Update Playwright: `pnpm update @playwright/test`
 
 ### Slow Tests
-- Run in parallel: `npm run test:parallel`
+- Run in parallel: `pnpm run test:parallel`
 - Reduce test data size
 - Use headed mode for debugging only
 - Check network latency

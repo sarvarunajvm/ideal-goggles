@@ -112,7 +112,7 @@ if curl -s http://localhost:3333 > /dev/null 2>&1; then
 else
     echo -e "${YELLOW}⚠️  Frontend is not running. Starting it...${NC}"
     cd ../frontend
-    npm run dev &
+    pnpm run dev &
     FRONTEND_PID=$!
     cd ../tests
     sleep 5
@@ -185,7 +185,7 @@ set -e
 if [ -d "playwright-report" ]; then
     echo ""
     echo -e "${YELLOW}📊 Test report generated${NC}"
-    echo "Run 'npm run test:report' to view the HTML report"
+    echo "Run 'pnpm run test:report' to view the HTML report"
 fi
 
 # Cleanup processes if we started them
