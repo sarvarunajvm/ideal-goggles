@@ -1,6 +1,6 @@
 {
   "name": "tests",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Playwright integration tests for Ideal Goggles",
   "private": true,
   "scripts": {
