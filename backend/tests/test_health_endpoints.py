@@ -33,7 +33,7 @@ class TestHealthEndpoints:
         assert "timestamp" in data
         assert "version" in data
         assert "service" in data
-        assert data["service"] == "photo-search-api"
+        assert data["service"] == "ideal-goggles-api"
         assert "system" in data
         assert "database" in data
         assert "dependencies" in data
@@ -69,7 +69,7 @@ class TestHealthEndpoints:
         data = response.json()
         assert data["alive"] is True
         assert "timestamp" in data
-        assert data["service"] == "photo-search-api"
+        assert data["service"] == "ideal-goggles-api"
 
     @patch("src.api.health.get_database_manager")
     def test_health_with_database_failure(self, mock_db_manager, client):

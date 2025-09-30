@@ -1,4 +1,4 @@
-# 📸 Photo Search System - Complete User Manual
+# 🥽 Ideal Goggles - Complete User Manual
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -19,7 +19,7 @@
 
 ## Overview
 
-Photo Search System (Ideal Goggles) is a privacy-focused desktop application that helps you search and organize your photos using:
+Ideal Goggles is a privacy-focused desktop application that helps you search and organize your photos using:
 
 - 🔍 **Text Search**: Find photos by filename, folder, or text in images (OCR)
 - 🎨 **Semantic Search**: Natural language queries ("sunset at the beach")
@@ -56,12 +56,12 @@ Photo Search System (Ideal Goggles) is a privacy-focused desktop application tha
 
 #### 🪟 Windows
 
-1. **Download** `PhotoSearch-Setup-1.0.8.exe` from [Releases](https://github.com/sarvarunajvm/ideal-goggles/releases)
+1. **Download** `ideal-goggles-Setup-1.0.8.exe` from [Releases](https://github.com/sarvarunajvm/ideal-goggles/releases)
 2. **Run installer** as Administrator:
    - Right-click → "Run as administrator"
    - If Windows Defender appears, click "More info" → "Run anyway"
 3. **Follow installation wizard**:
-   - Choose installation directory (default: `C:\Program Files\PhotoSearch`)
+   - Choose installation directory (default: `C:\Program Files\ideal-goggles`)
    - Select "Create desktop shortcut"
    - Click "Install"
 4. **Launch** from Start Menu or Desktop shortcut
@@ -73,20 +73,20 @@ Photo Search System (Ideal Goggles) is a privacy-focused desktop application tha
 
 #### 🍎 macOS
 
-1. **Download** `PhotoSearch-1.0.8.dmg` from [Releases](https://github.com/sarvarunajvm/ideal-goggles/releases)
+1. **Download** `ideal-goggles-1.0.8.dmg` from [Releases](https://github.com/sarvarunajvm/ideal-goggles/releases)
 2. **Open DMG file**:
    - Double-click the downloaded file
-   - Drag PhotoSearch to Applications folder
+- Drag Ideal Goggles to Applications folder
 3. **First launch** (security bypass):
    - Open Finder → Applications
-   - Right-click PhotoSearch → Select "Open"
+- Right-click Ideal Goggles → Select "Open"
    - Click "Open" in security dialog
 4. **Grant permissions** when prompted:
    - Photos library access (optional)
    - Full disk access (for indexing)
 
 **Troubleshooting macOS Installation:**
-- "App is damaged": Run `xattr -cr /Applications/PhotoSearch.app` in Terminal
+- "App is damaged": Run `xattr -cr /Applications/ideal-goggles.app` in Terminal
 - Gatekeeper issues: System Preferences → Security & Privacy → "Open Anyway"
 - M1/M2 Macs: App runs via Rosetta 2 (automatic)
 
@@ -95,57 +95,57 @@ Photo Search System (Ideal Goggles) is a privacy-focused desktop application tha
 **Ubuntu/Debian:**
 ```bash
 # Download the .deb package
-wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/photosearch_1.0.8_amd64.deb
+wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/ideal-goggles_1.0.8_amd64.deb
 
 # Install dependencies
 sudo apt update
 sudo apt install -y tesseract-ocr python3-pip libgtk-3-0
 
 # Install the package
-sudo dpkg -i photosearch_1.0.8_amd64.deb
+sudo dpkg -i ideal-goggles_1.0.8_amd64.deb
 
 # Fix any dependency issues
 sudo apt-get install -f
 
 # Launch
-photosearch
+ideal-goggles
 ```
 
 **Fedora/RHEL:**
 ```bash
 # Download the .rpm package
-wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/photosearch-1.0.8.x86_64.rpm
+wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/ideal-goggles-1.0.8.x86_64.rpm
 
 # Install
-sudo dnf install photosearch-1.0.8.x86_64.rpm
+sudo dnf install ideal-goggles-1.0.8.x86_64.rpm
 
 # Launch
-photosearch
+ideal-goggles
 ```
 
 **AppImage (Universal):**
 ```bash
 # Download AppImage
-wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/PhotoSearch-1.0.8.AppImage
+wget https://github.com/sarvarunajvm/ideal-goggles/releases/download/v1.0.8/ideal-goggles-1.0.8.AppImage
 
 # Make executable
-chmod +x PhotoSearch-1.0.8.AppImage
+chmod +x ideal-goggles-1.0.8.AppImage
 
 # Run
-./PhotoSearch-1.0.8.AppImage
+./ideal-goggles-1.0.8.AppImage
 ```
 
 **Arch Linux (AUR):**
 ```bash
-yay -S photosearch
+yay -S ideal-goggles
 # or
-paru -S photosearch
+paru -S ideal-goggles
 ```
 
 **Troubleshooting Linux Installation:**
-- Missing libraries: `ldd PhotoSearch.AppImage` to check
+- Missing libraries: `ldd ideal-goggles.AppImage` to check
 - Permission denied: Ensure file is executable
-- Desktop integration: `./PhotoSearch.AppImage --install-desktop-file`
+- Desktop integration: `./ideal-goggles.AppImage --install-desktop-file`
 
 ---
 
@@ -154,8 +154,8 @@ paru -S photosearch
 ### First Launch
 
 1. **Start the application**:
-   - Windows: Start Menu → PhotoSearch
-   - macOS: Applications → PhotoSearch
+- Windows: Start Menu → Ideal Goggles
+- macOS: Applications → Ideal Goggles
    - Linux: Application menu or terminal
 
 2. **Initial setup wizard** appears:
@@ -632,18 +632,18 @@ Select multiple photos (Ctrl/Cmd+Click):
 1. Run as Administrator
 2. Check Windows Defender exceptions
 3. Reinstall Visual C++ Redistributable
-4. Delete `%APPDATA%\PhotoSearch` and retry
+4. Delete `%APPDATA%\ideal-goggles` and retry
 
 **macOS:**
 1. Check Security & Privacy settings
 2. Grant full disk access
-3. Delete `~/Library/Application Support/PhotoSearch`
+3. Delete `~/Library/Application Support/ideal-goggles`
 4. Reinstall from fresh DMG
 
 **Linux:**
-1. Check dependencies: `ldd photosearch`
+1. Check dependencies: `ldd ideal-goggles`
 2. Run from terminal for error messages
-3. Delete `~/.config/photosearch`
+3. Delete `~/.config/ideal-goggles`
 4. Check file permissions
 
 #### Crashes/Freezes
@@ -742,7 +742,7 @@ Common errors and solutions:
 
 ```bash
 # Start with options
-photosearch [options]
+ideal-goggles [options]
 
 # Options:
 --safe-mode          Start in safe mode
@@ -872,9 +872,9 @@ PreloadCount=50
 - Your settings
 
 **Location:**
-- Windows: `%APPDATA%\PhotoSearch`
-- macOS: `~/Library/Application Support/PhotoSearch`
-- Linux: `~/.config/photosearch`
+- Windows: `%APPDATA%\ideal-goggles`
+- macOS: `~/Library/Application Support/ideal-goggles`
+- Linux: `~/.config/ideal-goggles`
 
 #### What We DON'T Store
 
@@ -1021,9 +1021,9 @@ A: Check privacy settings and grant necessary permissions.
 - **Discord**: Community chat (coming soon)
 
 #### Contact
-- **Email**: support@photosearch.app
-- **Twitter**: @photosearchapp
-- **Website**: https://photosearch.app
+- **Email**: support@ideal-goggles.app
+- **Twitter**: @idealgogglesapp
+- **Website**: https://ideal-goggles.app
 
 ### Reporting Issues
 
@@ -1064,7 +1064,7 @@ We welcome contributions!
 
 #### Windows
 ```
-%APPDATA%\PhotoSearch\          # Main data
+%APPDATA%\ideal-goggles\          # Main data
   ├── database.db               # Search index
   ├── thumbnails\               # Cache
   ├── settings.ini              # Configuration
@@ -1073,7 +1073,7 @@ We welcome contributions!
 
 #### macOS
 ```
-~/Library/Application Support/PhotoSearch/
+~/Library/Application Support/ideal-goggles/
   ├── database.db
   ├── thumbnails/
   ├── settings.plist
@@ -1082,7 +1082,7 @@ We welcome contributions!
 
 #### Linux
 ```
-~/.config/photosearch/
+~/.config/ideal-goggles/
   ├── database.db
   ├── thumbnails/
   ├── settings.conf
@@ -1109,7 +1109,7 @@ We welcome contributions!
 
 ---
 
-Thank you for using Photo Search System! We hope it makes finding your memories effortless. 📸
+Thank you for using Ideal Goggles! We hope it makes finding your memories effortless. 🥽
 
 **Last Updated**: 2025-09-29
 **Version**: 1.0.8

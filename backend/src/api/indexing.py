@@ -1,4 +1,4 @@
-"""Indexing control endpoints for photo search API."""
+"""Indexing control endpoints for Ideal Goggles API."""
 
 import asyncio
 import logging
@@ -270,8 +270,10 @@ async def _run_discovery_phase(workers, config, full_reindex):
     for root_path in config.get("roots", []):
         crawler.add_root_path(root_path)
 
+    await asyncio.sleep(0.5)  # Add small delay to show progress
     crawl_result = await crawler.crawl_all_paths(full_reindex)
     _indexing_state["progress"]["total_files"] = crawl_result.total_files
+    _indexing_state["progress"]["processed_files"] = 0  # Reset at start
 
     if crawl_result.errors > 0:
         _indexing_state["errors"].extend(crawl_result.error_details)
@@ -316,15 +318,23 @@ async def _run_processing_phases(workers, config, photos_to_process):
     """Run all processing phases for photos."""
     global _indexing_state
 
+    total_photos = len(photos_to_process)
+    _indexing_state["progress"]["total_files"] = total_photos
+    processed_count = 0
+
     # Phase 2: Metadata extraction
     _indexing_state["progress"]["current_phase"] = "metadata"
     logger.info("Phase 2: EXIF metadata extraction")
     exif_pipeline = workers["EXIFExtractionPipeline"]()
+    await asyncio.sleep(0.5)  # Add small delay to show progress
     await exif_pipeline.process_photos(photos_to_process)
+    processed_count = int(total_photos * 0.2)  # 20% complete after metadata
+    _indexing_state["progress"]["processed_files"] = processed_count
 
     # Phase 3: OCR processing (optional - skip if Tesseract not available)
     _indexing_state["progress"]["current_phase"] = "ocr"
     logger.info("Phase 3: OCR text extraction")
+    await asyncio.sleep(0.5)  # Add small delay to show progress
     try:
         ocr_worker = workers["SmartOCRWorker"](
             languages=config.get("ocr_languages", ["eng"])
@@ -336,24 +346,32 @@ async def _run_processing_phases(workers, config, photos_to_process):
             logger.info("Continuing without OCR text extraction")
         else:
             raise
+    processed_count = int(total_photos * 0.4)  # 40% complete after OCR
+    _indexing_state["progress"]["processed_files"] = processed_count
 
     # Phase 4: Embedding generation (optional - skip if dependencies missing)
     _indexing_state["progress"]["current_phase"] = "embeddings"
     logger.info("Phase 4: Embedding generation")
+    await asyncio.sleep(0.5)  # Add small delay to show progress
     try:
         embedding_worker = workers["OptimizedCLIPWorker"]()
         await embedding_worker.generate_batch_optimized(photos_to_process)
     except Exception as e:
         logger.warning(f"Embedding generation skipped: {e}")
         logger.info("Continuing without embeddings")
+    processed_count = int(total_photos * 0.6)  # 60% complete after embeddings
+    _indexing_state["progress"]["processed_files"] = processed_count
 
     # Phase 5: Thumbnail generation
     _indexing_state["progress"]["current_phase"] = "thumbnails"
     logger.info("Phase 5: Thumbnail generation")
+    await asyncio.sleep(0.5)  # Add small delay to show progress
     thumbnail_generator = workers["SmartThumbnailGenerator"](
         cache_root=str(settings.THUMBNAILS_DIR)
     )
     await thumbnail_generator.generate_batch(photos_to_process)
+    processed_count = int(total_photos * 0.8)  # 80% complete after thumbnails
+    _indexing_state["progress"]["processed_files"] = processed_count
 
     # Phase 6: Face detection (if enabled)
     if config.get("face_search_enabled", False):
@@ -364,6 +382,9 @@ async def _run_processing_phases(workers, config, photos_to_process):
             await face_worker.process_batch(photos_to_process)
         else:
             logger.warning("Face detection not available, skipping")
+
+    # Final update - 100% complete
+    _indexing_state["progress"]["processed_files"] = total_photos
 
 
 async def _run_indexing_process(full_reindex: bool):

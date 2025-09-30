@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { BasePage } from '../page-objects/BasePage';
 import { APIClient } from '../helpers/api-client';
 
-test.describe('Smoke Tests', () => {
+test.describe('Smoke Tests - Ideal Goggles', () => {
   let basePage: BasePage;
   let apiClient: APIClient;
 
@@ -22,7 +22,7 @@ test.describe('Smoke Tests', () => {
 
   test('application loads successfully', async ({ page }) => {
     await expect(basePage.navBar).toBeVisible();
-    await expect(page).toHaveTitle(/Photo Search/i);
+    await expect(page).toHaveTitle(/Ideal Goggles/i);
   });
 
   test('backend API is accessible', async () => {

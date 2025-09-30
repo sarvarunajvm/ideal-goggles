@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiService, SearchResponse, SearchResult } from '../services/apiClient';
+import { apiService, SearchResponse, SearchResult, getApiBaseUrl } from '../services/apiClient';
 import PreviewDrawer from '../components/PreviewDrawer';
 import { osIntegration } from '../services/osIntegration';
 
@@ -176,7 +176,7 @@ function ModernResultsGrid({
           <div className="relative aspect-square overflow-hidden">
             {item.thumb_path ? (
               <img
-                src={`file://${item.thumb_path}`}
+                src={`${getApiBaseUrl()}/thumbnails/${item.thumb_path}`}
                 alt={item.filename}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
                 loading="lazy"

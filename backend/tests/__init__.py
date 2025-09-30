@@ -1,1 +1,1 @@
-"""Test package for photo search backend."""
+"""Test package for Ideal Goggles backend."""

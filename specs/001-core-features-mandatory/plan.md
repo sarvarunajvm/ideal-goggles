@@ -1,5 +1,5 @@
 
-# Implementation Plan: Photo Search and Navigation System
+# Implementation Plan: Ideal Goggles
 
 **Branch**: `001-core-features-mandatory` | **Date**: 2025-09-22 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/001-core-features-mandatory/spec.md`

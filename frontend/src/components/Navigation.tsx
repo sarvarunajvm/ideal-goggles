@@ -30,7 +30,7 @@ export default function Navigation() {
             <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
               <Camera className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Photo Search</h1>
+            <h1 className="text-xl font-bold text-foreground">Ideal Goggles</h1>
           </div>
 
           {/* Desktop Navigation Links */}

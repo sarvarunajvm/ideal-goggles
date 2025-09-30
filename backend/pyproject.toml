@@ -3,10 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "photo-search-backend"
+name = "ideal-goggles-backend"
 version = "1.0.12"
-description = "Backend API for photo search and navigation system"
-authors = [{name = "Photo Search Team"}]
+description = "Backend API for Ideal Goggles"
+authors = [{name = "Ideal Goggles Team"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"

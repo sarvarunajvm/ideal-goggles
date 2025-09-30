@@ -1,8 +1,8 @@
 {
   "name": "frontend",
   "version": "1.0.12",
-  "description": "Frontend for Photo search and navigation application",
-  "author": "Photo Search Team",
+  "description": "Frontend for Ideal Goggles application",
+  "author": "Ideal Goggles Team",
   "homepage": "./",
   "scripts": {
     "dev": "vite",

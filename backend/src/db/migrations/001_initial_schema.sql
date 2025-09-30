@@ -1,6 +1,6 @@
--- Migration 001: Initial Photo Search Schema
+-- Migration 001: Initial Ideal Goggles Schema
 -- Created: 2025-09-22
--- Description: Core schema for photo search and navigation system
+-- Description: Core schema for Ideal Goggles system
 
 BEGIN TRANSACTION;
 

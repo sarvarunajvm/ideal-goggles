@@ -1,4 +1,4 @@
-"""Photo model for the photo search system."""
+"""Photo model for the Ideal Goggles system."""
 
 import hashlib
 from dataclasses import dataclass

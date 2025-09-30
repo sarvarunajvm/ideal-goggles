@@ -3,7 +3,7 @@ import * as path from 'path';
 
 /**
  * Playwright configuration for integration tests
- * Tests the complete Photo Search application including frontend and backend
+ * Tests the complete Ideal Goggles application including frontend and backend
  */
 export default defineConfig({
   testDir: './e2e',

@@ -1,6 +1,6 @@
 # 👨‍💻 Developer Guide - Ideal Googles
 
-Comprehensive guide for developers working on the Ideal Googles photo search application.
+Comprehensive guide for developers working on the Ideal Goggles application.
 
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)

@@ -1,7 +1,7 @@
 {
   "name": "tests",
   "version": "1.0.12",
-  "description": "Playwright integration tests for Photo Search application",
+  "description": "Playwright integration tests for Ideal Goggles",
   "private": true,
   "scripts": {
     "test": "playwright test",

@@ -1,4 +1,4 @@
-"""Thumbnail model for photo search system."""
+"""Thumbnail model for Ideal Goggles system."""
 
 import contextlib
 from dataclasses import dataclass

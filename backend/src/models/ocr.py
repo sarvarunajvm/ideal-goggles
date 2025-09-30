@@ -1,4 +1,4 @@
-"""OCR text model for photo search system."""
+"""OCR text model for Ideal Goggles system."""
 
 import re
 from dataclasses import dataclass

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Integration Test Runner for Photo Search Application
+# Integration Test Runner for Ideal Goggles
 # Usage: ./run-tests.sh [options]
 
 set -e
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo -e "${GREEN}🚀 Photo Search Integration Tests${NC}"
+echo -e "${GREEN}🚀 Ideal Goggles Integration Tests${NC}"
 echo "=================================="
 
 # Check if Node.js is installed

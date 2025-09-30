@@ -1,10 +1,10 @@
-# 📸 Ideal Googles - Photo Search Desktop App
+# 🥽 Ideal Goggles - Desktop App
 
 [![CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
 [![Dependabot Updates](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates)
 
-A privacy-focused desktop application for intelligent photo search and organization. Search your photos using natural language, faces, and text within images - all processed locally on your machine.
+A privacy-focused desktop application for intelligent photo search and organization. Ideal Goggles lets you search your photos using natural language, faces, and text within images — all processed locally on your machine.
 
 ## ✨ Features
 
@@ -217,4 +217,4 @@ For issues or questions:
 
 ---
 
-Made with ❤️ by the Photo Search Team
+Made with ❤️ by the Ideal Goggles Team

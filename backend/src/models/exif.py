@@ -1,4 +1,4 @@
-"""EXIF metadata model for photo search system."""
+"""EXIF metadata model for Ideal Goggles system."""
 
 from dataclasses import dataclass
 from datetime import datetime

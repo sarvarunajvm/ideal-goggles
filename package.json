@@ -1,8 +1,8 @@
 {
-  "name": "ideal-googles",
+  "name": "ideal-goggles",
   "version": "1.0.12",
-  "description": "Photo search and navigation desktop application",
-  "author": "Photo Search Team",
+  "description": "Ideal Goggles desktop application",
+  "author": "Ideal Goggles Team",
   "main": "electron/dist/main.js",
   "homepage": "./",
   "scripts": {
@@ -45,9 +45,9 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.idealgoogles.app",
-    "productName": "ideal-googles",
-    "copyright": "Copyright © 2023 Photo Search Team",
+    "appId": "com.idealgoggles.app",
+    "productName": "ideal-goggles",
+    "copyright": "Copyright © 2023 Ideal Goggles Team",
     "directories": {
       "output": "dist-electron",
       "buildResources": "build-resources"
@@ -85,7 +85,7 @@
           ]
         }
       ],
-      "publisherName": "Photo Search Team",
+      "publisherName": "Ideal Goggles Team",
       "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": false,
       "signingHashAlgorithms": [],
@@ -125,7 +125,7 @@
         }
       ],
       "category": "Graphics",
-      "executableName": "ideal-googles",
+      "executableName": "ideal-goggles",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
@@ -135,11 +135,11 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ideal-googles",
-      "uninstallDisplayName": "ideal-googles"
+      "shortcutName": "ideal-goggles",
+      "uninstallDisplayName": "ideal-goggles"
     },
     "dmg": {
-      "title": "ideal-googles",
+      "title": "ideal-goggles",
       "iconSize": 100,
       "contents": [
         {
@@ -159,9 +159,9 @@
     },
     "deb": {
       "packageCategory": "graphics",
-      "synopsis": "Local photo search and navigation application",
-      "description": "AI-powered photo search with text, semantic, and face recognition capabilities. Privacy-focused local processing.",
-      "maintainer": "Photo Search Team"
+      "synopsis": "Ideal Goggles desktop application",
+      "description": "Privacy-focused local photo search and organization with AI capabilities.",
+      "maintainer": "Ideal Goggles Team"
     },
     "publish": null
   },

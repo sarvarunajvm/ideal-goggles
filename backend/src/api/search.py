@@ -1,4 +1,4 @@
-"""Search endpoints for photo search API."""
+"""Search endpoints for Ideal Goggles API."""
 
 import contextlib
 import os

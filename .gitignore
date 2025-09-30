@@ -93,3 +93,4 @@ yarn.lock
 AGENTS.md
 CLAUDE.md
 *.xml
+/test_photos

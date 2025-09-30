@@ -1,4 +1,4 @@
-"""Production-ready logging configuration for the Photo Search API."""
+"""Production-ready logging configuration for the Ideal Goggles API."""
 
 import logging
 import logging.handlers
@@ -52,7 +52,7 @@ def setup_logging(
     enable_syslog: bool = False,
     max_bytes: int = 10_485_760,  # 10MB
     backup_count: int = 10,
-    app_name: str = "photo-search-api",
+    app_name: str = "ideal-goggles-api",
 ) -> None:
     """
     Configure comprehensive logging for production environment.

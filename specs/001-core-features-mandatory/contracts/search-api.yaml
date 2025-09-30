@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
-  title: Photo Search API
+  title: Ideal Goggles API
   version: 1.0.8
-  description: Local API for photo search and navigation system with production logging
+  description: Local API for Ideal Goggles with production logging
   contact:
     name: API Support
-    email: support@photosearch.app
+    email: support@ideal-goggles.app
   license:
     name: MIT
 
@@ -21,9 +21,9 @@ tags:
   - name: Configuration
     description: Application configuration
   - name: Search
-    description: Photo search operations
+    description: Search operations
   - name: Indexing
-    description: Photo indexing operations
+    description: Indexing operations
   - name: People
     description: People management for face search
   - name: Logs
@@ -44,7 +44,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Photo Search API
+                    example: Ideal Goggles API
                   version:
                     type: string
                     example: 1.0.8
@@ -80,7 +80,7 @@ paths:
                     example: 1.0.8
                   service:
                     type: string
-                    example: photo-search-api
+                    example: ideal-goggles-api
                   system:
                     type: object
                     properties:

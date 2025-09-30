@@ -1,4 +1,4 @@
-"""Database connection and session management for photo search system."""
+"""Database connection and session management for Ideal Goggles system."""
 
 import logging
 import sqlite3
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Embedded initial schema as fallback for bundled environments
 INITIAL_SCHEMA = """
--- Initial Photo Search Schema (embedded fallback)
+-- Initial Ideal Goggles Schema (embedded fallback)
 BEGIN TRANSACTION;
 
 -- Core photo metadata

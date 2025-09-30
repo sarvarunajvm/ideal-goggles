@@ -61,7 +61,7 @@ describe('SearchPage Component', () => {
     renderSearchPage()
 
     // Check for page title - use getAllByText if multiple elements
-    const titles = screen.getAllByText('Photo Search')
+    const titles = screen.getAllByText('Ideal Goggles')
     expect(titles.length).toBeGreaterThan(0)
 
     // Check for navigation

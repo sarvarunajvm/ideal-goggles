@@ -1,5 +1,5 @@
 /**
- * API service for photo search backend
+ * API service for Ideal Goggles backend
  */
 
 import { logger } from '../utils/logger';

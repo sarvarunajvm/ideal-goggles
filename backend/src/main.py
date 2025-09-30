@@ -23,7 +23,7 @@ setup_logging(
     log_level="DEBUG" if settings.DEBUG else "INFO",
     enable_file_logging=True,
     enable_console_logging=True,
-    app_name="photo-search-api",
+    app_name="ideal-goggles-api",
 )
 
 logger = get_logger(__name__)
@@ -59,9 +59,9 @@ _DOCS_ENABLED = False  # computed below and reused for root() response
 _DOCS_ENABLED = settings.DEBUG or not _UI_AVAILABLE
 
 app = FastAPI(
-    title="Photo Search API",
+    title="Ideal Goggles API",
     version="1.0.8",
-    description="Local API for photo search and navigation system",
+    description="Local API for Ideal Goggles",
     # If no UI is bundled, expose /docs by default; otherwise follow DEBUG.
     docs_url="/docs" if _DOCS_ENABLED else None,
     redoc_url="/redoc" if settings.DEBUG else None,
@@ -99,6 +99,15 @@ app.include_router(indexing.router)
 app.include_router(people.router)
 app.include_router(search.router)
 
+# Mount thumbnails directory for serving generated thumbnails
+if settings.THUMBNAILS_DIR and settings.THUMBNAILS_DIR.exists():
+    app.mount(
+        "/thumbnails",
+        StaticFiles(directory=str(settings.THUMBNAILS_DIR)),
+        name="thumbnails"
+    )
+    logger.info(f"Mounted thumbnails directory at /thumbnails: {settings.THUMBNAILS_DIR}")
+
 # Optionally mount a static UI at /ui if a 'frontend' directory is available.
 _UI_MOUNTED = False
 if _UI_AVAILABLE and _UI_DIR is not None:
@@ -111,7 +120,7 @@ async def root() -> dict[str, Any]:
     """Root endpoint."""
     logger.info("Root endpoint accessed")
     return {
-        "message": "Photo Search API",
+        "message": "Ideal Goggles API",
         "version": "1.0.8",
         "ui": "/ui" if _UI_MOUNTED else None,
         "docs": "/docs" if _DOCS_ENABLED else None,
@@ -126,7 +135,7 @@ def main() -> None:
     the module structure isn't importable in the frozen environment.
     Passing the in-memory `app` object avoids that issue.
     """
-    logger.info(f"Starting Photo Search API on {settings.HOST}:{settings.PORT}")
+    logger.info(f"Starting Ideal Goggles API on {settings.HOST}:{settings.PORT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
     logger.info(f"UI available: {_UI_AVAILABLE}")
     logger.info(f"Docs enabled: {_DOCS_ENABLED}")

@@ -1,6 +1,6 @@
-# Photo Search Backend
+# Ideal Goggles Backend
 
-Backend API for photo search and navigation system.
+Backend API for Ideal Goggles.
 
 ## Features
 

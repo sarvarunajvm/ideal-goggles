@@ -1,4 +1,4 @@
-"""Embedding model for photo search system."""
+"""Embedding model for Ideal Goggles system."""
 
 import struct
 from dataclasses import dataclass

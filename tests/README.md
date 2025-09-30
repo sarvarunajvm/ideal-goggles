@@ -1,6 +1,6 @@
-# Integration Tests for Photo Search Application
+# Integration Tests for Ideal Goggles
 
-Comprehensive Playwright-based integration tests for the Photo Search and Navigation System.
+Comprehensive Playwright-based integration tests for the Ideal Goggles application.
 
 ## 📋 Prerequisites
 

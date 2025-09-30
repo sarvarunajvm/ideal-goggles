@@ -2,7 +2,7 @@
 
 # Start backend and frontend for development
 
-echo "Starting Photo Search development environment..."
+echo "Starting Ideal Goggles development environment..."
 
 # Colors for output
 RED='\033[0;31m'

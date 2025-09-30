@@ -1,8 +1,8 @@
 .PHONY: help install dev test clean build dist-mac dist-win dist-all
 
 # Configuration
-APP_NAME = ideal-googles
-BACKEND_NAME = photo-search-backend
+APP_NAME = ideal-goggles
+BACKEND_NAME = ideal-goggles-backend
 PYTHON ?= python3
 NODE_PM ?= pnpm
 

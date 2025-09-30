@@ -93,7 +93,7 @@ async function startBackend(): Promise<void> {
       console.log('[Backend] resourcesPath:', process.resourcesPath);
 
       const backendPath = join(process.resourcesPath, 'backend');
-      const binaryName = process.platform === 'win32' ? 'photo-search-backend.exe' : 'photo-search-backend';
+      const binaryName = process.platform === 'win32' ? 'ideal-goggles-backend.exe' : 'ideal-goggles-backend';
       const backendExecutable = join(backendPath, binaryName);
 
       console.log('[Backend] Backend path:', backendPath);
@@ -421,7 +421,7 @@ app.whenReady().then(async () => {
     // Show error dialog and quit
     dialog.showErrorBox(
       'Startup Error',
-      `Failed to start Photo Search application:\n\n${error}`
+      `Failed to start Ideal Goggles application:\n\n${error}`
     );
     app.quit();
   }

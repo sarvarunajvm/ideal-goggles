@@ -1,4 +1,4 @@
-"""Health check endpoint for photo search API."""
+"""Health check endpoint for Ideal Goggles API."""
 
 import os
 from datetime import datetime
@@ -27,7 +27,7 @@ async def health_check() -> dict[str, Any]:
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
             "version": "1.0.8",
-            "service": "photo-search-api",
+            "service": "ideal-goggles-api",
         }
 
         # Add system information
@@ -341,5 +341,5 @@ async def liveness_check() -> dict[str, Any]:
     return {
         "alive": True,
         "timestamp": datetime.now().isoformat(),
-        "service": "photo-search-api",
+        "service": "ideal-goggles-api",
     }

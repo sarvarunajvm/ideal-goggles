@@ -1,4 +1,4 @@
-# Quickstart Guide: Photo Search and Navigation System
+# Quickstart Guide: Ideal Goggles
 
 ## Prerequisites
 
@@ -23,12 +23,12 @@ mkdir -p ~/test-photos/2024/events/birthday
 ### 1. Application Installation
 ```bash
 # Download and run signed installer
-# Windows: photo-search-v1.0.0-setup.exe
-# macOS: photo-search-v1.0.0.dmg
+# Windows: ideal-goggles-v1.0.0-setup.exe
+# macOS: ideal-goggles-v1.0.0.dmg
 
 # Verify installation
-photo-search --version
-# Expected: Photo Search v1.0.0
+ideal-goggles --version
+# Expected: Ideal Goggles v1.0.0
 ```
 
 ### 2. Initial Configuration

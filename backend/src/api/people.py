@@ -1,4 +1,4 @@
-"""People management endpoints for photo search API."""
+"""People management endpoints for Ideal Goggles API."""
 
 from datetime import datetime
 from typing import Any

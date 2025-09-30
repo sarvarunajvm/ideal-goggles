@@ -1,4 +1,4 @@
-"""Configuration endpoints for photo search API."""
+"""Configuration endpoints for Ideal Goggles API."""
 
 from datetime import datetime
 from pathlib import Path
