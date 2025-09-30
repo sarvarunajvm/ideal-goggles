@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiService, DependenciesResponse, DependencyStatus } from '../services/apiClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,7 +102,7 @@ export default function DependenciesManager() {
   const [installProgress, setInstallProgress] = useState(0);
   const { toast } = useToast();
 
-  const fetchDependencies = async () => {
+  const fetchDependencies = useCallback(async () => {
     try {
       setLoading(true);
       const deps = await apiService.getDependencies();
@@ -116,11 +116,11 @@ export default function DependenciesManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchDependencies();
-  }, []);
+  }, [fetchDependencies]);
 
   const handleInstall = async (component: string) => {
     setInstalling(component);
@@ -223,7 +223,6 @@ export default function DependenciesManager() {
   }
 
   const allMLInstalled = dependencies.ml.every(d => d.installed);
-  const someMLInstalled = dependencies.ml.some(d => d.installed);
 
   return (
     <div className="space-y-6">

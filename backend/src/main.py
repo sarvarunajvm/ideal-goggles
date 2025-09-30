@@ -105,9 +105,11 @@ if settings.THUMBNAILS_DIR and settings.THUMBNAILS_DIR.exists():
     app.mount(
         "/thumbnails",
         StaticFiles(directory=str(settings.THUMBNAILS_DIR)),
-        name="thumbnails"
+        name="thumbnails",
     )
-    logger.info(f"Mounted thumbnails directory at /thumbnails: {settings.THUMBNAILS_DIR}")
+    logger.info(
+        f"Mounted thumbnails directory at /thumbnails: {settings.THUMBNAILS_DIR}"
+    )
 
 # Optionally mount a static UI at /ui if a 'frontend' directory is available.
 _UI_MOUNTED = False

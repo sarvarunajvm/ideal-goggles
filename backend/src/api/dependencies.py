@@ -2,7 +2,7 @@
 
 import subprocess
 import sys
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -28,13 +28,16 @@ class DependenciesResponse(BaseModel):
 
     core: list[DependencyStatus] = Field(description="Core dependencies")
     ml: list[DependencyStatus] = Field(description="ML dependencies")
-    features: Dict[str, bool] = Field(description="Feature availability based on dependencies")
+    features: dict[str, bool] = Field(
+        description="Feature availability based on dependencies"
+    )
 
 
 def check_python_package(package_name: str) -> tuple[bool, str | None]:
     """Check if a Python package is installed and get its version."""
     try:
         import importlib
+
         module = importlib.import_module(package_name)
         version = getattr(module, "__version__", None)
         return True, version
@@ -46,17 +49,15 @@ def check_system_command(command: str) -> tuple[bool, str | None]:
     """Check if a system command is available and get its version."""
     try:
         result = subprocess.run(
-            [command, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            [command, "--version"], check=False, capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             # Extract version from output (usually first line)
-            version_line = result.stdout.split('\n')[0]
+            version_line = result.stdout.split("\n")[0]
             # Try to extract version number
             import re
-            version_match = re.search(r'(\d+\.\d+(?:\.\d+)?)', version_line)
+
+            version_match = re.search(r"(\d+\.\d+(?:\.\d+)?)", version_line)
             version = version_match.group(1) if version_match else "unknown"
             return True, version
         return False, None
@@ -83,65 +84,77 @@ async def get_dependencies_status() -> DependenciesResponse:
         ("pydantic", "Data validation"),
     ]:
         installed, version = check_python_package(package)
-        core_deps.append(DependencyStatus(
-            name=package,
-            installed=installed,
-            version=version,
-            required=True,
-            description=description
-        ))
+        core_deps.append(
+            DependencyStatus(
+                name=package,
+                installed=installed,
+                version=version,
+                required=True,
+                description=description,
+            )
+        )
 
     # Check ML dependencies
     ml_deps = []
 
     # Tesseract OCR
     tesseract_installed, tesseract_version = check_system_command("tesseract")
-    ml_deps.append(DependencyStatus(
-        name="tesseract",
-        installed=tesseract_installed,
-        version=tesseract_version,
-        required=False,
-        description="OCR text extraction from images"
-    ))
+    ml_deps.append(
+        DependencyStatus(
+            name="tesseract",
+            installed=tesseract_installed,
+            version=tesseract_version,
+            required=False,
+            description="OCR text extraction from images",
+        )
+    )
 
     # CLIP and PyTorch
     torch_installed, torch_version = check_python_package("torch")
-    ml_deps.append(DependencyStatus(
-        name="pytorch",
-        installed=torch_installed,
-        version=torch_version,
-        required=False,
-        description="Deep learning framework for ML models"
-    ))
+    ml_deps.append(
+        DependencyStatus(
+            name="pytorch",
+            installed=torch_installed,
+            version=torch_version,
+            required=False,
+            description="Deep learning framework for ML models",
+        )
+    )
 
     clip_installed, clip_version = check_python_package("clip")
-    ml_deps.append(DependencyStatus(
-        name="clip",
-        installed=clip_installed,
-        version=clip_version,
-        required=False,
-        description="Semantic search with natural language"
-    ))
+    ml_deps.append(
+        DependencyStatus(
+            name="clip",
+            installed=clip_installed,
+            version=clip_version,
+            required=False,
+            description="Semantic search with natural language",
+        )
+    )
 
     # InsightFace
     insightface_installed, insightface_version = check_python_package("insightface")
-    ml_deps.append(DependencyStatus(
-        name="insightface",
-        installed=insightface_installed,
-        version=insightface_version,
-        required=False,
-        description="Face detection and recognition"
-    ))
+    ml_deps.append(
+        DependencyStatus(
+            name="insightface",
+            installed=insightface_installed,
+            version=insightface_version,
+            required=False,
+            description="Face detection and recognition",
+        )
+    )
 
     # OpenCV
     cv2_installed, cv2_version = check_python_package("cv2")
-    ml_deps.append(DependencyStatus(
-        name="opencv",
-        installed=cv2_installed,
-        version=cv2_version,
-        required=False,
-        description="Computer vision operations"
-    ))
+    ml_deps.append(
+        DependencyStatus(
+            name="opencv",
+            installed=cv2_installed,
+            version=cv2_version,
+            required=False,
+            description="Computer vision operations",
+        )
+    )
 
     # Determine feature availability
     features = {
@@ -154,22 +167,17 @@ async def get_dependencies_status() -> DependenciesResponse:
         "face_recognition": insightface_installed and cv2_installed,
     }
 
-    return DependenciesResponse(
-        core=core_deps,
-        ml=ml_deps,
-        features=features
-    )
+    return DependenciesResponse(core=core_deps, ml=ml_deps, features=features)
 
 
 class InstallRequest(BaseModel):
     """Request model for dependency installation."""
+
     components: list[str] = Field(default=["all"], description="Components to install")
 
 
 @router.post("/dependencies/install")
-async def install_dependencies(
-    request: InstallRequest
-) -> Dict[str, Any]:
+async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
     """
     Install ML dependencies.
 
@@ -184,12 +192,16 @@ async def install_dependencies(
         from pathlib import Path
 
         # Find the installer script
-        script_path = Path(__file__).parent.parent.parent / "scripts" / "install_ml_dependencies.py"
+        script_path = (
+            Path(__file__).parent.parent.parent
+            / "scripts"
+            / "install_ml_dependencies.py"
+        )
 
         if not script_path.exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Installer script not found"
+                detail="Installer script not found",
             )
 
         # Build command
@@ -207,34 +219,30 @@ async def install_dependencies(
         logger.info(f"Running ML dependency installer: {' '.join(cmd)}")
 
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=300  # 5 minute timeout
+            cmd, check=False, capture_output=True, text=True, timeout=300  # 5 minute timeout
         )
 
         if result.returncode == 0:
             return {
                 "status": "success",
                 "message": "Dependencies installed successfully",
-                "output": result.stdout
-            }
-        else:
-            return {
-                "status": "partial",
-                "message": "Some dependencies may have failed to install",
                 "output": result.stdout,
-                "errors": result.stderr
             }
+        return {
+            "status": "partial",
+            "message": "Some dependencies may have failed to install",
+            "output": result.stdout,
+            "errors": result.stderr,
+        }
 
     except subprocess.TimeoutExpired:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Installation timed out. Please run the installer manually."
+            detail="Installation timed out. Please run the installer manually.",
         )
     except Exception as e:
         logger.exception(f"Failed to install dependencies: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Installation failed: {str(e)}"
+            detail=f"Installation failed: {e!s}",
         )

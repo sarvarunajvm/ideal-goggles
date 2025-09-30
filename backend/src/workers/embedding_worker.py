@@ -431,16 +431,23 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
                                 (file_id, clip_vector, embedding_model, processed_at)
                                 VALUES (?, ?, ?, ?)
                                 """,
-                                (embedding.file_id, vector_blob, embedding.embedding_model, embedding.processed_at)
+                                (
+                                    embedding.file_id,
+                                    vector_blob,
+                                    embedding.embedding_model,
+                                    embedding.processed_at,
+                                ),
                             )
                         saved_count += 1
                     except Exception as e:
-                        logger.warning(f"Failed to save embedding for file_id {embedding.file_id}: {e}")
+                        logger.warning(
+                            f"Failed to save embedding for file_id {embedding.file_id}: {e}"
+                        )
 
             logger.info(f"Saved {saved_count} embeddings to database")
 
         except Exception as e:
-            logger.error(f"Failed to save embeddings to database: {e}")
+            logger.exception(f"Failed to save embeddings to database: {e}")
 
     def get_cache_statistics(self) -> dict[str, Any]:
         """Get cache statistics."""

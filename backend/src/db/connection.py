@@ -147,6 +147,7 @@ class DatabaseManager:
         if db_path is None:
             # Use absolute path based on the backend directory
             import os
+
             backend_dir = Path(__file__).resolve().parent.parent.parent
             data_dir = backend_dir / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
