@@ -49,7 +49,11 @@ def check_system_command(command: str) -> tuple[bool, str | None]:
     """Check if a system command is available and get its version."""
     try:
         result = subprocess.run(
-            [command, "--version"], check=False, capture_output=True, text=True, timeout=5
+            [command, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0:
             # Extract version from output (usually first line)
@@ -219,7 +223,11 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
         logger.info(f"Running ML dependency installer: {' '.join(cmd)}")
 
         result = subprocess.run(
-            cmd, check=False, capture_output=True, text=True, timeout=300  # 5 minute timeout
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
         )
 
         if result.returncode == 0:

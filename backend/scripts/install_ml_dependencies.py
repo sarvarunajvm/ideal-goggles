@@ -347,7 +347,6 @@ def main():
 
     installer = DependencyInstaller(verbose=args.verbose)
 
-
     if args.verify_only:
         results = installer.verify_installations()
 
@@ -375,7 +374,6 @@ def main():
 
         for _installed in results.values():
             pass
-
 
         return 0
     return 1

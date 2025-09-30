@@ -32,7 +32,6 @@ async def main():
     if not rows:
         return
 
-
     # Create Photo objects
     photos = []
     for row in rows:
@@ -68,7 +67,6 @@ async def main():
                 pass
         else:
             pass
-
 
     # Verify embeddings in database
     with db_manager.get_cursor() as cursor:
