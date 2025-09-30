@@ -1,4 +1,4 @@
-# Feature Specification: Photo Search and Navigation System
+# Feature Specification: Ideal Goggles
 
 **Feature Branch**: `001-core-features-mandatory`
 **Created**: 2025-09-22
@@ -8,25 +8,25 @@
 ## Execution Flow (main)
 ```
 1. Parse user description from Input
-   ’  Feature description provided with comprehensive requirements
+   ï¿½  Feature description provided with comprehensive requirements
 2. Extract key concepts from description
-   ’  Identified: studio operators, photo search, multi-modal search, navigation
+   ï¿½  Identified: studio operators, photo search, multi-modal search, navigation
 3. For each unclear aspect:
-   ’  All aspects clearly specified in user input
+   ï¿½  All aspects clearly specified in user input
 4. Fill User Scenarios & Testing section
-   ’  Clear user flows for search and navigation scenarios
+   ï¿½  Clear user flows for search and navigation scenarios
 5. Generate Functional Requirements
-   ’  All requirements testable and measurable
+   ï¿½  All requirements testable and measurable
 6. Identify Key Entities (if data involved)
-   ’  Photos, search indexes, thumbnails, metadata identified
+   ï¿½  Photos, search indexes, thumbnails, metadata identified
 7. Run Review Checklist
-   ’  No implementation details, focused on user needs
+   ï¿½  No implementation details, focused on user needs
 8. Return: SUCCESS (spec ready for planning)
 ```
 
 ---
 
-## ¡ Quick Guidelines
+## ï¿½ Quick Guidelines
 -  Focus on WHAT users need and WHY
 - L Avoid HOW to implement (no tech stack, APIs, code structure)
 - =e Written for business stakeholders, not developers

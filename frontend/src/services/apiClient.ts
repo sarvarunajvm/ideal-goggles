@@ -64,6 +64,20 @@ export interface IndexStatus {
   estimated_completion: string | null;
 }
 
+export interface DependencyStatus {
+  name: string;
+  installed: boolean;
+  version: string | null;
+  required: boolean;
+  description: string;
+}
+
+export interface DependenciesResponse {
+  core: DependencyStatus[];
+  ml: DependencyStatus[];
+  features: Record<string, boolean>;
+}
+
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const baseUrl = getApiBaseUrl();
@@ -273,6 +287,20 @@ class ApiService {
         person_id: personId,
         top_k: topK,
       }),
+    });
+  }
+
+  // Dependencies endpoints
+  async getDependencies(): Promise<DependenciesResponse> {
+    return this.request<DependenciesResponse>('/dependencies');
+  }
+
+  async installDependencies(components: string[] = ['all']): Promise<Record<string, unknown>> {
+    logger.info('Installing ML dependencies', { components });
+
+    return this.request('/dependencies/install', {
+      method: 'POST',
+      body: JSON.stringify({ components }),
     });
   }
 }

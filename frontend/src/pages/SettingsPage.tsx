@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService, IndexStatus } from '../services/apiClient';
+import DependenciesManager from '../components/DependenciesManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,8 @@ import {
   Image,
   Users,
   FileText,
-  Activity
+  Activity,
+  Package
 } from 'lucide-react';
 
 interface IndexStats {
@@ -192,7 +194,7 @@ export default function SettingsPage() {
           </div>
 
           <Tabs defaultValue="storage" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="storage" className="flex items-center space-x-2">
                 <Database className="h-4 w-4" />
                 <span>Storage & Indexing</span>
@@ -200,6 +202,10 @@ export default function SettingsPage() {
               <TabsTrigger value="features" className="flex items-center space-x-2">
                 <Search className="h-4 w-4" />
                 <span>Search Features</span>
+              </TabsTrigger>
+              <TabsTrigger value="dependencies" className="flex items-center space-x-2">
+                <Package className="h-4 w-4" />
+                <span>Dependencies</span>
               </TabsTrigger>
               <TabsTrigger value="status" className="flex items-center space-x-2">
                 <Activity className="h-4 w-4" />
@@ -554,6 +560,10 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="dependencies" className="space-y-6">
+              <DependenciesManager />
             </TabsContent>
 
             {/* Save Configuration */}

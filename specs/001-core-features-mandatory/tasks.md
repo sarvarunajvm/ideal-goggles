@@ -1,4 +1,4 @@
-# Tasks: Photo Search and Navigation System
+# Tasks: Ideal Goggles
 
 **Input**: Design documents from `/specs/001-core-features-mandatory/`
 **Prerequisites**: plan.md (required), research.md, data-model.md, contracts/

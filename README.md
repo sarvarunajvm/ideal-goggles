@@ -43,6 +43,30 @@ cd ..
 pnpm run dev
 ```
 
+### Optional: ML Dependencies
+
+Ideal Goggles works out of the box with basic search functionality. To enable advanced features like OCR, semantic search, and face recognition, install the optional ML dependencies:
+
+```bash
+# Install all ML dependencies (OCR, semantic search, face recognition)
+make backend-install-ml
+
+# Or install specific components:
+cd backend
+python scripts/install_ml_dependencies.py --skip-face  # Install only OCR and CLIP
+python scripts/install_ml_dependencies.py --skip-clip  # Install only OCR and face recognition
+
+# Check installation status
+make backend-check-ml
+```
+
+**ML Features:**
+- **Tesseract OCR**: Extract and search text within images
+- **CLIP**: Natural language semantic search ("photos of sunset at beach")
+- **InsightFace**: Face detection and recognition for people search
+
+These dependencies are optional and can be installed later if needed. The app will gracefully disable features that require missing dependencies.
+
 The app will launch with:
 - Backend API on http://localhost:5555
 - Frontend on http://localhost:3333

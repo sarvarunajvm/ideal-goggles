@@ -9,10 +9,15 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex flex-col h-screen bg-background">
+      {/* Top Navigation Bar */}
       <Navigation />
-      <div className="flex-1 overflow-auto">
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto">
         {children}
-      </div>
+      </main>
+
+      {/* Footer Status Bar */}
       <StatusBar />
     </div>
   );

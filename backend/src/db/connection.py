@@ -145,11 +145,14 @@ class DatabaseManager:
         may be restricted.
         """
         if db_path is None:
-            data_dir = Path("./data")
+            # Use absolute path based on the backend directory
+            import os
+            backend_dir = Path(__file__).resolve().parent.parent.parent
+            data_dir = backend_dir / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
             db_path = data_dir / "photos.db"
 
-        self.db_path = Path(db_path)
+        self.db_path = Path(db_path).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = None
 
@@ -162,15 +165,27 @@ class DatabaseManager:
             logger.info(f"Creating new database at {self.db_path}")
             self._run_migrations()
         else:
-            # Check if we need to run migrations
-            current_version = self._get_schema_version()
-            latest_version = self._get_latest_migration_version()
-
-            if current_version < latest_version:
-                logger.info(
-                    f"Upgrading database from version {current_version} to {latest_version}"
+            # Check if the database has tables
+            with self.get_connection() as conn:
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
                 )
-                self._run_migrations(from_version=current_version)
+                tables = cursor.fetchall()
+
+            if not tables:
+                # Database file exists but is empty, initialize it
+                logger.info(f"Initializing empty database at {self.db_path}")
+                self._run_migrations()
+            else:
+                # Check if we need to run migrations
+                current_version = self._get_schema_version()
+                latest_version = self._get_latest_migration_version()
+
+                if current_version < latest_version:
+                    logger.info(
+                        f"Upgrading database from version {current_version} to {latest_version}"
+                    )
+                    self._run_migrations(from_version=current_version)
 
     def _get_schema_version(self) -> int:
         """Get current schema version from database."""

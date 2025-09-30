@@ -1,4 +1,4 @@
-# Data Model: Photo Search and Navigation System
+# Data Model: Ideal Goggles
 
 ## Core Entities
 

@@ -21,9 +21,9 @@ class Settings(BaseSettings):
         default="sqlite+aiosqlite:///./data/photos.db", env="DATABASE_URL"
     )
 
-    # Storage paths
-    DATA_DIR: Path = Field(default=Path("./data"), env="DATA_DIR")
-    CACHE_DIR: Path = Field(default=Path("./cache"), env="CACHE_DIR")
+    # Storage paths - use absolute paths
+    DATA_DIR: Path | None = Field(default=None, env="DATA_DIR")
+    CACHE_DIR: Path | None = Field(default=None, env="CACHE_DIR")
     # Compute thumbnails dir relative to CACHE_DIR unless explicitly overridden.
     THUMBNAILS_DIR: Path | None = Field(default=None, env="THUMBNAILS_DIR")
 
@@ -59,9 +59,27 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize settings and create required directories."""
         super().__init__(**kwargs)
+
+        # Get backend directory for relative paths
+        backend_dir = Path(__file__).resolve().parent.parent.parent
+
+        # Set default paths if not provided
+        if self.DATA_DIR is None:
+            self.DATA_DIR = backend_dir / "data"
+        else:
+            self.DATA_DIR = Path(self.DATA_DIR).resolve()
+
+        if self.CACHE_DIR is None:
+            self.CACHE_DIR = backend_dir / "cache"
+        else:
+            self.CACHE_DIR = Path(self.CACHE_DIR).resolve()
+
         # Derive thumbnails directory if not set
         if self.THUMBNAILS_DIR is None:
             self.THUMBNAILS_DIR = self.CACHE_DIR / "thumbs"
+        else:
+            self.THUMBNAILS_DIR = Path(self.THUMBNAILS_DIR).resolve()
+
         self._create_directories()
 
     def _create_directories(self) -> None:

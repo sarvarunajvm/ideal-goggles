@@ -22,6 +22,8 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Backend:$(NC)"
 	@echo "  backend-install    Install backend dependencies"
+	@echo "  backend-install-ml Install optional ML dependencies (OCR, semantic search, face)"
+	@echo "  backend-check-ml   Check ML dependencies status"
 	@echo "  backend-dev        Run backend development server"
 	@echo "  backend-test       Run backend tests"
 	@echo "  backend-lint       Run backend linter (ruff)"
@@ -81,6 +83,15 @@ backend-install:
 	cd backend && $(PYTHON) -m venv .venv && \
 		.venv/bin/pip install --upgrade pip && \
 		.venv/bin/pip install -e ".[dev]"
+
+backend-install-ml:
+	@echo "$(YELLOW)Installing ML dependencies (OCR, semantic search, face recognition)...$(NC)"
+	@cd backend && $(PYTHON) scripts/install_ml_dependencies.py
+	@echo "$(GREEN)✓ ML dependencies installed$(NC)"
+
+backend-check-ml:
+	@echo "$(YELLOW)Checking ML dependencies status...$(NC)"
+	@cd backend && $(PYTHON) scripts/install_ml_dependencies.py --verify-only
 
 backend-dev:
 	cd backend && .venv/bin/python -m src.main

@@ -110,8 +110,8 @@ export default function StatusBar() {
   };
 
   return (
-    <div className="bg-muted/30 border-t border-border px-4 sm:px-6 py-2">
-      <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
+    <footer className="bg-card border-t border-border px-4 py-2 shrink-0">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
         {/* Connection Status */}
         <div className="flex items-center space-x-3">
           <Badge
@@ -221,6 +221,6 @@ export default function StatusBar() {
           )}
         </div>
       )}
-    </div>
+    </footer>
   );
 }

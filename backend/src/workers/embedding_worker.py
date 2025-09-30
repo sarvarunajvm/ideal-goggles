@@ -303,6 +303,10 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
             f"Optimized embedding completed: {successful_count}/{len(photos)} successful"
         )
 
+        # Save embeddings to database
+        if successful_count > 0:
+            self._save_embeddings_to_database(results)
+
         return results
 
     async def _process_batch_on_gpu(
@@ -404,6 +408,39 @@ class OptimizedCLIPWorker(CLIPEmbeddingWorker):
     def clear_cache(self):
         """Clear the embedding cache."""
         self.embedding_cache.clear()
+
+    def _save_embeddings_to_database(self, embeddings: list[Embedding | None]):
+        """Save generated embeddings to database."""
+        try:
+            from ..db.connection import get_database_manager
+
+            db_manager = get_database_manager()
+            saved_count = 0
+
+            for embedding in embeddings:
+                if embedding:
+                    try:
+                        # Convert numpy array to blob
+                        vector_blob = embedding._numpy_to_blob(embedding.clip_vector)
+
+                        # Save to database
+                        with db_manager.get_transaction() as conn:
+                            conn.execute(
+                                """
+                                INSERT OR REPLACE INTO embeddings
+                                (file_id, clip_vector, embedding_model, processed_at)
+                                VALUES (?, ?, ?, ?)
+                                """,
+                                (embedding.file_id, vector_blob, embedding.embedding_model, embedding.processed_at)
+                            )
+                        saved_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to save embedding for file_id {embedding.file_id}: {e}")
+
+            logger.info(f"Saved {saved_count} embeddings to database")
+
+        except Exception as e:
+            logger.error(f"Failed to save embeddings to database: {e}")
 
     def get_cache_statistics(self) -> dict[str, Any]:
         """Get cache statistics."""

@@ -28,8 +28,8 @@ class Logger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000; // Keep last 1000 logs in memory
   private performanceMetrics: Map<string, PerformanceMetrics> = new Map();
-  private isDevelopment = process.env.NODE_ENV === 'development';
-  private logLevel: string = process.env.VITE_LOG_LEVEL || 'INFO';
+  private isDevelopment = import.meta.env.DEV;
+  private logLevel: string = import.meta.env.VITE_LOG_LEVEL || 'INFO';
   private requestIdCounter = 0;
 
   private constructor() {

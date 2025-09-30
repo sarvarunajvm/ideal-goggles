@@ -1,4 +1,4 @@
-# Research Findings: Photo Search and Navigation System
+# Research Findings: Ideal Goggles
 
 ## Technology Stack Research
 
