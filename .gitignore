@@ -74,8 +74,7 @@ backend/data/
 backend/cache/
 backend/performance_report.txt
 
-# Lock files (not used - project uses --no-frozen-lockfile)
-pnpm-lock.yaml
+# Lock files (committed for CI caching)
 
 # Environment files (keep examples)
 .env
