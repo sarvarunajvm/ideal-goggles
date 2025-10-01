@@ -59,7 +59,9 @@ describe('ResultsGrid Component', () => {
 
     expect(screen.getByText('wedding1.jpg')).toBeInTheDocument()
     expect(screen.getByText('portrait1.jpg')).toBeInTheDocument()
-    expect(screen.getByText('/test/photos')).toBeInTheDocument()
+    // Both items have the same folder, so we expect 2 instances
+    const folderElements = screen.getAllByText('/test/photos')
+    expect(folderElements).toHaveLength(2)
   })
 
   test('shows match type badges', () => {

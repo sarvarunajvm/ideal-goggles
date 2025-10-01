@@ -13,6 +13,13 @@
     "type-check": "tsc --noEmit",
     "test": "jest -c jest.config.js",
     "test:coverage": "jest -c jest.config.js --coverage",
+    "test:p0": "jest -c jest.config.p0.js --coverage",
+    "test:p0:quick": "jest -c jest.config.p0.js",
+    "test:p1": "jest -c jest.config.p1.js --coverage",
+    "test:p2": "jest -c jest.config.p2.js --coverage",
+    "test:all": "npm run test:p0 && npm run test:p1 && npm run test:p2",
+    "test:ci:quick": "npm run test:p0:quick",
+    "test:ci:full": "npm run test:all",
     "test:unit": "jest -c jest.config.js tests/basic.test.js",
     "test:components": "jest -c jest.config.js --testPathPattern=tests/components/.*"
   },

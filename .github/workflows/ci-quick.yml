@@ -70,6 +70,12 @@ jobs:
         echo "Large files (>1MB):" >> $GITHUB_STEP_SUMMARY
         find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./dist*/*" -exec ls -lh {} \; | head -20 >> $GITHUB_STEP_SUMMARY || echo "No large files found ✅" >> $GITHUB_STEP_SUMMARY
 
+    - name: Run P0 Critical Tests
+      run: |
+        cd frontend
+        pnpm run test:p0:quick
+        cd ..
+
     - name: Quick smoke test
       run: |
         # Just verify imports work
