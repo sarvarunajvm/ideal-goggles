@@ -148,8 +148,17 @@ frontend-test:
 	cd frontend && $(NODE_PM) run test
 
 frontend-coverage:
-	@echo "$(YELLOW)Generating frontend coverage...$(NC)"
+	@echo "$(YELLOW)Running frontend tests with coverage...$(NC)"
 	cd frontend && $(NODE_PM) run test:coverage
+
+coverage: backend-coverage frontend-coverage
+	@echo "$(GREEN)✓ All coverage reports generated$(NC)"
+	@echo "$(YELLOW)Run 'make coverage-report' to view combined report$(NC)"
+
+coverage-report:
+	@echo "$(YELLOW)Generating combined coverage report...$(NC)"
+	@bash scripts/run-coverage.sh
+	@echo "$(GREEN)✓ Coverage report available at coverage-reports/index.html$(NC)"
 	@echo "$(GREEN)✓ Frontend coverage: frontend/coverage/lcov-report/index.html$(NC)"
 
 frontend-lint:
