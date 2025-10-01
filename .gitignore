@@ -74,7 +74,7 @@ backend/data/
 backend/cache/
 backend/performance_report.txt
 
-# PNPM lockfile (tracked)
+# Lock files (not used - project uses --no-frozen-lockfile)
 pnpm-lock.yaml
 
 # Environment files (keep examples)

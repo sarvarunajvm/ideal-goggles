@@ -28,7 +28,6 @@ jobs:
       uses: actions/setup-node@v5
       with:
         node-version: '20'
-        cache: 'pnpm'
 
     - name: Build backend binary (PyInstaller)
       working-directory: ./backend
@@ -40,7 +39,7 @@ jobs:
         pyinstaller --onefile --name ideal-goggles-backend -p src -s src/main.py
 
     - name: Install dependencies
-      run: pnpm install --no-lockfile
+      run: pnpm install --no-frozen-lockfile
 
     - name: Lint + typecheck frontend
       run: |

@@ -132,7 +132,6 @@ jobs:
       uses: actions/setup-node@v5
       with:
         node-version: '20'
-        cache: 'pnpm'
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -222,7 +221,6 @@ jobs:
       uses: actions/setup-node@v5
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
 
 
     - name: Install dependencies
@@ -287,7 +285,6 @@ jobs:
       uses: actions/setup-node@v5
       with:
         node-version: '20'
-        cache: 'pnpm'
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -412,7 +409,6 @@ jobs:
       uses: actions/setup-node@v5
       with:
         node-version: '20'
-        cache: 'pnpm'
 
     - name: Install dependencies
       run: |
