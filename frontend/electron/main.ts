@@ -29,7 +29,7 @@ async function startBackend(): Promise<void> {
     });
   };
 
-  const waitForPort = (port: number, host = '127.0.0.1', retries = 40, delayMs = 500): Promise<void> => {
+  const waitForPort = (port: number, host = '127.0.0.1', retries = 60, delayMs = 500): Promise<void> => {
     console.log(`[Backend] Waiting for port ${host}:${port} to become available...`);
     return new Promise((resolve, reject) => {
       const tryOnce = (attempt: number) => {
@@ -182,6 +182,13 @@ async function startBackend(): Promise<void> {
 
       backendProcess.on('error', (error) => {
         console.error('[Backend] Process spawn error:', error);
+        console.error('[Backend] Error details:', {
+          message: error.message,
+          code: (error as any).code,
+          errno: (error as any).errno,
+          syscall: (error as any).syscall,
+          path: (error as any).path
+        });
         reject(error);
       });
 
@@ -234,13 +241,13 @@ function createWindow(): void {
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
     },
-    icon: join(__dirname, '../build-resources/icon.png'), // App icon
+    icon: join(__dirname, '../../../build-resources/icon.png'), // App icon
   });
 
   // Load the app
   const startUrl = isDev
     ? 'http://localhost:3333'  // Vite dev server (configured in vite.config.ts)
-    : `file://${join(__dirname, '../../frontend/dist/index.html')}#/`;
+    : `file://${join(__dirname, '../../dist/index.html')}#/`;
 
   mainWindow.loadURL(startUrl);
 

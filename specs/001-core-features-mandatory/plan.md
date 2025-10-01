@@ -79,10 +79,10 @@ src/
 ├── cli/
 └── lib/
 
-tests/
-├── contract/
+func_tests/
+├── e2e/
 ├── integration/
-└── unit/
+└── functional/
 
 # Option 2: Web application (when "frontend" + "backend" detected)
 backend/

@@ -1,7 +1,6 @@
 packages:
   - frontend
-  - electron
-  - tests
+  - func_tests
 
 onlyBuiltDependencies:
   - electron

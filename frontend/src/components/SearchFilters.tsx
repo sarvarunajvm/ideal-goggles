@@ -1,23 +1,26 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
 interface SearchFilters {
-  from: string;
-  to: string;
-  folder: string;
-  limit: number;
+  from: string
+  to: string
+  folder: string
+  limit: number
 }
 
 interface SearchFiltersProps {
-  filters: SearchFilters;
-  onChange: (filters: Partial<SearchFilters>) => void;
+  filters: SearchFilters
+  onChange: (filters: Partial<SearchFilters>) => void
 }
 
-export default function SearchFilters({ filters, onChange }: SearchFiltersProps) {
-  const [showFilters, setShowFilters] = useState(false);
+export default function SearchFilters({
+  filters,
+  onChange,
+}: SearchFiltersProps) {
+  const [showFilters, setShowFilters] = useState(false)
 
   const handleChange = (key: string, value: string | number) => {
-    onChange({ [key]: value });
-  };
+    onChange({ [key]: value })
+  }
 
   return (
     <div className="mt-4">
@@ -28,7 +31,9 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
       >
         <span>🔧</span>
         <span>Filters</span>
-        <span className={`transform transition-transform ${showFilters ? 'rotate-180' : ''}`}>
+        <span
+          className={`transform transition-transform ${showFilters ? 'rotate-180' : ''}`}
+        >
           ▼
         </span>
       </button>
@@ -45,7 +50,7 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
               <input
                 type="date"
                 value={filters.from}
-                onChange={(e) => handleChange('from', e.target.value)}
+                onChange={e => handleChange('from', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -57,7 +62,7 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
               <input
                 type="date"
                 value={filters.to}
-                onChange={(e) => handleChange('to', e.target.value)}
+                onChange={e => handleChange('to', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -71,7 +76,7 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
                 type="text"
                 placeholder="Filter by folder..."
                 value={filters.folder}
-                onChange={(e) => handleChange('folder', e.target.value)}
+                onChange={e => handleChange('folder', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -83,7 +88,7 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
               </label>
               <select
                 value={filters.limit}
-                onChange={(e) => handleChange('limit', parseInt(e.target.value))}
+                onChange={e => handleChange('limit', parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value={10}>10 photos</option>
@@ -98,7 +103,9 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
           {/* Clear Filters */}
           <div className="mt-4">
             <button
-              onClick={() => onChange({ from: '', to: '', folder: '', limit: 50 })}
+              onClick={() =>
+                onChange({ from: '', to: '', folder: '', limit: 50 })
+              }
               className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
             >
               Clear All Filters
@@ -107,5 +114,5 @@ export default function SearchFilters({ filters, onChange }: SearchFiltersProps)
         </div>
       )}
     </div>
-  );
+  )
 }

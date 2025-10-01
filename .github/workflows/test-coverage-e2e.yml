@@ -324,7 +324,7 @@ jobs:
         cd ..
 
         # E2E tests
-        cd tests
+        cd func_tests
         pnpm install --no-frozen-lockfile
         npx playwright install --with-deps ${{ matrix.browser }}
 
@@ -376,7 +376,7 @@ jobs:
 
     - name: Run E2E tests
       run: |
-        cd tests
+        cd func_tests
         npx playwright test --project=${{ matrix.browser }} --reporter=blob
       continue-on-error: true
       env:
@@ -390,8 +390,8 @@ jobs:
       with:
         name: e2e-test-reports-${{ matrix.browser }}
         path: |
-          tests/blob-report/
-          tests/playwright-report/
+          func_tests/blob-report/
+          func_tests/playwright-report/
           backend/logs/
         retention-days: 3
 
@@ -416,7 +416,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd tests
+        cd func_tests
         pnpm install --no-frozen-lockfile
 
     - name: Download all test reports
@@ -427,7 +427,7 @@ jobs:
 
     - name: Merge reports
       run: |
-        cd tests
+        cd func_tests
         # Find and merge blob reports
         if find ../all-test-reports -name "blob-report" -type d | head -1 > /dev/null; then
           npx playwright merge-reports --reporter=html,github ../all-test-reports/*/blob-report || echo "No blob reports to merge"
@@ -439,7 +439,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: e2e-test-report
-        path: tests/playwright-report/
+        path: func_tests/playwright-report/
 
   # Generate Combined Coverage Report
   generate-coverage-report:

@@ -1,17 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiService, IndexStatus } from '../services/apiClient';
-import DependenciesManager from '../components/DependenciesManager';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect, useCallback } from 'react'
+import { apiService, IndexStatus } from '../services/apiClient'
+import DependenciesManager from '../components/DependenciesManager'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Toaster } from '@/components/ui/toaster'
+import { useToast } from '@/components/ui/use-toast'
 import {
   FolderOpen,
   Settings2,
@@ -29,74 +35,75 @@ import {
   Users,
   FileText,
   Activity,
-  Package
-} from 'lucide-react';
+  Package,
+} from 'lucide-react'
 
 interface IndexStats {
   database: {
-    total_photos: number;
-    indexed_photos: number;
-    photos_with_embeddings: number;
-    total_faces: number;
-  };
+    total_photos: number
+    indexed_photos: number
+    photos_with_embeddings: number
+    total_faces: number
+  }
 }
 
 export default function SettingsPage() {
-  const { toast } = useToast();
-  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
-  const [indexStats, setIndexStats] = useState<IndexStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { toast } = useToast()
+  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null)
+  const [indexStats, setIndexStats] = useState<IndexStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   // Form state
-  const [rootFolders, setRootFolders] = useState<string[]>([]);
-  const [newFolderPath, setNewFolderPath] = useState('');
-  const [ocrLanguages, setOcrLanguages] = useState<string[]>([]);
-  const [faceSearchEnabled, setFaceSearchEnabled] = useState(false);
-  const [semanticSearchEnabled, setSemanticSearchEnabled] = useState(true);
-  const [batchSize, setBatchSize] = useState(50);
-  const [thumbnailSize, setThumbnailSize] = useState('medium');
+  const [rootFolders, setRootFolders] = useState<string[]>([])
+  const [newFolderPath, setNewFolderPath] = useState('')
+  const [ocrLanguages, setOcrLanguages] = useState<string[]>([])
+  const [faceSearchEnabled, setFaceSearchEnabled] = useState(false)
+  const [semanticSearchEnabled, setSemanticSearchEnabled] = useState(true)
+  const [batchSize, setBatchSize] = useState(50)
+  const [thumbnailSize, setThumbnailSize] = useState('medium')
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true);
+      setLoading(true)
       const [configData, statusData, statsData] = await Promise.all([
         apiService.getConfig(),
         apiService.getIndexStatus(),
         apiService.getIndexStats(),
-      ]);
+      ])
 
-      setIndexStatus(statusData);
-      setIndexStats(statsData as unknown as IndexStats);
+      setIndexStatus(statusData)
+      setIndexStats(statsData as unknown as IndexStats)
 
       // Update form state
-      setRootFolders(configData.roots || []);
-      setOcrLanguages(configData.ocr_languages || []);
-      setFaceSearchEnabled(configData.face_search_enabled || false);
-      setSemanticSearchEnabled(configData.semantic_search_enabled !== false);
-      setBatchSize(configData.batch_size || 50);
-      setThumbnailSize(configData.thumbnail_size || 'medium');
+      setRootFolders(configData.roots || [])
+      setOcrLanguages(configData.ocr_languages || [])
+      setFaceSearchEnabled(configData.face_search_enabled || false)
+      setSemanticSearchEnabled(configData.semantic_search_enabled !== false)
+      setBatchSize(configData.batch_size || 50)
+      setThumbnailSize(configData.thumbnail_size || 'medium')
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to load configuration',
-        variant: "destructive",
-      });
+        title: 'Error',
+        description:
+          err instanceof Error ? err.message : 'Failed to load configuration',
+        variant: 'destructive',
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [toast]);
+  }, [toast])
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData()
+  }, [loadData])
 
   const saveConfig = async () => {
     try {
-      setSaving(true);
+      setSaving(true)
 
       // Update root folders
-      await apiService.updateRoots(rootFolders);
+      await apiService.updateRoots(rootFolders)
 
       // Update other config
       await apiService.updateConfig({
@@ -105,72 +112,75 @@ export default function SettingsPage() {
         semantic_search_enabled: semanticSearchEnabled,
         batch_size: batchSize,
         thumbnail_size: thumbnailSize,
-      });
+      })
 
       toast({
-        title: "Success",
-        description: "Configuration saved successfully!",
-      });
+        title: 'Success',
+        description: 'Configuration saved successfully!',
+      })
 
       // Reload data
-      await loadData();
+      await loadData()
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to save configuration',
-        variant: "destructive",
-      });
+        title: 'Error',
+        description:
+          err instanceof Error ? err.message : 'Failed to save configuration',
+        variant: 'destructive',
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const addRootFolder = () => {
     if (newFolderPath.trim() && !rootFolders.includes(newFolderPath.trim())) {
-      setRootFolders([...rootFolders, newFolderPath.trim()]);
-      setNewFolderPath('');
+      setRootFolders([...rootFolders, newFolderPath.trim()])
+      setNewFolderPath('')
     }
-  };
+  }
 
   const removeRootFolder = (index: number) => {
-    setRootFolders(rootFolders.filter((_, i) => i !== index));
-  };
+    setRootFolders(rootFolders.filter((_, i) => i !== index))
+  }
 
   const startIndexing = async (full = false) => {
     try {
-      await apiService.startIndexing(full);
+      await apiService.startIndexing(full)
       toast({
-        title: "Success",
+        title: 'Success',
         description: `${full ? 'Full' : 'Incremental'} indexing started!`,
-      });
+      })
       // Reload status
-      await loadData();
+      await loadData()
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to start indexing',
-        variant: "destructive",
-      });
+        title: 'Error',
+        description:
+          err instanceof Error ? err.message : 'Failed to start indexing',
+        variant: 'destructive',
+      })
     }
-  };
+  }
 
   const stopIndexing = async () => {
     try {
-      await apiService.stopIndexing();
+      await apiService.stopIndexing()
       toast({
-        title: "Success",
-        description: "Indexing stopped!",
-      });
+        title: 'Success',
+        description: 'Indexing stopped!',
+      })
       // Reload status
-      await loadData();
+      await loadData()
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to stop indexing',
-        variant: "destructive",
-      });
+        title: 'Error',
+        description:
+          err instanceof Error ? err.message : 'Failed to stop indexing',
+        variant: 'destructive',
+      })
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -180,12 +190,11 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">Loading settings...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <>
-
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center space-x-3 mb-8">
@@ -195,19 +204,31 @@ export default function SettingsPage() {
 
           <Tabs defaultValue="storage" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="storage" className="flex items-center space-x-2">
+              <TabsTrigger
+                value="storage"
+                className="flex items-center space-x-2"
+              >
                 <Database className="h-4 w-4" />
                 <span>Storage & Indexing</span>
               </TabsTrigger>
-              <TabsTrigger value="features" className="flex items-center space-x-2">
+              <TabsTrigger
+                value="features"
+                className="flex items-center space-x-2"
+              >
                 <Search className="h-4 w-4" />
                 <span>Search Features</span>
               </TabsTrigger>
-              <TabsTrigger value="dependencies" className="flex items-center space-x-2">
+              <TabsTrigger
+                value="dependencies"
+                className="flex items-center space-x-2"
+              >
                 <Package className="h-4 w-4" />
                 <span>Dependencies</span>
               </TabsTrigger>
-              <TabsTrigger value="status" className="flex items-center space-x-2">
+              <TabsTrigger
+                value="status"
+                className="flex items-center space-x-2"
+              >
                 <Activity className="h-4 w-4" />
                 <span>System Status</span>
               </TabsTrigger>
@@ -222,15 +243,21 @@ export default function SettingsPage() {
                     <span>Photo Directories</span>
                   </CardTitle>
                   <CardDescription>
-                    Configure which folders to scan for photos. The system will recursively search these directories.
+                    Configure which folders to scan for photos. The system will
+                    recursively search these directories.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Current Folders */}
                   <div className="space-y-2">
                     {rootFolders.map((folder, index) => (
-                      <div key={index} className="group flex items-center justify-between p-3 bg-muted/50 rounded-lg border transition-all duration-200 hover:bg-muted">
-                        <span className="font-mono text-sm flex-1 truncate">{folder}</span>
+                      <div
+                        key={index}
+                        className="group flex items-center justify-between p-3 bg-muted/50 rounded-lg border transition-all duration-200 hover:bg-muted"
+                      >
+                        <span className="font-mono text-sm flex-1 truncate">
+                          {folder}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -247,7 +274,7 @@ export default function SettingsPage() {
                   <div className="flex space-x-2">
                     <Input
                       value={newFolderPath}
-                      onChange={(e) => setNewFolderPath(e.target.value)}
+                      onChange={e => setNewFolderPath(e.target.value)}
                       placeholder="/path/to/your/photos"
                       className="flex-1"
                     />
@@ -282,9 +309,11 @@ export default function SettingsPage() {
                         <Label className="font-medium">Current Status</Label>
                         <Badge
                           variant={
-                            indexStatus.status === 'indexing' ? 'default' :
-                            indexStatus.status === 'error' ? 'destructive' :
-                            'secondary'
+                            indexStatus.status === 'indexing'
+                              ? 'default'
+                              : indexStatus.status === 'error'
+                                ? 'destructive'
+                                : 'secondary'
                           }
                           className="capitalize"
                         >
@@ -295,16 +324,26 @@ export default function SettingsPage() {
                       {indexStatus.status === 'indexing' && (
                         <div className="space-y-2">
                           <div className="text-sm text-muted-foreground">
-                            Phase: <span className="font-medium">{indexStatus.progress.current_phase}</span>
+                            Phase:{' '}
+                            <span className="font-medium">
+                              {indexStatus.progress.current_phase}
+                            </span>
                           </div>
                           {indexStatus.progress.total_files > 0 && (
                             <div className="space-y-1">
                               <div className="flex justify-between text-sm">
                                 <span>Progress</span>
-                                <span>{indexStatus.progress.processed_files}/{indexStatus.progress.total_files} files</span>
+                                <span>
+                                  {indexStatus.progress.processed_files}/
+                                  {indexStatus.progress.total_files} files
+                                </span>
                               </div>
                               <Progress
-                                value={(indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100}
+                                value={
+                                  (indexStatus.progress.processed_files /
+                                    indexStatus.progress.total_files) *
+                                  100
+                                }
                                 className="h-2"
                               />
                             </div>
@@ -319,11 +358,16 @@ export default function SettingsPage() {
                               {indexStatus.errors.length} error(s) encountered
                             </summary>
                             <div className="mt-2 space-y-1 max-h-24 overflow-y-auto">
-                              {indexStatus.errors.map((error: string, index: number) => (
-                                <div key={index} className="text-destructive font-mono text-xs p-1 bg-background rounded">
-                                  {error}
-                                </div>
-                              ))}
+                              {indexStatus.errors.map(
+                                (error: string, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="text-destructive font-mono text-xs p-1 bg-background rounded"
+                                  >
+                                    {error}
+                                  </div>
+                                )
+                              )}
                             </div>
                           </details>
                         </div>
@@ -374,28 +418,37 @@ export default function SettingsPage() {
                     <span>OCR Languages</span>
                   </CardTitle>
                   <CardDescription>
-                    Select languages for text extraction from images (requires Tesseract).
+                    Select languages for text extraction from images (requires
+                    Tesseract).
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {[
                       { code: 'eng', name: 'English' },
-                      { code: 'tam', name: 'Tamil' }
+                      { code: 'tam', name: 'Tamil' },
                     ].map(({ code, name }) => (
-                      <div key={code} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div
+                        key={code}
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
                         <Checkbox
                           id={`ocr-${code}`}
                           checked={ocrLanguages.includes(code)}
-                          onCheckedChange={(checked) => {
+                          onCheckedChange={checked => {
                             if (checked) {
-                              setOcrLanguages([...ocrLanguages, code]);
+                              setOcrLanguages([...ocrLanguages, code])
                             } else {
-                              setOcrLanguages(ocrLanguages.filter(l => l !== code));
+                              setOcrLanguages(
+                                ocrLanguages.filter(l => l !== code)
+                              )
                             }
                           }}
                         />
-                        <Label htmlFor={`ocr-${code}`} className="font-medium cursor-pointer">
+                        <Label
+                          htmlFor={`ocr-${code}`}
+                          className="font-medium cursor-pointer"
+                        >
                           {name}
                         </Label>
                       </div>
@@ -418,7 +471,9 @@ export default function SettingsPage() {
                 <CardContent>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <Label htmlFor="semantic-search" className="font-medium">Enable Semantic Search</Label>
+                      <Label htmlFor="semantic-search" className="font-medium">
+                        Enable Semantic Search
+                      </Label>
                       <p className="text-sm text-muted-foreground mt-1">
                         Use AI embeddings for natural language photo search.
                       </p>
@@ -446,9 +501,12 @@ export default function SettingsPage() {
                 <CardContent>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <Label htmlFor="face-search" className="font-medium">Enable Face Search</Label>
+                      <Label htmlFor="face-search" className="font-medium">
+                        Enable Face Search
+                      </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Detect and recognize faces in photos (requires additional dependencies).
+                        Detect and recognize faces in photos (requires
+                        additional dependencies).
                       </p>
                     </div>
                     <Switch
@@ -474,7 +532,9 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   {/* Batch Size */}
                   <div className="space-y-2">
-                    <Label htmlFor="batch-size" className="font-medium">Batch Size</Label>
+                    <Label htmlFor="batch-size" className="font-medium">
+                      Batch Size
+                    </Label>
                     <div className="flex items-center space-x-3">
                       <Input
                         id="batch-size"
@@ -482,10 +542,14 @@ export default function SettingsPage() {
                         min="1"
                         max="500"
                         value={batchSize}
-                        onChange={(e) => setBatchSize(parseInt(e.target.value) || 50)}
+                        onChange={e =>
+                          setBatchSize(parseInt(e.target.value) || 50)
+                        }
                         className="w-32"
                       />
-                      <span className="text-sm text-muted-foreground">photos per batch</span>
+                      <span className="text-sm text-muted-foreground">
+                        photos per batch
+                      </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Number of photos to process in each batch during indexing.
@@ -494,11 +558,13 @@ export default function SettingsPage() {
 
                   {/* Thumbnail Size */}
                   <div className="space-y-2">
-                    <Label htmlFor="thumbnail-size" className="font-medium">Thumbnail Size</Label>
+                    <Label htmlFor="thumbnail-size" className="font-medium">
+                      Thumbnail Size
+                    </Label>
                     <select
                       id="thumbnail-size"
                       value={thumbnailSize}
-                      onChange={(e) => setThumbnailSize(e.target.value)}
+                      onChange={e => setThumbnailSize(e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="small">Small (150x150)</option>
@@ -533,28 +599,36 @@ export default function SettingsPage() {
                         <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                           {indexStats.database.total_photos.toLocaleString()}
                         </div>
-                        <div className="text-sm text-blue-600 dark:text-blue-400">Total Photos</div>
+                        <div className="text-sm text-blue-600 dark:text-blue-400">
+                          Total Photos
+                        </div>
                       </div>
                       <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 transition-all duration-200 hover:shadow-sm">
                         <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
                         <div className="text-2xl font-bold text-green-700 dark:text-green-300">
                           {indexStats.database.indexed_photos.toLocaleString()}
                         </div>
-                        <div className="text-sm text-green-600 dark:text-green-400">Indexed</div>
+                        <div className="text-sm text-green-600 dark:text-green-400">
+                          Indexed
+                        </div>
                       </div>
                       <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 transition-all duration-200 hover:shadow-sm">
                         <Search className="h-8 w-8 mx-auto mb-2 text-purple-600" />
                         <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                           {indexStats.database.photos_with_embeddings.toLocaleString()}
                         </div>
-                        <div className="text-sm text-purple-600 dark:text-purple-400">With Embeddings</div>
+                        <div className="text-sm text-purple-600 dark:text-purple-400">
+                          With Embeddings
+                        </div>
                       </div>
                       <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 transition-all duration-200 hover:shadow-sm">
                         <Users className="h-8 w-8 mx-auto mb-2 text-orange-600" />
                         <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
                           {indexStats.database.total_faces.toLocaleString()}
                         </div>
-                        <div className="text-sm text-orange-600 dark:text-orange-400">Faces Detected</div>
+                        <div className="text-sm text-orange-600 dark:text-orange-400">
+                          Faces Detected
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -592,5 +666,5 @@ export default function SettingsPage() {
 
       <Toaster />
     </>
-  );
+  )
 }

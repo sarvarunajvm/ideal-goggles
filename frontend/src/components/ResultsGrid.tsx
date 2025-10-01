@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { SearchResult, getApiBaseUrl } from '../services/apiClient';
+import React, { useState, useRef, useEffect } from 'react'
+import { SearchResult, getThumbnailBaseUrl } from '../services/apiClient'
 
 interface ResultsGridProps {
-  results: SearchResult[];
-  loading?: boolean;
-  totalMatches?: number;
-  onItemClick?: (item: SearchResult) => void;
-  onItemDoubleClick?: (item: SearchResult) => void;
-  onItemRightClick?: (item: SearchResult, event: React.MouseEvent) => void;
-  onRevealInFolder?: (item: SearchResult) => void;
+  results: SearchResult[]
+  loading?: boolean
+  totalMatches?: number
+  onItemClick?: (item: SearchResult) => void
+  onItemDoubleClick?: (item: SearchResult) => void
+  onItemRightClick?: (item: SearchResult, event: React.MouseEvent) => void
+  onRevealInFolder?: (item: SearchResult) => void
 }
 
 export default function ResultsGrid({
@@ -18,64 +18,64 @@ export default function ResultsGrid({
   onItemClick,
   onItemDoubleClick,
   onItemRightClick,
-  onRevealInFolder
+  onRevealInFolder,
 }: ResultsGridProps) {
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Focus management for keyboard navigation
     if (gridRef.current && results.length > 0) {
-      const items = gridRef.current.querySelectorAll('.result-item');
+      const items = gridRef.current.querySelectorAll('.result-item')
       if (items[focusedIndex]) {
-        (items[focusedIndex] as HTMLElement).focus();
+        ;(items[focusedIndex] as HTMLElement).focus()
       }
     }
-  }, [focusedIndex, results]);
+  }, [focusedIndex, results])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const columns = 4; // Assuming 4 columns grid
+    const columns = 4 // Assuming 4 columns grid
     switch (e.key) {
       case 'ArrowRight':
-        setFocusedIndex(prev => Math.min(prev + 1, results.length - 1));
-        break;
+        setFocusedIndex(prev => Math.min(prev + 1, results.length - 1))
+        break
       case 'ArrowLeft':
-        setFocusedIndex(prev => Math.max(prev - 1, 0));
-        break;
+        setFocusedIndex(prev => Math.max(prev - 1, 0))
+        break
       case 'ArrowDown':
-        setFocusedIndex(prev => Math.min(prev + columns, results.length - 1));
-        break;
+        setFocusedIndex(prev => Math.min(prev + columns, results.length - 1))
+        break
       case 'ArrowUp':
-        setFocusedIndex(prev => Math.max(prev - columns, 0));
-        break;
+        setFocusedIndex(prev => Math.max(prev - columns, 0))
+        break
       case 'Enter':
         if (results[focusedIndex] && onItemDoubleClick) {
-          onItemDoubleClick(results[focusedIndex]);
+          onItemDoubleClick(results[focusedIndex])
         }
-        break;
+        break
     }
-  };
+  }
 
   const formatTimestamp = (timestamp: string | null) => {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) return 'Unknown'
     try {
-      return new Date(timestamp).toLocaleDateString();
+      return new Date(timestamp).toLocaleDateString()
     } catch {
-      return 'Unknown';
+      return 'Unknown'
     }
-  };
+  }
 
   const getBadgeColor = (badge: string) => {
     const colors: Record<string, string> = {
-      'OCR': 'bg-blue-100 text-blue-800',
-      'Face': 'bg-red-100 text-red-800',
+      OCR: 'bg-blue-100 text-blue-800',
+      Face: 'bg-red-100 text-red-800',
       'Photo-Match': 'bg-indigo-100 text-indigo-800',
-      'EXIF': 'bg-orange-100 text-orange-800',
-      'filename': 'bg-green-100 text-green-800',
-      'folder': 'bg-purple-100 text-purple-800',
-    };
-    return colors[badge] || 'bg-gray-100 text-gray-800';
-  };
+      EXIF: 'bg-orange-100 text-orange-800',
+      filename: 'bg-green-100 text-green-800',
+      folder: 'bg-purple-100 text-purple-800',
+    }
+    return colors[badge] || 'bg-gray-100 text-gray-800'
+  }
 
   if (loading) {
     return (
@@ -83,19 +83,21 @@ export default function ResultsGrid({
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <span className="sr-only">Loading...</span>
       </div>
-    );
+    )
   }
 
   if (results.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔍</div>
-        <h2 className="text-2xl font-semibold text-gray-700 mb-2">No results found</h2>
+        <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+          No results found
+        </h2>
         <p className="text-gray-500">
           Try a different search term or adjust your filters.
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -121,7 +123,7 @@ export default function ResultsGrid({
             }`}
             onClick={() => onItemClick?.(item)}
             onDoubleClick={() => onItemDoubleClick?.(item)}
-            onContextMenu={(e) => onItemRightClick?.(item, e)}
+            onContextMenu={e => onItemRightClick?.(item, e)}
             role="gridcell"
             tabIndex={index === focusedIndex ? 0 : -1}
             data-testid={`result-item-${item.file_id}`}
@@ -130,19 +132,33 @@ export default function ResultsGrid({
             <div className="aspect-square relative overflow-hidden bg-gray-100">
               {item.thumb_path ? (
                 <img
-                  src={`${getApiBaseUrl()}${item.thumb_path}`}
+                  src={`${getThumbnailBaseUrl()}/${item.thumb_path}`}
                   alt={item.filename}
                   className="w-full h-full object-cover"
                   style={{ minWidth: '256px', minHeight: '256px' }}
                   loading="lazy"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"%3E%3Crect width="256" height="256" fill="%23f0f0f0"/%3E%3Ctext x="128" y="128" text-anchor="middle" dominant-baseline="middle" fill="%23999" font-family="Arial" font-size="24"%3E📷%3C/text%3E%3C/svg%3E';
+                  onError={e => {
+                    ;(e.target as HTMLImageElement).src =
+                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"%3E%3Crect width="256" height="256" fill="%23f0f0f0"/%3E%3Ctext x="128" y="128" text-anchor="middle" dominant-baseline="middle" fill="%23999" font-family="Arial" font-size="24"%3E📷%3C/text%3E%3C/svg%3E'
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400" style={{ minWidth: '256px', minHeight: '256px' }}>
-                  <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <div
+                  className="w-full h-full flex items-center justify-center text-gray-400"
+                  style={{ minWidth: '256px', minHeight: '256px' }}
+                >
+                  <svg
+                    className="w-16 h-16"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
                   </svg>
                 </div>
               )}
@@ -157,11 +173,17 @@ export default function ResultsGrid({
 
             {/* Metadata */}
             <div className="p-4">
-              <h3 className="font-medium text-gray-900 truncate" title={item.path}>
+              <h3
+                className="font-medium text-gray-900 truncate"
+                title={item.path}
+              >
                 {item.filename}
               </h3>
 
-              <p className="text-sm text-gray-500 truncate mt-1" title={item.folder}>
+              <p
+                className="text-sm text-gray-500 truncate mt-1"
+                title={item.folder}
+              >
                 {item.folder}
               </p>
 
@@ -185,16 +207,19 @@ export default function ResultsGrid({
 
               {/* OCR Snippet */}
               {item.snippet && (
-                <p className="text-xs text-gray-600 mt-2 line-clamp-2" title={item.snippet}>
+                <p
+                  className="text-xs text-gray-600 mt-2 line-clamp-2"
+                  title={item.snippet}
+                >
                   {item.snippet}
                 </p>
               )}
 
               {/* Context menu button */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRevealInFolder?.(item);
+                onClick={e => {
+                  e.stopPropagation()
+                  onRevealInFolder?.(item)
                 }}
                 className="mt-2 text-xs text-blue-600 hover:text-blue-800"
                 title="Reveal in folder"
@@ -206,5 +231,5 @@ export default function ResultsGrid({
         ))}
       </div>
     </div>
-  );
+  )
 }

@@ -23,15 +23,13 @@ if [ $? -eq 0 ]; then
     echo "📦 Committing version updates..."
 
     # Stage all version file changes
-    git add package.json frontend/package.json tests/package.json backend/pyproject.toml
+    git add package.json backend/pyproject.toml
 
     # Create commit with version update
     git commit -m "chore: update version to $TAG
 
 Updated versions in:
 - package.json
-- frontend/package.json
-- tests/package.json
 - backend/pyproject.toml
 
 [skip ci]"

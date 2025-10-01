@@ -7,8 +7,8 @@ Thanks for your interest in contributing! This guide helps you set up, develop, 
 - Backend (FastAPI, Python): `backend/src` (API, services, workers)
 - Backend tests: `backend/tests` (unit, contract, integration, performance)
 - Frontend (React + Vite + Electron): `frontend/src`
-- Frontend tests: `frontend/tests` (components, unit); E2E: root `tests/` (Playwright)
-- Electron main: `electron/`
+- Frontend tests: `frontend/tests` (components, unit); E2E: root `func_tests/` (Playwright)
+- Electron main: `frontend/electron/`
 - Local runtime data: `backend/data`, `backend/cache`
 
 ## Setup
@@ -35,13 +35,13 @@ Thanks for your interest in contributing! This guide helps you set up, develop, 
 ## Testing
 
 - Backend: Pytest with markers `contract`, `integration`, `performance`. Example: `pytest -m "not performance"`.
-- Frontend: Jest + Testing Library in `frontend/tests`; E2E with Playwright under `tests/`.
+– Frontend: Jest + Testing Library in `frontend/tests`; E2E with Playwright under `func_tests/`.
 
 ## Pull Requests
 
 - Write clear PR titles with scope prefix: `backend: ...`, `frontend: ...`, `tooling: ...`.
 - Include rationale, screenshots for UI, reproduction steps, and test plan.
-- Update docs when applicable: `README.md`, `USER_MANUAL.md`, `DEVELOPER_GUIDE.md`.
+- Update docs when applicable: `README.md`, `docs/USER_MANUAL.md`, `docs/DEVELOPER_GUIDE.md`.
 
 ## Housekeeping
 
@@ -60,4 +60,3 @@ Thanks for your interest in contributing! This guide helps you set up, develop, 
 - Run `pnpm lint` and `make backend-lint` before pushing.
 
 Happy contributing!
-

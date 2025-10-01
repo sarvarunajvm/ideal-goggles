@@ -8,7 +8,7 @@ class OSIntegrationService {
    * Check if we're running in Electron
    */
   get isElectron(): boolean {
-    return typeof window.electronAPI !== 'undefined';
+    return typeof window.electronAPI !== 'undefined'
   }
 
   /**
@@ -16,9 +16,9 @@ class OSIntegrationService {
    */
   async getPlatform(): Promise<string> {
     if (this.isElectron && window.electronAPI?.getPlatform) {
-      return await window.electronAPI.getPlatform();
+      return await window.electronAPI.getPlatform()
     }
-    return navigator.platform;
+    return navigator.platform
   }
 
   /**
@@ -28,10 +28,10 @@ class OSIntegrationService {
   async revealInFolder(filePath: string): Promise<void> {
     if (this.isElectron && window.electronAPI?.revealInFolder) {
       // Use Electron's shell.showItemInFolder
-      await window.electronAPI.revealInFolder(filePath);
+      await window.electronAPI.revealInFolder(filePath)
     } else {
       // Fallback for web browsers
-      this.fallbackRevealInFolder(filePath);
+      this.fallbackRevealInFolder(filePath)
     }
   }
 
@@ -42,10 +42,10 @@ class OSIntegrationService {
   async openExternal(filePath: string): Promise<void> {
     if (this.isElectron && window.electronAPI?.openExternal) {
       // Use Electron's shell.openExternal
-      await window.electronAPI.openExternal(filePath);
+      await window.electronAPI.openExternal(filePath)
     } else {
       // Fallback for web browsers
-      this.fallbackOpenExternal(filePath);
+      this.fallbackOpenExternal(filePath)
     }
   }
 
@@ -55,10 +55,10 @@ class OSIntegrationService {
    */
   async copyToClipboard(filePath: string): Promise<void> {
     try {
-      await navigator.clipboard.writeText(filePath);
+      await navigator.clipboard.writeText(filePath)
     } catch (error) {
       // Fallback for older browsers
-      this.fallbackCopyToClipboard(filePath);
+      this.fallbackCopyToClipboard(filePath)
     }
   }
 
@@ -67,9 +67,9 @@ class OSIntegrationService {
    */
   async getVersion(): Promise<string> {
     if (this.isElectron && window.electronAPI?.getVersion) {
-      return await window.electronAPI.getVersion();
+      return await window.electronAPI.getVersion()
     }
-    return '1.0.0-web';
+    return '1.0.0-web'
   }
 
   /**
@@ -77,11 +77,11 @@ class OSIntegrationService {
    */
   private fallbackRevealInFolder(filePath: string): void {
     // Show notification that this feature requires desktop app
-    this.showDesktopFeatureNotification('File reveal');
+    this.showDesktopFeatureNotification('File reveal')
 
     // As a fallback, copy the folder path to clipboard
-    const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
-    this.copyToClipboard(folderPath);
+    const folderPath = filePath.substring(0, filePath.lastIndexOf('/'))
+    this.copyToClipboard(folderPath)
   }
 
   /**
@@ -89,29 +89,29 @@ class OSIntegrationService {
    */
   private fallbackOpenExternal(filePath: string): void {
     // Show notification that this feature requires desktop app
-    this.showDesktopFeatureNotification('File opening');
+    this.showDesktopFeatureNotification('File opening')
 
     // As a fallback, copy the file path to clipboard
-    this.copyToClipboard(filePath);
+    this.copyToClipboard(filePath)
   }
 
   /**
    * Fallback method for copying to clipboard
    */
   private fallbackCopyToClipboard(text: string): void {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
 
     try {
-      document.execCommand('copy');
+      document.execCommand('copy')
     } catch (error) {
       // Silent failure for clipboard fallback
     }
 
-    document.body.removeChild(textArea);
+    document.body.removeChild(textArea)
   }
 
   /**
@@ -119,8 +119,9 @@ class OSIntegrationService {
    */
   private showDesktopFeatureNotification(feature: string): void {
     // Create a temporary notification
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded z-50 max-w-sm';
+    const notification = document.createElement('div')
+    notification.className =
+      'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded z-50 max-w-sm'
     notification.innerHTML = `
       <div class="flex">
         <div class="flex-shrink-0">
@@ -138,31 +139,39 @@ class OSIntegrationService {
           </button>
         </div>
       </div>
-    `;
+    `
 
-    document.body.appendChild(notification);
+    document.body.appendChild(notification)
 
     // Auto-remove after 5 seconds
     setTimeout(() => {
       if (notification.parentElement) {
-        notification.remove();
+        notification.remove()
       }
-    }, 5000);
+    }, 5000)
   }
 
   /**
    * Check if a specific OS integration feature is available
    */
-  isFeatureAvailable(feature: 'revealInFolder' | 'openExternal' | 'clipboard'): boolean {
+  isFeatureAvailable(
+    feature: 'revealInFolder' | 'openExternal' | 'clipboard'
+  ): boolean {
     switch (feature) {
       case 'revealInFolder':
-        return this.isElectron && typeof window.electronAPI?.revealInFolder === 'function';
+        return (
+          this.isElectron &&
+          typeof window.electronAPI?.revealInFolder === 'function'
+        )
       case 'openExternal':
-        return this.isElectron && typeof window.electronAPI?.openExternal === 'function';
+        return (
+          this.isElectron &&
+          typeof window.electronAPI?.openExternal === 'function'
+        )
       case 'clipboard':
-        return typeof navigator.clipboard?.writeText === 'function';
+        return typeof navigator.clipboard?.writeText === 'function'
       default:
-        return false;
+        return false
     }
   }
 
@@ -171,25 +180,29 @@ class OSIntegrationService {
    */
   async showFileProperties(): Promise<void> {
     // This would be implemented with additional Electron APIs
-    throw new Error('File properties not yet implemented');
+    throw new Error('File properties not yet implemented')
   }
 
   /**
    * Create a desktop notification
    */
-  async showNotification(title: string, body: string, icon?: string): Promise<void> {
+  async showNotification(
+    title: string,
+    body: string,
+    icon?: string
+  ): Promise<void> {
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
-        new Notification(title, { body, icon });
+        new Notification(title, { body, icon })
       } else if (Notification.permission !== 'denied') {
-        const permission = await Notification.requestPermission();
+        const permission = await Notification.requestPermission()
         if (permission === 'granted') {
-          new Notification(title, { body, icon });
+          new Notification(title, { body, icon })
         }
       }
     }
   }
 }
 
-export const osIntegration = new OSIntegrationService();
-export default osIntegration;
+export const osIntegration = new OSIntegrationService()
+export default osIntegration

@@ -1,9 +1,9 @@
-import { ReactNode } from 'react';
-import Navigation from './Navigation';
-import StatusBar from './StatusBar';
+import { ReactNode } from 'react'
+import Navigation from './Navigation'
+import StatusBar from './StatusBar'
 
 interface LayoutProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -13,12 +13,10 @@ export default function Layout({ children }: LayoutProps) {
       <Navigation />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
 
       {/* Footer Status Bar */}
       <StatusBar />
     </div>
-  );
+  )
 }

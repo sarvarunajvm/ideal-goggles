@@ -1,39 +1,45 @@
-import { useState, useRef } from 'react';
+import { useState, useRef } from 'react'
 
 interface SearchBarProps {
-  onSearch: (query: string) => void;
-  onImageSearch: (file: File) => void;
-  searchMode: 'text' | 'semantic' | 'image';
-  loading: boolean;
+  onSearch: (query: string) => void
+  onImageSearch: (file: File) => void
+  searchMode: 'text' | 'semantic' | 'image'
+  loading: boolean
 }
 
-export default function SearchBar({ onSearch, onImageSearch, searchMode, loading }: SearchBarProps) {
-  const [query, setQuery] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function SearchBar({
+  onSearch,
+  onImageSearch,
+  searchMode,
+  loading,
+}: SearchBarProps) {
+  const [query, setQuery] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (searchMode !== 'image' && query.trim()) {
-      onSearch(query.trim());
+      onSearch(query.trim())
     }
-  };
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[0]
     if (file && file.type.startsWith('image/')) {
-      onImageSearch(file);
+      onImageSearch(file)
     }
-  };
+  }
 
   const handleImageUpload = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
   const placeholderText = {
     text: 'Search by filename, folder, or content...',
-    semantic: 'Describe what you\'re looking for (e.g., "sunset over mountains", "people at wedding")...',
+    semantic:
+      'Describe what you\'re looking for (e.g., "sunset over mountains", "people at wedding")...',
     image: 'Click to upload an image for visual similarity search...',
-  };
+  }
 
   return (
     <div className="w-full">
@@ -70,7 +76,7 @@ export default function SearchBar({ onSearch, onImageSearch, searchMode, loading
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={e => setQuery(e.target.value)}
               placeholder={placeholderText[searchMode]}
               disabled={loading}
               className={`w-full px-4 py-3 pr-12 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -96,5 +102,5 @@ export default function SearchBar({ onSearch, onImageSearch, searchMode, loading
         </form>
       )}
     </div>
-  );
+  )
 }

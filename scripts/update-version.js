@@ -30,16 +30,8 @@ function updateVersion(version) {
       type: 'json',
       path: ['version']
     },
-    {
-      file: 'frontend/package.json',
-      type: 'json',
-      path: ['version']
-    },
-    {
-      file: 'tests/package.json',
-      type: 'json',
-      path: ['version']
-    },
+    // Frontend/package.json removed; frontend managed by root package.json
+    // func_tests/package.json removed; tests managed by root package.json
     {
       file: 'backend/pyproject.toml',
       type: 'toml',

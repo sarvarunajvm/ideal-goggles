@@ -1,29 +1,35 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logger } from '../utils/logger';
-import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { AlertCircle } from 'lucide-react';
+import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { logger } from '../utils/logger'
+import { Button } from './ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card'
+import { AlertCircle } from 'lucide-react'
 
 interface Props {
-  children: ReactNode;
-  componentName?: string;
-  fallback?: ReactNode;
+  children: ReactNode
+  componentName?: string
+  fallback?: ReactNode
 }
 
 interface State {
-  hasError: boolean;
-  error?: Error;
-  errorInfo?: ErrorInfo;
-  errorCount: number;
+  hasError: boolean
+  error?: Error
+  errorInfo?: ErrorInfo
+  errorCount: number
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
-    super(props);
+    super(props)
     this.state = {
       hasError: false,
       errorCount: 0,
-    };
+    }
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -32,29 +38,29 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: true,
       error,
       errorCount: 0,
-    };
+    }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const { componentName = 'Unknown' } = this.props;
+    const { componentName = 'Unknown' } = this.props
 
     // Log the error to our logging service
     logger.logComponentError(componentName, error, {
       componentStack: errorInfo.componentStack,
       errorBoundary: true,
       timestamp: new Date().toISOString(),
-    });
+    })
 
     // Update state with error details
     this.setState(prevState => ({
       error,
       errorInfo,
       errorCount: prevState.errorCount + 1,
-    }));
+    }))
 
     // Send error to backend for monitoring (in production)
     if (process.env.NODE_ENV === 'production') {
-      this.reportErrorToBackend(error, errorInfo);
+      this.reportErrorToBackend(error, errorInfo)
     }
   }
 
@@ -77,33 +83,33 @@ export class ErrorBoundary extends Component<Props, State> {
     }).catch(err => {
       // Silently fail to avoid infinite loop - using logger would risk infinite loop
       // eslint-disable-next-line no-console
-      console.error('Failed to report error to backend:', err);
-    });
+      console.error('Failed to report error to backend:', err)
+    })
   }
 
   handleReset = (): void => {
     logger.info('Error boundary reset by user', {
       componentName: this.props.componentName,
       errorCount: this.state.errorCount,
-    });
+    })
 
     this.setState({
       hasError: false,
       error: undefined,
       errorInfo: undefined,
       errorCount: 0,
-    });
-  };
+    })
+  }
 
   handleDownloadLogs = (): void => {
-    logger.downloadLogs();
-  };
+    logger.downloadLogs()
+  }
 
   render(): ReactNode {
     if (this.state.hasError) {
       // Custom fallback UI
       if (this.props.fallback) {
-        return this.props.fallback;
+        return this.props.fallback
       }
 
       // Default error UI
@@ -116,19 +122,24 @@ export class ErrorBoundary extends Component<Props, State> {
                 <CardTitle>Something went wrong</CardTitle>
               </div>
               <CardDescription>
-                An unexpected error occurred in the application. The error has been logged and reported.
+                An unexpected error occurred in the application. The error has
+                been logged and reported.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <div className="p-4 bg-red-50 rounded-lg">
-                  <h3 className="font-semibold text-red-800 mb-2">Error Details (Development Only)</h3>
+                  <h3 className="font-semibold text-red-800 mb-2">
+                    Error Details (Development Only)
+                  </h3>
                   <p className="text-sm text-red-700 font-mono mb-2">
                     {this.state.error.message}
                   </p>
                   {this.state.error.stack && (
                     <details className="text-xs text-red-600">
-                      <summary className="cursor-pointer hover:underline">Stack Trace</summary>
+                      <summary className="cursor-pointer hover:underline">
+                        Stack Trace
+                      </summary>
                       <pre className="mt-2 p-2 bg-white rounded overflow-x-auto">
                         {this.state.error.stack}
                       </pre>
@@ -136,7 +147,9 @@ export class ErrorBoundary extends Component<Props, State> {
                   )}
                   {this.state.errorInfo?.componentStack && (
                     <details className="text-xs text-red-600 mt-2">
-                      <summary className="cursor-pointer hover:underline">Component Stack</summary>
+                      <summary className="cursor-pointer hover:underline">
+                        Component Stack
+                      </summary>
                       <pre className="mt-2 p-2 bg-white rounded overflow-x-auto">
                         {this.state.errorInfo.componentStack}
                       </pre>
@@ -146,29 +159,31 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
 
               <div className="flex gap-2">
-                <Button onClick={this.handleReset}>
-                  Try Again
-                </Button>
+                <Button onClick={this.handleReset}>Try Again</Button>
                 <Button variant="outline" onClick={this.handleDownloadLogs}>
                   Download Logs
                 </Button>
-                <Button variant="outline" onClick={() => window.location.href = '/'}>
+                <Button
+                  variant="outline"
+                  onClick={() => (window.location.href = '/')}
+                >
                   Go to Home
                 </Button>
               </div>
 
               {this.state.errorCount > 1 && (
                 <p className="text-sm text-amber-600">
-                  This error has occurred {this.state.errorCount} times. If it persists, please contact support.
+                  This error has occurred {this.state.errorCount} times. If it
+                  persists, please contact support.
                 </p>
               )}
             </CardContent>
           </Card>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -178,8 +193,10 @@ export function withErrorBoundary<P extends object>(
   componentName?: string
 ): React.ComponentType<P> {
   return (props: P) => (
-    <ErrorBoundary componentName={componentName || Component.displayName || Component.name}>
+    <ErrorBoundary
+      componentName={componentName || Component.displayName || Component.name}
+    >
       <Component {...props} />
     </ErrorBoundary>
-  );
+  )
 }

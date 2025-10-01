@@ -4,40 +4,34 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 
-export default typescript.config(
-  // Base JavaScript configuration
-  js.configs.recommended,
-
-  // TypeScript configurations
-  ...typescript.configs.recommended,
-
+export default [
   // Global ignores
   {
     ignores: [
-      'dist/**',
-      'node_modules/**',
-      '*.js',
-      'tests/**',
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/electron/dist/**',
+      'tailwind.config.js',
+      'jest.config.js',
+      'jest.config.*.js',
+      'postcss.config.js',
+      'prettier.config.js',
       'vite.config.ts',
-      'electron/**',
-      'playwright.config.ts',
-      'coverage/**',
-      '*.config.js',
-      '*.config.cjs',
-      '*.config.mjs'
+      'tests/**/__mocks__/**'
     ]
   },
 
-  // Main configuration for TypeScript files
+  // Main configuration for source files
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],
+    extends: [js.configs.recommended, ...typescript.configs.recommended],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
         ...globals.browser,
-        ...globals.es2020,
-        ...globals.node
+        ...globals.es2020
       },
       parser: typescript.parser,
       parserOptions: {
@@ -79,5 +73,30 @@ export default typescript.config(
       // General rules
       'no-console': 'warn'
     }
+  },
+
+  // Configuration for test files
+  {
+    files: ['tests/**/*.{ts,tsx,js}'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.jest,
+        describe: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        it: 'readonly'
+      }
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
   }
-);
+];

@@ -147,7 +147,7 @@ coverageReporters: ['json', 'lcov', 'html', 'text']
 
 ### E2E (Playwright)
 
-Configuration in `tests/playwright.config.ts`:
+Configuration in `func_tests/playwright.config.ts`:
 ```typescript
 reporter: [
   ['html', { outputFolder: 'playwright-report' }],

@@ -1,16 +1,21 @@
-import { useState } from 'react';
-import { apiService, SearchResponse, SearchResult, getApiBaseUrl } from '../services/apiClient';
-import PreviewDrawer from '../components/PreviewDrawer';
-import { osIntegration } from '../services/osIntegration';
+import { useState } from 'react'
+import {
+  apiService,
+  SearchResponse,
+  SearchResult,
+  getThumbnailBaseUrl,
+} from '../services/apiClient'
+import PreviewDrawer from '../components/PreviewDrawer'
+import { osIntegration } from '../services/osIntegration'
 
 // shadcn/ui components
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Icons
 import {
@@ -24,49 +29,49 @@ import {
   Clock,
   FileText,
   ExternalLink,
-  AlertCircle
-} from 'lucide-react';
+  AlertCircle,
+} from 'lucide-react'
 
 // Modern Search Bar Component
 function ModernSearchBar({
   onSearch,
   onImageSearch,
   searchMode,
-  loading
+  loading,
 }: {
-  onSearch: (query: string) => void;
-  onImageSearch: (file: File) => void;
-  searchMode: 'text' | 'semantic' | 'image';
-  loading: boolean;
+  onSearch: (query: string) => void
+  onImageSearch: (file: File) => void
+  searchMode: 'text' | 'semantic' | 'image'
+  loading: boolean
 }) {
-  const [query, setQuery] = useState('');
-  const [dragActive, setDragActive] = useState(false);
+  const [query, setQuery] = useState('')
+  const [dragActive, setDragActive] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (query.trim() && searchMode !== 'image') {
-      onSearch(query.trim());
+      onSearch(query.trim())
     }
-  };
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
+    e.preventDefault()
+    setDragActive(false)
 
-    const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find(file => file.type.startsWith('image/'));
+    const files = Array.from(e.dataTransfer.files)
+    const imageFile = files.find(file => file.type.startsWith('image/'))
 
     if (imageFile && searchMode === 'image') {
-      onImageSearch(imageFile);
+      onImageSearch(imageFile)
     }
-  };
+  }
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[0]
     if (file && searchMode === 'image') {
-      onImageSearch(file);
+      onImageSearch(file)
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -77,15 +82,15 @@ function ModernSearchBar({
               ? 'border-primary bg-primary/5'
               : 'border-muted-foreground/25 hover:border-muted-foreground/50'
           }`}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragActive(true);
+          onDragEnter={e => {
+            e.preventDefault()
+            setDragActive(true)
           }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setDragActive(false);
+          onDragLeave={e => {
+            e.preventDefault()
+            setDragActive(false)
           }}
-          onDragOver={(e) => e.preventDefault()}
+          onDragOver={e => e.preventDefault()}
           onDrop={handleDrop}
         >
           <input
@@ -96,7 +101,9 @@ function ModernSearchBar({
             disabled={loading}
           />
           <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Upload an image to search</h3>
+          <h3 className="text-lg font-medium mb-2">
+            Upload an image to search
+          </h3>
           <p className="text-sm text-muted-foreground">
             Drag and drop an image here, or click to select
           </p>
@@ -107,11 +114,11 @@ function ModernSearchBar({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={e => setQuery(e.target.value)}
               placeholder={
                 searchMode === 'semantic'
                   ? "Describe what you're looking for..."
-                  : "Search photos by filename, folder, or content..."
+                  : 'Search photos by filename, folder, or content...'
               }
               className="pl-10 h-12 text-base"
               disabled={loading}
@@ -135,7 +142,7 @@ function ModernSearchBar({
         </form>
       )}
     </div>
-  );
+  )
 }
 
 // Loading Skeleton Grid
@@ -152,22 +159,22 @@ function SkeletonGrid() {
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 // Modern Results Grid
 function ModernResultsGrid({
   results,
   onItemClick,
-  onRevealInFolder
+  onRevealInFolder,
 }: {
-  results: SearchResult[];
-  onItemClick: (item: SearchResult) => void;
-  onRevealInFolder: (item: SearchResult) => void;
+  results: SearchResult[]
+  onItemClick: (item: SearchResult) => void
+  onRevealInFolder: (item: SearchResult) => void
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {results.map((item) => (
+      {results.map(item => (
         <Card
           key={item.file_id}
           className="group overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-1"
@@ -176,7 +183,7 @@ function ModernResultsGrid({
           <div className="relative aspect-square overflow-hidden">
             {item.thumb_path ? (
               <img
-                src={`${getApiBaseUrl()}/thumbnails/${item.thumb_path}`}
+                src={`${getThumbnailBaseUrl()}/${item.thumb_path}`}
                 alt={item.filename}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
                 loading="lazy"
@@ -194,9 +201,9 @@ function ModernResultsGrid({
                   size="icon"
                   variant="secondary"
                   className="h-8 w-8 backdrop-blur-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRevealInFolder(item);
+                  onClick={e => {
+                    e.stopPropagation()
+                    onRevealInFolder(item)
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -215,13 +222,18 @@ function ModernResultsGrid({
           </div>
 
           <CardContent className="p-4">
-            <h3 className="font-medium text-sm mb-2 truncate" title={item.filename}>
+            <h3
+              className="font-medium text-sm mb-2 truncate"
+              title={item.filename}
+            >
               {item.filename}
             </h3>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <Folder className="h-3 w-3" />
-              <span className="truncate flex-1">{item.folder || 'Unknown'}</span>
+              <span className="truncate flex-1">
+                {item.folder || 'Unknown'}
+              </span>
             </div>
 
             {item.shot_dt && (
@@ -258,16 +270,20 @@ function ModernResultsGrid({
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 export default function SearchPage() {
-  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>('text');
-  const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(
+    null
+  )
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>(
+    'text'
+  )
+  const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Search filters
   const [filters, setFilters] = useState({
@@ -275,83 +291,116 @@ export default function SearchPage() {
     to: '',
     folder: '',
     limit: 50,
-  });
+  })
 
   const handleSearch = async (query: string) => {
-    if (!query.trim() && searchMode !== 'image') return;
+    if (!query.trim() && searchMode !== 'image') return
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      let results: SearchResponse;
+      let results: SearchResponse
 
       switch (searchMode) {
         case 'text':
           results = await apiService.searchPhotos({
             q: query,
             ...filters,
-          });
-          break;
+          })
+          break
         case 'semantic':
-          results = await apiService.semanticSearch(query, filters.limit);
-          break;
+          results = await apiService.semanticSearch(query, filters.limit)
+          break
         default:
-          throw new Error('Invalid search mode');
+          throw new Error('Invalid search mode')
       }
 
-      setSearchResults(results);
+      setSearchResults(results)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
+      // Handle ML feature errors gracefully
+      const errorMessage = err instanceof Error ? err.message : 'Search failed'
+      if (
+        errorMessage.includes('Semantic search failed') ||
+        errorMessage.includes('No such file or directory')
+      ) {
+        setError(
+          'Semantic search is not available. ML models are not installed. Please use text search instead.'
+        )
+        // Automatically switch to text search
+        setSearchMode('text')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleImageSearch = async (file: File) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      const results = await apiService.imageSearch(file, filters.limit);
-      setSearchResults(results);
+      const results = await apiService.imageSearch(file, filters.limit)
+      setSearchResults(results)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Image search failed');
+      // Handle ML feature errors gracefully
+      const errorMessage =
+        err instanceof Error ? err.message : 'Image search failed'
+      if (
+        errorMessage.includes('Image search failed') ||
+        errorMessage.includes('No such file or directory')
+      ) {
+        setError(
+          'Image search is not available. ML models are not installed. Please use text search instead.'
+        )
+        // Automatically switch to text search
+        setSearchMode('text')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleFilterChange = (newFilters: Partial<typeof filters>) => {
-    setFilters({ ...filters, ...newFilters });
-  };
+    setFilters({ ...filters, ...newFilters })
+  }
 
   const handleItemClick = (item: SearchResult) => {
-    setSelectedItem(item);
-    setPreviewOpen(true);
-  };
+    setSelectedItem(item)
+    setPreviewOpen(true)
+  }
 
   const handleRevealInFolder = async (item: SearchResult) => {
     try {
-      await osIntegration.revealInFolder(item.path);
+      await osIntegration.revealInFolder(item.path)
     } catch (error) {
       // Silent failure - error will be handled by osIntegration service
     }
-  };
+  }
 
   const handleNextItem = () => {
-    if (!searchResults || !selectedItem) return;
-    const currentIndex = searchResults.items.findIndex(item => item.file_id === selectedItem.file_id);
-    const nextIndex = (currentIndex + 1) % searchResults.items.length;
-    setSelectedItem(searchResults.items[nextIndex]);
-  };
+    if (!searchResults || !selectedItem) return
+    const currentIndex = searchResults.items.findIndex(
+      item => item.file_id === selectedItem.file_id
+    )
+    const nextIndex = (currentIndex + 1) % searchResults.items.length
+    setSelectedItem(searchResults.items[nextIndex])
+  }
 
   const handlePreviousItem = () => {
-    if (!searchResults || !selectedItem) return;
-    const currentIndex = searchResults.items.findIndex(item => item.file_id === selectedItem.file_id);
-    const prevIndex = (currentIndex - 1 + searchResults.items.length) % searchResults.items.length;
-    setSelectedItem(searchResults.items[prevIndex]);
-  };
+    if (!searchResults || !selectedItem) return
+    const currentIndex = searchResults.items.findIndex(
+      item => item.file_id === selectedItem.file_id
+    )
+    const prevIndex =
+      (currentIndex - 1 + searchResults.items.length) %
+      searchResults.items.length
+    setSelectedItem(searchResults.items[prevIndex])
+  }
 
   return (
     <>
@@ -359,7 +408,12 @@ export default function SearchPage() {
       <div className="bg-card shadow-sm border-b p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Search Mode Tabs */}
-          <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as 'text' | 'semantic' | 'image')}>
+          <Tabs
+            value={searchMode}
+            onValueChange={value =>
+              setSearchMode(value as 'text' | 'semantic' | 'image')
+            }
+          >
             <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
               <TabsTrigger value="text" className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
@@ -398,7 +452,7 @@ export default function SearchPage() {
                 <Input
                   type="date"
                   value={filters.from}
-                  onChange={(e) => handleFilterChange({ from: e.target.value })}
+                  onChange={e => handleFilterChange({ from: e.target.value })}
                   className="w-auto"
                   placeholder="From"
                 />
@@ -406,7 +460,7 @@ export default function SearchPage() {
                 <Input
                   type="date"
                   value={filters.to}
-                  onChange={(e) => handleFilterChange({ to: e.target.value })}
+                  onChange={e => handleFilterChange({ to: e.target.value })}
                   className="w-auto"
                   placeholder="To"
                 />
@@ -416,7 +470,7 @@ export default function SearchPage() {
                 <Folder className="h-4 w-4 text-muted-foreground" />
                 <Input
                   value={filters.folder}
-                  onChange={(e) => handleFilterChange({ folder: e.target.value })}
+                  onChange={e => handleFilterChange({ folder: e.target.value })}
                   placeholder="Folder path..."
                   className="w-48"
                 />
@@ -427,7 +481,11 @@ export default function SearchPage() {
                 <Input
                   type="number"
                   value={filters.limit}
-                  onChange={(e) => handleFilterChange({ limit: parseInt(e.target.value) || 50 })}
+                  onChange={e =>
+                    handleFilterChange({
+                      limit: parseInt(e.target.value) || 50,
+                    })
+                  }
                   min="1"
                   max="1000"
                   className="w-20"
@@ -438,7 +496,9 @@ export default function SearchPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFilters({ from: '', to: '', folder: '', limit: 50 })}
+                  onClick={() =>
+                    setFilters({ from: '', to: '', folder: '', limit: 50 })
+                  }
                 >
                   Clear Filters
                 </Button>
@@ -458,7 +518,9 @@ export default function SearchPage() {
                 <CardContent className="flex items-center gap-3 p-4">
                   <AlertCircle className="h-5 w-5 text-destructive" />
                   <div>
-                    <h3 className="font-medium text-destructive">Search Error</h3>
+                    <h3 className="font-medium text-destructive">
+                      Search Error
+                    </h3>
                     <p className="text-sm text-muted-foreground">{error}</p>
                   </div>
                 </CardContent>
@@ -476,7 +538,8 @@ export default function SearchPage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <h2 className="text-2xl font-semibold tracking-tight">
-                        {searchResults.total_matches.toLocaleString()} photo{searchResults.total_matches !== 1 ? 's' : ''} found
+                        {searchResults.total_matches.toLocaleString()} photo
+                        {searchResults.total_matches !== 1 ? 's' : ''} found
                       </h2>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
@@ -510,9 +573,12 @@ export default function SearchPage() {
                 <div className="text-center space-y-6 max-w-2xl">
                   <ImageIcon className="mx-auto h-24 w-24 text-muted-foreground/50" />
                   <div className="space-y-2">
-                    <h2 className="text-3xl font-bold tracking-tight">Search Your Photos</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">
+                      Search Your Photos
+                    </h2>
                     <p className="text-lg text-muted-foreground">
-                      Enter a search term above to find photos by content, metadata, or visual similarity.
+                      Enter a search term above to find photos by content,
+                      metadata, or visual similarity.
                     </p>
                   </div>
 
@@ -554,9 +620,17 @@ export default function SearchPage() {
         isOpen={previewOpen}
         onClose={() => setPreviewOpen(false)}
         onRevealInFolder={handleRevealInFolder}
-        onNext={searchResults?.items && searchResults.items.length > 1 ? handleNextItem : undefined}
-        onPrevious={searchResults?.items && searchResults.items.length > 1 ? handlePreviousItem : undefined}
+        onNext={
+          searchResults?.items && searchResults.items.length > 1
+            ? handleNextItem
+            : undefined
+        }
+        onPrevious={
+          searchResults?.items && searchResults.items.length > 1
+            ? handlePreviousItem
+            : undefined
+        }
       />
     </>
-  );
+  )
 }

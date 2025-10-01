@@ -47,4 +47,4 @@ make backend-format       # Format with black
 make backend-typecheck    # Type check with mypy
 ```
 
-📚 For complete documentation, see the main [README](../README.md) and [DEVELOPER_GUIDE](../DEVELOPER_GUIDE.md)
+📚 For complete documentation, see the main README at ../README.md and Developer Guide at ../docs/DEVELOPER_GUIDE.md

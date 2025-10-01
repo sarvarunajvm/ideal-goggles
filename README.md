@@ -92,7 +92,7 @@ ideal-goggles/
 │   │   └── services/  # API services
 │   └── vite.config.ts # Vite configuration
 │
-├── electron/           # Electron desktop wrapper
+├── frontend/electron/  # Electron desktop wrapper
 │   ├── main.ts        # Main process
 │   └── preload.ts     # Preload scripts
 │
@@ -175,6 +175,14 @@ pnpm run dist:all
 
 Built installers will be in the `dist-electron/` directory.
 
+Functional tests live under `func_tests/`. To run:
+
+```bash
+cd func_tests
+pnpm install
+pnpm test
+```
+
 ## 🔧 Configuration
 
 ### Package Management
@@ -206,12 +214,12 @@ We welcome contributions!
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
-See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for detailed development guidelines.
+See docs/DEVELOPER_GUIDE.md for detailed development guidelines.
 
 ## 📚 Documentation
 
-- [USER_MANUAL.md](USER_MANUAL.md) - End user guide
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Developer documentation
+- docs/USER_MANUAL.md - End user guide
+- docs/DEVELOPER_GUIDE.md - Developer documentation
 - [API Documentation](http://localhost:5555/docs) - When backend is running
 
 ## 🐛 Troubleshooting

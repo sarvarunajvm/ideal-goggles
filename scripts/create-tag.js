@@ -70,7 +70,7 @@ function createTag(version) {
 
   // Step 3: Commit version changes
   console.log('\n📦 Committing version changes...');
-  exec('git add package.json frontend/package.json tests/package.json backend/pyproject.toml');
+  exec('git add package.json backend/pyproject.toml');
 
   const hasChanges = exec('git diff --cached --quiet', true).length === 0;
   if (!hasChanges) {
@@ -78,8 +78,6 @@ function createTag(version) {
 
 Updated versions in:
 - package.json
-- frontend/package.json
-- tests/package.json
 - backend/pyproject.toml"`);
   } else {
     console.log('ℹ️  No version changes needed');

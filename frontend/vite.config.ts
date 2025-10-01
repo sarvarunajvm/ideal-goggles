@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   css: {
-    postcss: './postcss.config.js',
+    postcss: path.resolve(__dirname, 'postcss.config.js'),
   },
   server: {
     port: 3333,
@@ -24,6 +24,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/docs': {
+        target: 'http://127.0.0.1:5555',
+        changeOrigin: true,
+      },
+      '/thumbnails': {
         target: 'http://127.0.0.1:5555',
         changeOrigin: true,
       },

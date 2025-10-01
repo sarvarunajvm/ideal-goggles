@@ -74,7 +74,7 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: 'cd ../frontend && pnpm run dev',
+          command: 'cd .. && pnpm run dev:frontend',
           port: 3333,
           timeout: 120 * 1000,
           reuseExistingServer: !process.env.CI,

@@ -14,8 +14,9 @@ do
 
     # Check package.json versions
     ROOT_VERSION=$(node -e "console.log(require('./package.json').version)")
-    FRONTEND_VERSION=$(node -e "console.log(require('./frontend/package.json').version)")
-    TESTS_VERSION=$(node -e "console.log(require('./tests/package.json').version)")
+    # Frontend version managed by root package.json
+    FRONTEND_VERSION=$(node -e "console.log(require('./package.json').version)")
+    TESTS_VERSION=$(node -e "console.log(require('./package.json').version)")
 
     # Check pyproject.toml version
     BACKEND_VERSION=$(grep -E '^version = ' backend/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
@@ -29,12 +30,12 @@ do
     fi
 
     if [ "$FRONTEND_VERSION" != "$VERSION" ]; then
-      echo "❌ frontend/package.json version ($FRONTEND_VERSION) doesn't match tag ($VERSION)"
+      echo "❌ root package.json version ($FRONTEND_VERSION) doesn't match tag ($VERSION)"
       ERRORS=$((ERRORS + 1))
     fi
 
     if [ "$TESTS_VERSION" != "$VERSION" ]; then
-      echo "❌ tests/package.json version ($TESTS_VERSION) doesn't match tag ($VERSION)"
+      echo "❌ root package.json version ($TESTS_VERSION) doesn't match tag ($VERSION)"
       ERRORS=$((ERRORS + 1))
     fi
 

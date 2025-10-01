@@ -107,7 +107,7 @@ ideal-goggles/
 │   │   └── App.tsx     # Root component
 │   └── vite.config.ts  # Vite config
 │
-├── electron/           # Electron wrapper
+├── frontend/electron/  # Electron wrapper
 │   ├── main.ts        # Main process
 │   └── preload.ts     # Preload scripts
 │
@@ -368,7 +368,7 @@ tests/
 ├── frontend/tests/       # Frontend tests
 │   ├── components/      # Component tests
 │   └── setupTests.ts    # Test configuration
-└── tests/               # E2E Playwright tests
+└── func_tests/          # E2E/functional/integration Playwright tests
     ├── e2e/            # End-to-end test suites
     ├── page-objects/   # Page object models
     └── helpers/        # Test utilities
@@ -520,7 +520,7 @@ lsof -ti:5555 | xargs kill -9
 **Electron won't start:**
 ```bash
 # Rebuild Electron
-rm -rf node_modules electron/dist
+rm -rf node_modules frontend/electron/dist
 pnpm install --no-lockfile
 pnpm run build:electron:main
 ```

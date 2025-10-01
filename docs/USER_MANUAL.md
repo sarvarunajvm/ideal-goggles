@@ -1012,7 +1012,7 @@ A: Check privacy settings and grant necessary permissions.
 #### Documentation
 - **This Manual**: Comprehensive guide
 - **README**: [GitHub README](README.md)
-- **Developer Guide**: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- **Developer Guide**: [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)
 - **API Docs**: [API Documentation](docs/api.md)
 
 #### Community Support

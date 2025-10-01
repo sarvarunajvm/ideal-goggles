@@ -1,44 +1,46 @@
-import { SearchResponse, getApiBaseUrl } from '../services/apiClient';
+import { SearchResponse, getThumbnailBaseUrl } from '../services/apiClient'
 
 interface SearchResultsProps {
-  results: SearchResponse;
+  results: SearchResponse
 }
 
 export default function SearchResults({ results }: SearchResultsProps) {
-  const { query, total_matches, items, took_ms } = results;
+  const { query, total_matches, items, took_ms } = results
 
   const formatTimestamp = (timestamp: string | null) => {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) return 'Unknown'
     try {
-      return new Date(timestamp).toLocaleDateString();
+      return new Date(timestamp).toLocaleDateString()
     } catch {
-      return 'Unknown';
+      return 'Unknown'
     }
-  };
+  }
 
   const getBadgeColor = (badge: string) => {
     const colors: Record<string, string> = {
-      'text': 'bg-blue-100 text-blue-800',
-      'filename': 'bg-green-100 text-green-800',
-      'folder': 'bg-purple-100 text-purple-800',
-      'metadata': 'bg-orange-100 text-orange-800',
-      'semantic': 'bg-pink-100 text-pink-800',
-      'visual': 'bg-indigo-100 text-indigo-800',
-      'face': 'bg-red-100 text-red-800',
-    };
-    return colors[badge] || 'bg-gray-100 text-gray-800';
-  };
+      text: 'bg-blue-100 text-blue-800',
+      filename: 'bg-green-100 text-green-800',
+      folder: 'bg-purple-100 text-purple-800',
+      metadata: 'bg-orange-100 text-orange-800',
+      semantic: 'bg-pink-100 text-pink-800',
+      visual: 'bg-indigo-100 text-indigo-800',
+      face: 'bg-red-100 text-red-800',
+    }
+    return colors[badge] || 'bg-gray-100 text-gray-800'
+  }
 
   if (total_matches === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔍</div>
-        <h2 className="text-2xl font-semibold text-gray-700 mb-2">No photos found</h2>
+        <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+          No photos found
+        </h2>
         <p className="text-gray-500">
           Try a different search term or adjust your filters.
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -47,7 +49,8 @@ export default function SearchResults({ results }: SearchResultsProps) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
-            {total_matches.toLocaleString()} photo{total_matches !== 1 ? 's' : ''} found
+            {total_matches.toLocaleString()} photo
+            {total_matches !== 1 ? 's' : ''} found
           </h2>
           <p className="text-sm text-gray-500">
             Search for "{query}" completed in {took_ms}ms
@@ -57,7 +60,7 @@ export default function SearchResults({ results }: SearchResultsProps) {
 
       {/* Results Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {items.map((item) => (
+        {items.map(item => (
           <div
             key={item.file_id}
             className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
@@ -66,23 +69,30 @@ export default function SearchResults({ results }: SearchResultsProps) {
             <div className="aspect-square bg-gray-100 flex items-center justify-center">
               {item.thumb_path ? (
                 <img
-                  src={`${getApiBaseUrl()}${item.thumb_path}`}
+                  src={`${getThumbnailBaseUrl()}/${item.thumb_path}`}
                   alt={item.filename}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).nextElementSibling!.classList.remove('hidden');
+                  onError={e => {
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                    ;(
+                      e.target as HTMLImageElement
+                    ).nextElementSibling!.classList.remove('hidden')
                   }}
                 />
               ) : null}
-              <div className={`text-6xl text-gray-400 ${item.thumb_path ? 'hidden' : ''}`}>
+              <div
+                className={`text-6xl text-gray-400 ${item.thumb_path ? 'hidden' : ''}`}
+              >
                 📷
               </div>
             </div>
 
             {/* Photo Info */}
             <div className="p-4">
-              <h3 className="font-medium text-gray-900 truncate mb-2" title={item.filename}>
+              <h3
+                className="font-medium text-gray-900 truncate mb-2"
+                title={item.filename}
+              >
                 {item.filename}
               </h3>
 
@@ -133,7 +143,7 @@ export default function SearchResults({ results }: SearchResultsProps) {
                 <button
                   onClick={() => {
                     // Open file location
-                    navigator.clipboard.writeText(item.path);
+                    navigator.clipboard.writeText(item.path)
                   }}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                   title="Copy file path"
@@ -143,7 +153,7 @@ export default function SearchResults({ results }: SearchResultsProps) {
                 <button
                   onClick={() => {
                     // View full image
-                    window.open(`file://${item.path}`, '_blank');
+                    window.open(`file://${item.path}`, '_blank')
                   }}
                   className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                 >
@@ -164,5 +174,5 @@ export default function SearchResults({ results }: SearchResultsProps) {
         </div>
       )}
     </div>
-  );
+  )
 }

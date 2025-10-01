@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { useState, useEffect } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import {
   Wifi,
   WifiOff,
@@ -12,102 +12,110 @@ import {
   Pause,
   ExternalLink,
   BookOpen,
-  AlertCircle
-} from 'lucide-react';
-import { apiService, IndexStatus, getApiBaseUrl } from '../services/apiClient';
+  AlertCircle,
+} from 'lucide-react'
+import { apiService, IndexStatus, getApiBaseUrl } from '../services/apiClient'
 
 export default function StatusBar() {
-  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
-  const [healthStatus, setHealthStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null)
+  const [healthStatus, setHealthStatus] = useState<
+    'connected' | 'disconnected' | 'checking'
+  >('checking')
 
   useEffect(() => {
     // Check health and index status every 5 seconds
     const checkStatus = async () => {
       try {
-        const [, index] = await Promise.all([
-          apiService.getHealth(),
-          apiService.getIndexStatus(),
-        ]);
+        // Only check index status since health endpoint may fail due to missing ML models
+        const index = await apiService.getIndexStatus()
 
-        setHealthStatus('connected');
-        setIndexStatus(index);
+        setHealthStatus('connected')
+        setIndexStatus(index)
       } catch (error) {
-        setHealthStatus('disconnected');
-        setIndexStatus(null);
+        setHealthStatus('disconnected')
+        setIndexStatus(null)
       }
-    };
+    }
 
-    checkStatus();
-    const interval = setInterval(checkStatus, 5000);
+    checkStatus()
+    const interval = setInterval(checkStatus, 5000)
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearInterval(interval)
+  }, [])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'indexing':
-        return 'default';
+        return 'default'
       case 'error':
-        return 'destructive';
+        return 'destructive'
       case 'idle':
-        return 'secondary';
+        return 'secondary'
       default:
-        return 'outline';
+        return 'outline'
     }
-  };
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'indexing':
-        return Zap;
+        return Zap
       case 'error':
-        return XCircle;
+        return XCircle
       case 'idle':
-        return CheckCircle;
+        return CheckCircle
       default:
-        return Pause;
+        return Pause
     }
-  };
+  }
 
   const getConnectionIcon = () => {
     switch (healthStatus) {
       case 'connected':
-        return Wifi;
+        return Wifi
       case 'disconnected':
-        return WifiOff;
+        return WifiOff
       default:
-        return Loader2;
+        return Loader2
     }
-  };
+  }
 
   const getConnectionBadgeVariant = () => {
     switch (healthStatus) {
       case 'connected':
-        return 'secondary';
+        return 'secondary'
       case 'disconnected':
-        return 'destructive';
+        return 'destructive'
       default:
-        return 'outline';
+        return 'outline'
     }
-  };
+  }
 
   const getConnectionText = () => {
     switch (healthStatus) {
       case 'connected':
-        return 'Connected';
+        return 'Connected'
       case 'disconnected':
-        return 'Disconnected';
+        return 'Disconnected'
       default:
-        return 'Checking...';
+        return 'Checking...'
     }
-  };
+  }
 
   const getProgressPercentage = () => {
-    if (!indexStatus || indexStatus.status !== 'indexing' || indexStatus.progress.total_files === 0) {
-      return 0;
+    if (
+      !indexStatus ||
+      indexStatus.status !== 'indexing' ||
+      indexStatus.progress.total_files === 0
+    ) {
+      return 0
     }
-    return (indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100;
-  };
+    return (
+      (indexStatus.progress.processed_files /
+        indexStatus.progress.total_files) *
+      100
+    )
+  }
 
   return (
     <footer className="bg-card border-t border-border px-4 py-2 shrink-0">
@@ -122,15 +130,17 @@ export default function StatusBar() {
             data-testid="connection-badge"
           >
             {(() => {
-              const IconComponent = getConnectionIcon();
+              const IconComponent = getConnectionIcon()
               return (
                 <>
-                  <IconComponent className={`w-3 h-3 mr-1.5 ${
-                    healthStatus === 'checking' ? 'animate-spin' : ''
-                  }`} />
+                  <IconComponent
+                    className={`w-3 h-3 mr-1.5 ${
+                      healthStatus === 'checking' ? 'animate-spin' : ''
+                    }`}
+                  />
                   {getConnectionText()}
                 </>
-              );
+              )
             })()}
           </Badge>
         </div>
@@ -144,15 +154,20 @@ export default function StatusBar() {
                 className="transition-all duration-300"
               >
                 {(() => {
-                  const IconComponent = getStatusIcon(indexStatus.status);
+                  const IconComponent = getStatusIcon(indexStatus.status)
                   return (
                     <>
-                      <IconComponent className={`w-3 h-3 mr-1.5 ${
-                        indexStatus.status === 'indexing' ? 'animate-pulse' : ''
-                      }`} />
-                      {indexStatus.status.charAt(0).toUpperCase() + indexStatus.status.slice(1)}
+                      <IconComponent
+                        className={`w-3 h-3 mr-1.5 ${
+                          indexStatus.status === 'indexing'
+                            ? 'animate-pulse'
+                            : ''
+                        }`}
+                      />
+                      {indexStatus.status.charAt(0).toUpperCase() +
+                        indexStatus.status.slice(1)}
                     </>
-                  );
+                  )
                 })()}
               </Badge>
 
@@ -170,7 +185,8 @@ export default function StatusBar() {
                         />
                       </div>
                       <span className="text-muted-foreground text-xs">
-                        {indexStatus.progress.processed_files}/{indexStatus.progress.total_files}
+                        {indexStatus.progress.processed_files}/
+                        {indexStatus.progress.total_files}
                       </span>
                     </>
                   )}
@@ -180,7 +196,8 @@ export default function StatusBar() {
               {indexStatus.errors.length > 0 && (
                 <Badge variant="destructive" className="animate-pulse">
                   <AlertCircle className="w-3 h-3 mr-1.5" />
-                  {indexStatus.errors.length} error{indexStatus.errors.length !== 1 ? 's' : ''}
+                  {indexStatus.errors.length} error
+                  {indexStatus.errors.length !== 1 ? 's' : ''}
                 </Badge>
               )}
             </>
@@ -210,18 +227,16 @@ export default function StatusBar() {
             <span>{indexStatus.progress.current_phase}</span>
             {indexStatus.progress.total_files > 0 && (
               <span>
-                {indexStatus.progress.processed_files}/{indexStatus.progress.total_files}
+                {indexStatus.progress.processed_files}/
+                {indexStatus.progress.total_files}
               </span>
             )}
           </div>
           {indexStatus.progress.total_files > 0 && (
-            <Progress
-              value={getProgressPercentage()}
-              className="h-1"
-            />
+            <Progress value={getProgressPercentage()} className="h-1" />
           )}
         </div>
       )}
     </footer>
-  );
+  )
 }

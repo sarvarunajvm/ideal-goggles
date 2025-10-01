@@ -201,7 +201,7 @@ Verify: Graceful handling of interruptions
 ### Automated Test Suite
 ```python
 # Run complete integration test suite
-pytest tests/integration/
+pytest backend/tests/integration/
 # Tests cover all quickstart scenarios
 # Includes performance benchmarking
 # Generates test report with metrics
