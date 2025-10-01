@@ -231,18 +231,15 @@ jobs:
 
     - name: Lint frontend
       run: |
-        cd frontend
         pnpm run lint
 
     - name: Type check
       run: |
-        cd frontend
         pnpm run type-check
 
     - name: Run tests with coverage
       run: |
-        cd frontend
-        pnpm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text --reporters=default --reporters=jest-junit
+        pnpm run test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text --reporters=default --reporters=jest-junit
       continue-on-error: true
       env:
         JEST_JUNIT_OUTPUT_DIR: ./test-results
@@ -330,9 +327,7 @@ jobs:
 
     - name: Build application
       run: |
-        cd frontend
-        pnpm run build
-        cd ..
+        pnpm run build:frontend
 
     - name: Start backend server
       run: |
@@ -358,9 +353,8 @@ jobs:
 
     - name: Start frontend server
       run: |
-        cd frontend
-        nohup pnpm run preview > ../backend/logs/frontend.log 2>&1 &
-        echo $! > ../backend/frontend.pid
+        nohup pnpm run preview > backend/logs/frontend.log 2>&1 &
+        echo $! > backend/frontend.pid
         sleep 3
         echo "Frontend started with PID $(cat ../backend/frontend.pid)"
 

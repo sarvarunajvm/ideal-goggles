@@ -21,6 +21,7 @@
     "test": "jest -c frontend/jest.config.js --rootDir frontend",
     "test:unit": "jest -c frontend/jest.config.js --rootDir frontend frontend/tests/basic.test.js",
     "test:components": "jest -c frontend/jest.config.js --rootDir frontend --testPathPattern=tests/components/.*",
+    "test:p0:quick": "jest -c frontend/jest.config.p0.js --rootDir frontend --silent",
     "backend:install": "make -C backend install",
     "backend:package": "make -C backend package",
     "backend:test": "make -C backend test",
