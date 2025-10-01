@@ -1,10 +1,11 @@
-.PHONY: help install dev test clean build dist-mac dist-win dist-all
+.PHONY: help install dev test coverage clean build dist-mac dist-win dist-all
 
 # Configuration
 APP_NAME = ideal-goggles
 BACKEND_NAME = ideal-goggles-backend
 PYTHON ?= python3
 NODE_PM ?= pnpm
+COV_MIN ?= 0
 
 # Colors for output
 RED = \033[0;31m
@@ -19,6 +20,7 @@ help:
 	@echo "  install            Install all dependencies (backend + frontend)"
 	@echo "  dev                Start development environment (backend + frontend + electron)"
 	@echo "  test               Run all tests (backend + frontend)"
+	@echo "  coverage           Generate test coverage (backend + frontend)"
 	@echo ""
 	@echo "$(YELLOW)Backend:$(NC)"
 	@echo "  backend-install    Install backend dependencies"
@@ -63,6 +65,9 @@ dev:
 test: backend-test frontend-test
 	@echo "$(GREEN)✓ All tests completed$(NC)"
 
+coverage: backend-coverage frontend-coverage
+	@echo "$(GREEN)✓ Coverage reports generated$(NC)"
+
 build: frontend-build electron-build backend-package
 	@echo "$(GREEN)✓ Build completed$(NC)"
 
@@ -98,6 +103,11 @@ backend-dev:
 
 backend-test:
 	cd backend && .venv/bin/pytest -q
+
+backend-coverage:
+	@echo "$(YELLOW)Generating backend coverage...$(NC)"
+	cd backend && .venv/bin/pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-fail-under=$(COV_MIN)
+	@echo "$(GREEN)✓ Backend coverage: backend/htmlcov/index.html, backend/coverage.xml$(NC)"
 
 backend-lint:
 	cd backend && .venv/bin/ruff check .
@@ -136,6 +146,11 @@ frontend-build:
 
 frontend-test:
 	cd frontend && $(NODE_PM) run test
+
+frontend-coverage:
+	@echo "$(YELLOW)Generating frontend coverage...$(NC)"
+	cd frontend && $(NODE_PM) run test:coverage
+	@echo "$(GREEN)✓ Frontend coverage: frontend/coverage/lcov-report/index.html$(NC)"
 
 frontend-lint:
 	cd frontend && $(NODE_PM) run lint

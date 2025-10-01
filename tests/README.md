@@ -1,6 +1,6 @@
-# Integration Tests for Ideal Goggles
+# E2E Tests - Ideal Goggles
 
-Comprehensive Playwright-based integration tests for the Ideal Goggles application.
+End-to-end Playwright tests for the Ideal Goggles desktop application.
 
 ## 📋 Prerequisites
 
@@ -15,7 +15,7 @@ Comprehensive Playwright-based integration tests for the Ideal Goggles applicati
 pnpm install
 
 # Install Playwright browsers
-pnpm run install
+pnpm exec playwright install
 
 # Run all tests
 pnpm test

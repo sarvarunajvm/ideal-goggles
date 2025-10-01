@@ -12,6 +12,7 @@
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "type-check": "tsc --noEmit",
     "test": "jest -c jest.config.js",
+    "test:coverage": "jest -c jest.config.js --coverage",
     "test:unit": "jest -c jest.config.js tests/basic.test.js",
     "test:components": "jest -c jest.config.js --testPathPattern=tests/components/.*"
   },

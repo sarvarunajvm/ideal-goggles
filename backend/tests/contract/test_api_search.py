@@ -10,9 +10,9 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from main import app
+from src.main import app
 
 
 class TestSearchAPI:

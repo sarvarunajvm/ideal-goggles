@@ -1,4 +1,4 @@
-# 👨‍💻 Developer Guide - Ideal Googles
+# 👨‍💻 Developer Guide - Ideal Goggles
 
 Comprehensive guide for developers working on the Ideal Goggles application.
 
@@ -37,11 +37,10 @@ Comprehensive guide for developers working on the Ideal Goggles application.
 
 ### Key Design Decisions
 
-1. **Single package.json**: Simplified dependency management
-2. **No lock files**: Always fresh dependencies, better for desktop apps
-3. **PNPM only**: Fast, efficient package management
-4. **Local-first**: All processing on user's machine for privacy
-5. **Modular architecture**: Clean separation of concerns
+1. **Single package.json with root scripts**: Simplified orchestration across frontend, backend, and Electron.
+2. **PNPM**: Fast, efficient package management and workspaces.
+3. **Local-first**: All processing on user's machine for privacy.
+4. **Modular architecture**: Clean separation of concerns.
 
 ## Development Setup
 
@@ -63,17 +62,17 @@ git clone https://github.com/sarvarunajvm/ideal-goggles.git
 cd ideal-goggles
 
 # Install everything
-make install
+make install        # Or: pnpm install && make backend-install
 
 # Start development
-make dev
+pnpm run dev
 ```
 
 ### Manual Setup
 
 ```bash
-# Frontend dependencies (PNPM, no lock file)
-pnpm install --no-lockfile
+# Frontend dependencies (PNPM)
+pnpm install
 
 # Backend dependencies
 cd backend
@@ -156,6 +155,32 @@ pnpm run dev:frontend
 pnpm run dev:electron
 ```
 
+### Quick Start Cheat-Sheet
+
+```bash
+# Backend
+make backend-dev        # Start backend only
+make backend-test       # Run backend tests
+make backend-coverage   # Coverage report
+make backend-lint       # Ruff
+make backend-format     # Black
+
+# Frontend
+pnpm --filter frontend run dev        # Start frontend only
+pnpm --filter frontend run lint       # ESLint
+pnpm --filter frontend run type-check # TypeScript
+pnpm --filter frontend run test       # Jest tests
+
+# Build & Package
+pnpm run build                        # Build frontend
+make dist-mac                         # macOS .dmg
+make dist-win                         # Windows installer
+
+# Ports (kill if stuck)
+lsof -ti:5555 | xargs kill -9         # Backend
+lsof -ti:3333 | xargs kill -9         # Frontend
+```
+
 ### Code Quality
 
 ```bash
@@ -177,7 +202,7 @@ make backend-typecheck # Backend (mypy)
 ### API Structure
 
 ```python
-# src/api/search.py
+# Backend: src/api/search.py
 from fastapi import APIRouter, Query, HTTPException
 from typing import List, Optional
 
@@ -307,7 +332,7 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
 ### API Client
 
 ```tsx
-// src/services/apiClient.ts
+// Frontend: src/services/apiClient.ts
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555';
@@ -331,6 +356,40 @@ export const searchAPI = {
 
 ## Testing Strategy
 
+### Test Organization
+
+```
+tests/
+├── backend/tests/        # Backend tests
+│   ├── unit/            # Fast, isolated unit tests
+│   ├── contract/        # API contract tests
+│   ├── integration/     # Integration tests
+│   └── performance/     # Performance benchmarks
+├── frontend/tests/       # Frontend tests
+│   ├── components/      # Component tests
+│   └── setupTests.ts    # Test configuration
+└── tests/               # E2E Playwright tests
+    ├── e2e/            # End-to-end test suites
+    ├── page-objects/   # Page object models
+    └── helpers/        # Test utilities
+```
+
+### Backend Testing
+
+```bash
+# Run all tests
+make backend-test
+
+# Run specific test types
+pytest -m unit           # Unit tests only
+pytest -m contract       # Contract tests only
+pytest -m integration    # Integration tests only
+pytest -m "not performance"  # Exclude performance tests
+
+# Coverage report
+make backend-coverage    # Generate HTML report
+```
+
 ### Frontend Testing
 
 ```bash
@@ -340,11 +399,22 @@ pnpm run test:unit
 # Component tests
 pnpm run test:components
 
-# All tests
-pnpm run test
+# All tests with coverage
+pnpm run test:coverage
 ```
 
-Example test:
+### E2E Testing
+
+```bash
+cd tests
+pnpm test                # Run all E2E tests
+pnpm run test:smoke      # Quick smoke tests
+pnpm run test:ui         # Interactive mode
+```
+
+### Test Writing Guidelines
+
+Example unit test:
 
 ```tsx
 // tests/components/PhotoCard.test.tsx

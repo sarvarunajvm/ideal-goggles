@@ -28,11 +28,35 @@ class Logger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000; // Keep last 1000 logs in memory
   private performanceMetrics: Map<string, PerformanceMetrics> = new Map();
-  private isDevelopment = import.meta.env.DEV;
-  private logLevel: string = import.meta.env.VITE_LOG_LEVEL || 'INFO';
+  private isDevelopment: boolean;
+  private logLevel: string;
   private requestIdCounter = 0;
 
+  private getEnvValue(): { isDev: boolean; logLevel: string } {
+    // Check if we're in a test environment
+    if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+      return { isDev: true, logLevel: 'INFO' };
+    }
+
+    // Try to access Vite env variables
+    try {
+      // @ts-ignore - import.meta might not exist in test environment
+      const viteEnv = import.meta?.env;
+      return {
+        isDev: viteEnv?.DEV || false,
+        logLevel: viteEnv?.VITE_LOG_LEVEL || 'INFO'
+      };
+    } catch {
+      // Fallback for environments where import.meta doesn't exist
+      return { isDev: false, logLevel: 'INFO' };
+    }
+  }
+
   private constructor() {
+    const env = this.getEnvValue();
+    this.isDevelopment = env.isDev;
+    this.logLevel = env.logLevel;
+
     // Set up global error handler
     this.setupGlobalErrorHandler();
     // Set up performance observer
@@ -47,25 +71,27 @@ class Logger {
   }
 
   private setupGlobalErrorHandler(): void {
-    window.addEventListener('error', (event) => {
-      this.error('Uncaught error', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error,
+    if (typeof window !== 'undefined') {
+      window.addEventListener('error', (event) => {
+        this.error('Uncaught error', {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          error: event.error,
+        });
       });
-    });
 
-    window.addEventListener('unhandledrejection', (event) => {
-      this.error('Unhandled promise rejection', {
-        reason: event.reason,
+      window.addEventListener('unhandledrejection', (event) => {
+        this.error('Unhandled promise rejection', {
+          reason: event.reason,
+        });
       });
-    });
+    }
   }
 
   private setupPerformanceObserver(): void {
-    if ('PerformanceObserver' in window) {
+    if (typeof window !== 'undefined' && 'PerformanceObserver' in window) {
       try {
         // Monitor navigation timing
         const navObserver = new PerformanceObserver((list) => {

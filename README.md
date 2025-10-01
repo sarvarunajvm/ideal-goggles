@@ -32,12 +32,11 @@ A privacy-focused desktop application for intelligent photo search and organizat
 git clone https://github.com/sarvarunajvm/ideal-goggles.git
 cd ideal-goggles
 
-# Install all dependencies (no lock files)
-pnpm install --no-lockfile
+# Install all dependencies
+pnpm install
 
 # Install backend dependencies
-cd backend && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-cd ..
+make backend-install
 
 # Start development environment
 pnpm run dev
@@ -83,7 +82,7 @@ ideal-goggles/
 │   │   └── models/      # Data models
 │   └── pyproject.toml   # Python dependencies
 │
-├── frontend/            # React frontend
+├── frontend/            # React frontend (Vite)
 │   ├── src/            # Frontend source code
 │   │   ├── components/ # React components
 │   │   ├── pages/     # Application pages
@@ -94,9 +93,9 @@ ideal-goggles/
 │   ├── main.ts        # Main process
 │   └── preload.ts     # Preload scripts
 │
-├── package.json       # Single package.json for all Node.js deps
+├── package.json       # Root scripts and Electron builder config
 ├── Makefile          # Build automation commands
-└── .gitignore        # Includes lock files (not tracked)
+└── .gitignore        # Ignores build artifacts and local data
 ```
 
 ## 🛠️ Development
@@ -105,8 +104,8 @@ ideal-goggles/
 
 ```bash
 # Development
-pnpm run dev              # Start full dev environment
-pnpm run dev:backend      # Start backend only
+pnpm run dev              # Start full dev environment (backend 5555, frontend 3333, electron)
+make backend-dev          # Start backend only
 pnpm run dev:frontend     # Start frontend only
 
 # Testing
@@ -121,6 +120,22 @@ make backend-format     # Format backend (black)
 # Building
 pnpm run build          # Build frontend
 make backend-package    # Package backend with PyInstaller
+
+### Test Coverage
+
+```bash
+# Backend coverage (HTML + XML)
+make backend-coverage             # Outputs: backend/htmlcov/index.html, backend/coverage.xml
+
+# Frontend coverage (lcov + HTML)
+make frontend-coverage            # Outputs: frontend/coverage/lcov-report/index.html
+
+# Combined convenience target
+make coverage                     # Runs both backend and frontend coverage
+
+# Enforce minimum backend coverage (e.g., 70%)
+make backend-coverage COV_MIN=70
+```
 ```
 
 ### Using Make Commands

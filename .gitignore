@@ -74,7 +74,7 @@ backend/data/
 backend/cache/
 backend/performance_report.txt
 
-# PNPM lockfile (lockfiles not tracked in this repo)
+# PNPM lockfile (tracked)
 pnpm-lock.yaml
 
 # Environment files (keep examples)
@@ -82,7 +82,7 @@ pnpm-lock.yaml
 .env.*
 !.env.example
 
-# Package lock files (using PNPM)
+# Other package lock files (not used)
 package-lock.json
 yarn.lock
 
