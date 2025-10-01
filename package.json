@@ -1,6 +1,6 @@
 {
   "name": "ideal-goggles",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Ideal Goggles desktop application",
   "author": "Ideal Goggles Team",
   "main": "electron/dist/main.js",
@@ -39,7 +39,7 @@
     "@types/node": "^20.9.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "33.3.1",
+    "electron": "35.7.5",
     "electron-builder": "^24.6.4",
     "typescript": "^5.2.2",
     "wait-on": "^7.2.0"

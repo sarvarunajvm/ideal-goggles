@@ -65,9 +65,6 @@ dev:
 test: backend-test frontend-test
 	@echo "$(GREEN)✓ All tests completed$(NC)"
 
-coverage: backend-coverage frontend-coverage
-	@echo "$(GREEN)✓ Coverage reports generated$(NC)"
-
 build: frontend-build electron-build backend-package
 	@echo "$(GREEN)✓ Build completed$(NC)"
 

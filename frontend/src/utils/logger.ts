@@ -40,7 +40,7 @@ class Logger {
 
     // Try to access Vite env variables
     try {
-      // @ts-ignore - import.meta might not exist in test environment
+      // @ts-expect-error - import.meta might not exist in test environment
       const viteEnv = import.meta?.env;
       return {
         isDev: viteEnv?.DEV || false,
