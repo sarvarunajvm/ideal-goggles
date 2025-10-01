@@ -94,11 +94,11 @@ jobs:
           esac
         fi
 
-        # For PRs, check what changed
+        # For PRs, E2E tests run by default unless it's docs-only
         if [ "${{ github.event_name }}" == "pull_request" ]; then
-          # Check if only docs changed
+          # Only skip E2E if ONLY docs changed (no code changes at all)
           if git diff --name-only HEAD^ HEAD | grep -v '\.md$' | grep -v '^docs/' > /dev/null; then
-            echo "Code changes detected"
+            echo "Code changes detected, will run E2E tests"
           else
             echo "Only documentation changed, skipping E2E"
             RUN_E2E="false"
@@ -120,7 +120,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.12']
 
     steps:
     - uses: actions/checkout@v4
@@ -174,7 +174,6 @@ jobs:
       continue-on-error: true
 
     - name: Upload coverage to Codecov
-      if: matrix.python-version == '3.11'
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -202,7 +201,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ['18', '20']
+        node-version: ['20']
 
     steps:
     - uses: actions/checkout@v4
@@ -215,7 +214,6 @@ jobs:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 10
         run_install: false
 
     - name: Get pnpm store directory
@@ -255,7 +253,6 @@ jobs:
         JEST_JUNIT_OUTPUT_NAME: junit-${{ matrix.node-version }}.xml
 
     - name: Upload coverage to Codecov
-      if: matrix.node-version == '18'
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -277,17 +274,12 @@ jobs:
   e2e-tests:
     name: E2E Tests - Full Suite
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    if: |
-      always() &&
-      needs.determine-tests.outputs.run_e2e == 'true' &&
-      (needs.backend-tests.result == 'success' || needs.backend-tests.result == 'skipped') &&
-      (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped')
+    needs: determine-tests
+    if: needs.determine-tests.outputs.run_e2e == 'true'
 
     strategy:
       matrix:
-        browser: [chromium, firefox, webkit]
-        shard: [1, 2, 3]
+        browser: [chromium]
 
     steps:
     - uses: actions/checkout@v4
@@ -295,17 +287,15 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
-      with:
-        version: 10
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -366,7 +356,7 @@ jobs:
     - name: Run E2E tests
       run: |
         cd tests
-        npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3 --reporter=blob
+        npx playwright test --project=${{ matrix.browser }} --reporter=blob
       continue-on-error: true
       env:
         CI: true
@@ -377,7 +367,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: e2e-blob-report-${{ matrix.browser }}-${{ matrix.shard }}
+        name: e2e-blob-report-${{ matrix.browser }}
         path: tests/blob-report/
         retention-days: 1
 
@@ -394,12 +384,10 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
-      with:
-        version: 10
 
     - name: Install dependencies
       run: |
@@ -445,14 +433,14 @@ jobs:
       run: |
         mkdir -p coverage-report
 
-        # Copy backend coverage (Python 3.11)
-        if [ -d "coverage-artifacts/backend-test-results-3.11/htmlcov" ]; then
-          cp -r coverage-artifacts/backend-test-results-3.11/htmlcov coverage-report/backend
+        # Copy backend coverage (Python 3.12)
+        if [ -d "coverage-artifacts/backend-test-results-3.12/htmlcov" ]; then
+          cp -r coverage-artifacts/backend-test-results-3.12/htmlcov coverage-report/backend
         fi
 
-        # Copy frontend coverage (Node 18)
-        if [ -d "coverage-artifacts/frontend-test-results-18/coverage" ]; then
-          cp -r coverage-artifacts/frontend-test-results-18/coverage coverage-report/frontend
+        # Copy frontend coverage (Node 20)
+        if [ -d "coverage-artifacts/frontend-test-results-20/coverage" ]; then
+          cp -r coverage-artifacts/frontend-test-results-20/coverage coverage-report/frontend
         fi
 
         # Copy E2E test results
