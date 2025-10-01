@@ -1,6 +1,6 @@
 {
   "name": "ideal-goggles",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Ideal Goggles desktop application",
   "author": "Ideal Goggles Team",
   "main": "electron/dist/main.js",
