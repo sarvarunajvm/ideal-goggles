@@ -133,7 +133,6 @@ jobs:
       with:
         node-version: '20'
         registry-url: 'https://registry.npmjs.org/'
-        cache: 'pnpm'
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -224,7 +223,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         registry-url: 'https://registry.npmjs.org/'
-        cache: 'pnpm'
 
 
     - name: Install dependencies
@@ -290,7 +288,6 @@ jobs:
       with:
         node-version: '20'
         registry-url: 'https://registry.npmjs.org/'
-        cache: 'pnpm'
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -416,7 +413,6 @@ jobs:
       with:
         node-version: '20'
         registry-url: 'https://registry.npmjs.org/'
-        cache: 'pnpm'
 
     - name: Install dependencies
       run: |
