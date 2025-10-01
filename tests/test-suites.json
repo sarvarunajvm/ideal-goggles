@@ -1,0 +1,68 @@
+{
+  "suites": {
+    "smoke": {
+      "name": "Smoke Tests",
+      "description": "Basic functionality tests",
+      "files": ["01-smoke.test.ts"],
+      "dependencies": [],
+      "priority": 1
+    },
+    "core": {
+      "name": "Core Features",
+      "description": "Essential application features",
+      "files": ["02-search.test.ts", "03-settings.test.ts"],
+      "dependencies": ["backend", "frontend"],
+      "priority": 2
+    },
+    "advanced": {
+      "name": "Advanced Features",
+      "description": "Features requiring additional setup",
+      "files": ["04-people.test.ts"],
+      "dependencies": ["face-detection", "models"],
+      "priority": 3,
+      "conditional": true
+    },
+    "integration": {
+      "name": "Integration Tests",
+      "description": "End-to-end workflows",
+      "files": ["05-workflows.test.ts", "08-integration.test.ts"],
+      "dependencies": ["backend", "frontend", "database"],
+      "priority": 4,
+      "skipInCI": false
+    },
+    "ui": {
+      "name": "UI Components",
+      "description": "User interface tests",
+      "files": ["06-preview-drawer.test.ts"],
+      "dependencies": ["frontend"],
+      "priority": 2
+    },
+    "system": {
+      "name": "System Tests",
+      "description": "Dependency and error handling",
+      "files": ["07-dependencies.test.ts"],
+      "dependencies": [],
+      "priority": 3
+    }
+  },
+  "execution": {
+    "ci": {
+      "suites": ["smoke", "core"],
+      "parallel": false,
+      "retries": 2,
+      "timeout": 120000
+    },
+    "local": {
+      "suites": ["smoke", "core", "ui", "advanced", "integration", "system"],
+      "parallel": true,
+      "retries": 0,
+      "timeout": 60000
+    },
+    "quick": {
+      "suites": ["smoke"],
+      "parallel": true,
+      "retries": 0,
+      "timeout": 30000
+    }
+  }
+}

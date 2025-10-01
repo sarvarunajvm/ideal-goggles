@@ -85,9 +85,11 @@ jobs:
     - name: Build frontend
       run: pnpm run build:frontend
 
-  integration-test:
+  # P0 Critical E2E Tests - Fast, essential tests only
+  e2e-critical:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
+    timeout-minutes: 10  # Strict timeout for CI
 
     steps:
     - uses: actions/checkout@v4
@@ -124,5 +126,31 @@ jobs:
     - name: Build project
       run: pnpm run build
 
-    - name: E2E tests disabled temporarily
-      run: echo "Skipping e2e integration tests for now"
+    - name: Install Playwright browsers (Chromium only)
+      working-directory: ./tests
+      run: |
+        npx playwright install chromium --with-deps
+
+    - name: Run P0 Critical Tests Only
+      working-directory: ./tests
+      env:
+        CI: true
+        SKIP_HEAVY_TESTS: true
+      run: |
+        echo "Running P0 critical tests only..."
+        npx playwright test --config=playwright.config.ci.ts --grep @P0
+        echo "P0 tests completed successfully!"
+
+    - name: Upload Playwright report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: tests/playwright-report
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-test-results
+        path: tests/test-results

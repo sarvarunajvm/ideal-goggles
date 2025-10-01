@@ -20,12 +20,12 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
     await basePage.goto();
   });
 
-  test('application loads successfully', async ({ page }) => {
+  test('@P0 application loads successfully', async ({ page }) => {
     await expect(basePage.navBar).toBeVisible();
     await expect(page).toHaveTitle(/Ideal Goggles/i);
   });
 
-  test('backend API is accessible', async () => {
+  test('@P0 backend API is accessible', async () => {
     const response = await apiClient.checkHealth();
     expect(response.ok).toBeTruthy();
 
@@ -34,7 +34,7 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
     expect(health.status).toBe('healthy');
   });
 
-  test('navigation links are visible and functional', async ({ page }) => {
+  test('@P0 navigation links are visible and functional', async ({ page }) => {
     // Check all navigation links are visible
     await expect(basePage.searchLink).toBeVisible();
     await expect(basePage.settingsLink).toBeVisible();

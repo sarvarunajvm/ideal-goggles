@@ -105,18 +105,51 @@ export class PeoplePage extends BasePage {
 
   async removePhotoFromPerson(name: string, photoIndex: number) {
     await this.selectPerson(name);
-    const photo = await this.photoGallery.locator('img').nth(photoIndex);
-    await photo.hover();
-    const removeButton = await this.page.locator('[data-testid="remove-photo"]').nth(photoIndex);
+
+    // Wait for photos to load
+    await this.photoGallery.waitFor({ state: 'visible' });
+    const photos = await this.photoGallery.locator('img');
+    await photos.nth(photoIndex).waitFor({ state: 'visible' });
+
+    // Hover over the photo to reveal remove button
+    await photos.nth(photoIndex).hover();
+
+    // Wait for remove button and click it
+    const removeButton = this.page.locator('[data-testid="remove-photo"]').nth(photoIndex);
+    await removeButton.waitFor({ state: 'visible' });
     await removeButton.click();
-    // Click the specific Confirm button (not Confirm Delete)
-    await this.page.locator('button#confirm-remove-btn').click();
+
+    // Wait for confirmation dialog and confirm
+    const confirmButton = this.page.locator('button#confirm-remove-btn');
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
+    await confirmButton.click();
+
+    // Wait for the action to complete
     await this.waitForSaveComplete();
+
+    // Wait a bit for the UI to update
+    await this.page.waitForTimeout(500);
   }
 
   async searchByFace(name: string) {
     await this.selectPerson(name);
-    const searchButton = await this.page.locator('button:has-text("Search Photos of this Person")');
+    const searchButton = this.page.locator('button:has-text("Search Photos of this Person")');
+
+    // Wait for the button to be enabled (face search config to propagate)
+    await searchButton.waitFor({ state: 'visible' });
+
+    // Poll until button is enabled
+    let isEnabled = false;
+    for (let i = 0; i < 20; i++) { // Max 10 seconds
+      isEnabled = await searchButton.isEnabled();
+      if (isEnabled) break;
+      await this.page.waitForTimeout(500);
+    }
+
+    if (!isEnabled) {
+      throw new Error('Face search button remained disabled after 10 seconds');
+    }
+
     await searchButton.click();
     await this.page.waitForURL('**/?face=*');
   }

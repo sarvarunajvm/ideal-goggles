@@ -26,6 +26,8 @@ export default function PeoplePage() {
   const [formPhotos, setFormPhotos] = useState<string[]>([]);
   const [toast, setToast] = useState<{ kind: 'Saved' | 'Deleted'; id: number } | null>(null);
   const [faceSearchEnabled, setFaceSearchEnabled] = useState(true);
+  const [photoToRemove, setPhotoToRemove] = useState<{ personId: number; photoIndex: number } | null>(null);
+  const [editingPersonId, setEditingPersonId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,13 +41,14 @@ export default function PeoplePage() {
       }
     };
     check();
-    const id = setInterval(check, 2000);
+    const id = setInterval(check, 1000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   const resetForm = () => {
     setNameInput('');
     setFormPhotos([]);
+    setEditingPersonId(null);
   };
 
   const openAddForm = () => {
@@ -73,17 +76,31 @@ export default function PeoplePage() {
       setError('At least one photo is required');
       return;
     }
-    const now = new Date().toISOString();
-    const newPerson: Person = {
-      id: Date.now(),
-      name: nameInput.trim(),
-      createdAt: now,
-      active: true,
-      photos: formPhotos,
-    };
-    setPeople((prev) => [...prev, newPerson]);
+
+    if (editingPersonId) {
+      // Update existing person
+      setPeople((prev) => prev.map((p) =>
+        p.id === editingPersonId
+          ? { ...p, name: nameInput.trim(), photos: formPhotos }
+          : p
+      ));
+      setToast({ kind: 'Saved', id: editingPersonId });
+    } else {
+      // Create new person
+      const now = new Date().toISOString();
+      const newPerson: Person = {
+        id: Date.now(),
+        name: nameInput.trim(),
+        createdAt: now,
+        active: true,
+        photos: formPhotos,
+      };
+      setPeople((prev) => [...prev, newPerson]);
+      setToast({ kind: 'Saved', id: newPerson.id });
+    }
+
     setShowForm(false);
-    setToast({ kind: 'Saved', id: newPerson.id });
+    resetForm();
     setTimeout(() => setToast(null), 1200);
   };
 
@@ -93,6 +110,21 @@ export default function PeoplePage() {
     if (!selected) return;
     setPeople((prev) => prev.map((p) => (p.id === selected.id ? updater(p) : p)));
     setToast({ kind: 'Saved', id: selected.id });
+    setTimeout(() => setToast(null), 1200);
+  };
+
+  const confirmRemovePhoto = () => {
+    if (!photoToRemove) return;
+    const person = people.find(p => p.id === photoToRemove.personId);
+    if (!person) return;
+
+    setPeople((prev) => prev.map((p) =>
+      p.id === photoToRemove.personId
+        ? { ...p, photos: p.photos.filter((_, i) => i !== photoToRemove.photoIndex) }
+        : p
+    ));
+    setPhotoToRemove(null);
+    setToast({ kind: 'Saved', id: photoToRemove.personId });
     setTimeout(() => setToast(null), 1200);
   };
 
@@ -130,7 +162,10 @@ export default function PeoplePage() {
           {/* Add/Edit Form */}
           {showForm && (
             <Card className="mb-6">
-              <CardContent className="pt-6">
+              <CardHeader>
+                <CardTitle>{editingPersonId ? 'Edit Person' : 'Add Person'}</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="person-name">Name</Label>
@@ -205,7 +240,12 @@ export default function PeoplePage() {
                     </Button>
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" className="flex-1" onClick={(e) => {
-                        e.stopPropagation(); setSelectedId(person.id); setShowForm(true); setNameInput(person.name); setFormPhotos(person.photos);
+                        e.stopPropagation();
+                        setSelectedId(person.id);
+                        setEditingPersonId(person.id);
+                        setShowForm(true);
+                        setNameInput(person.name);
+                        setFormPhotos(person.photos);
                       }}>Edit</Button>
                       <Button variant="destructive" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); setSelectedId(person.id); }}>Delete</Button>
                     </div>
@@ -226,7 +266,17 @@ export default function PeoplePage() {
                             for (const f of Array.from(files)) { const url = URL.createObjectURL(f); urls.push(url); }
                             updateSelected((p) => ({ ...p, photos: [...p.photos, ...urls] }));
                           }} />
-                          <Button className="ml-2" onClick={(e) => { e.stopPropagation(); setToast({ kind: 'Saved', id: person.id }); setTimeout(() => setToast(null), 1200); }}>Save Person</Button>
+                          <Button
+                            className="ml-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // The photos have already been added via updateSelected in the file input onChange
+                              setToast({ kind: 'Saved', id: person.id });
+                              setTimeout(() => setToast(null), 1200);
+                            }}
+                          >
+                            Save Person
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -234,16 +284,18 @@ export default function PeoplePage() {
                       {person.photos.map((src, idx) => (
                         <div key={idx} className="relative group">
                           <img src={src} alt="photo" className="w-full aspect-square object-cover rounded" />
-                          <Button data-testid="remove-photo" variant="secondary" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition h-auto py-0.5 px-2 text-xs" onClick={(e) => {
-                            e.stopPropagation();
-                            const confirmBtn = document.getElementById('confirm-remove-btn');
-                            const dialog = document.getElementById('confirm-remove');
-                            if (dialog) dialog.classList.remove('hidden');
-                            (confirmBtn as HTMLButtonElement | null)?.addEventListener('click', () => {
-                              updateSelected((p) => ({ ...p, photos: p.photos.filter((_, i) => i !== idx) }));
-                              if (dialog) dialog.classList.add('hidden');
-                            }, { once: true });
-                          }}>Remove</Button>
+                          <Button
+                            data-testid="remove-photo"
+                            variant="secondary"
+                            size="sm"
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition h-auto py-0.5 px-2 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPhotoToRemove({ personId: person.id, photoIndex: idx });
+                            }}
+                          >
+                            Remove
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -266,10 +318,22 @@ export default function PeoplePage() {
             </Card>
           )}
 
-          {/* Hidden confirm overlay for photo removal */}
-          <div id="confirm-remove" className="hidden">
-            <Button id="confirm-remove-btn">Confirm</Button>
-          </div>
+          {/* Photo removal confirmation */}
+          {photoToRemove && (
+            <Card className="mt-6">
+              <CardContent className="pt-4">
+                <div className="font-medium mb-2">Remove this photo?</div>
+                <div className="flex gap-2">
+                  <Button id="confirm-remove-btn" variant="destructive" onClick={confirmRemovePhoto}>
+                    Confirm
+                  </Button>
+                  <Button variant="ghost" onClick={() => setPhotoToRemove(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Toast messages expected by tests */}
           {toast && (

@@ -119,6 +119,7 @@ export default function StatusBar() {
             className={`transition-all duration-300 ${
               healthStatus === 'checking' ? 'animate-pulse' : ''
             }`}
+            data-testid="connection-badge"
           >
             {(() => {
               const IconComponent = getConnectionIcon();

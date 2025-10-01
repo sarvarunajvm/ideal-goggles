@@ -5,6 +5,8 @@ import * as path from 'path';
  * Playwright configuration for integration tests
  * Tests the complete Ideal Goggles application including frontend and backend
  */
+const useExistingServer = !!process.env.USE_EXISTING_SERVER;
+
 export default defineConfig({
   testDir: './e2e',
 
@@ -57,6 +59,10 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chrome',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     }
   ],
 
@@ -64,23 +70,26 @@ export default defineConfig({
   outputDir: 'test-results/',
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: 'cd ../frontend && pnpm run dev',
-      port: 3333,
-      timeout: 120 * 1000,
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: 'cd ../backend && python3 init_test_db.py && DATABASE_URL=sqlite+aiosqlite:///test_data/photos.db python3 -m src.main',
-      port: 5555,
-      timeout: 120 * 1000,
-      reuseExistingServer: !process.env.CI,
-      env: {
-        DATABASE_URL: 'sqlite+aiosqlite:///test_data/photos.db'
-      }
-    }
-  ],
+  webServer: useExistingServer
+    ? undefined
+    : [
+        {
+          command: 'cd ../frontend && pnpm run dev',
+          port: 3333,
+          timeout: 120 * 1000,
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          command:
+            'cd ../backend && python3 init_test_db.py && DATABASE_URL=sqlite+aiosqlite:///test_data/photos.db python3 -m src.main',
+          port: 5555,
+          timeout: 120 * 1000,
+          reuseExistingServer: !process.env.CI,
+          env: {
+            DATABASE_URL: 'sqlite+aiosqlite:///test_data/photos.db',
+          },
+        },
+      ],
 
   /* Global setup and teardown */
   globalSetup: path.join(__dirname, 'helpers', 'global-setup.ts'),

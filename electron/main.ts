@@ -234,7 +234,7 @@ function createWindow(): void {
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
     },
-    icon: join(__dirname, '../assets/icon.png'), // App icon
+    icon: join(__dirname, '../build-resources/icon.png'), // App icon
   });
 
   // Load the app

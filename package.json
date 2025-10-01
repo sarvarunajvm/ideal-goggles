@@ -52,6 +52,7 @@
       "output": "dist-electron",
       "buildResources": "build-resources"
     },
+    "icon": "build-resources/icon.png",
     "files": [
       "frontend/dist/**/*",
       "electron/dist/**/*",

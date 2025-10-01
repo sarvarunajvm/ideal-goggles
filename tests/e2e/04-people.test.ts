@@ -167,8 +167,7 @@ test.describe('People Management', () => {
   });
 
   test.describe('Editing People', () => {
-    test.skip('edits person name', async () => {
-      // SKIP: This appears to be a frontend bug where editing creates a new person instead of updating
+    test('edits person name', async () => {
       const oldName = 'Original Name';
       const newName = 'Updated Name';
 
@@ -180,8 +179,7 @@ test.describe('People Management', () => {
       expect(people).not.toContain(oldName);
     });
 
-    test.skip('adds photos to existing person', async () => {
-      // SKIP: Adding photos to existing person not working - frontend issue
+    test('adds photos to existing person', async () => {
       const personName = 'Photo Addition Test';
 
       // Add person with one photo
@@ -241,17 +239,17 @@ test.describe('People Management', () => {
   });
 
   test.describe('Face Search Integration', () => {
-    test.skip('searches photos by person face', async () => {
-      // SKIP: Face search button remains disabled even after enabling face search - likely a backend/frontend issue
+    test('searches photos by person face', async () => {
       const personName = 'Face Search Test';
 
       // Enable face search first
       await apiClient.updateConfig({ face_search_enabled: true });
 
+      // Add person and wait for processing
       await peoplePage.addPerson(personName, testImages.slice(0, 2));
 
-      // Wait for the person to be fully created and indexed
-      await peoplePage.page.waitForTimeout(2000);
+      // Wait for configuration to propagate and person to be processed
+      await peoplePage.page.waitForTimeout(3000);
 
       await peoplePage.searchByFace(personName);
 

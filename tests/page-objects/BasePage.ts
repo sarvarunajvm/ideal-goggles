@@ -10,6 +10,7 @@ export class BasePage {
   readonly settingsLink: Locator;
   readonly peopleLink: Locator;
   readonly connectionStatus: Locator;
+  readonly connectionBadge: Locator;
   readonly apiDocsButton: Locator;
 
   constructor(page: Page) {
@@ -19,6 +20,7 @@ export class BasePage {
     this.settingsLink = page.locator('a:has-text("Settings")');
     this.peopleLink = page.locator('a:has-text("People")');
     this.connectionStatus = page.locator('.w-2.h-2.rounded-full');
+    this.connectionBadge = page.locator('[data-testid="connection-badge"]:has-text("Connected")');
     this.apiDocsButton = page.locator('button:has-text("API Docs")');
   }
 
@@ -47,18 +49,16 @@ export class BasePage {
   }
 
   async isConnected(): Promise<boolean> {
-    const statusClass = await this.connectionStatus.first().getAttribute('class');
-    return statusClass?.includes('bg-green-500') || false;
+    try {
+      await this.connectionBadge.waitFor({ state: 'visible', timeout: 1000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async waitForConnection(timeout: number = 10000) {
-    await this.page.waitForFunction(
-      () => {
-        const indicator = document.querySelector('.w-2.h-2.rounded-full');
-        return indicator?.classList.contains('bg-green-500');
-      },
-      { timeout }
-    );
+    await this.connectionBadge.waitFor({ state: 'visible', timeout });
   }
 
   async getActiveNavItem(): Promise<string | null> {

@@ -106,4 +106,27 @@ export class SearchPage extends BasePage {
       path: await result.locator('[data-testid="result-path"]').textContent()
     };
   }
+
+  async performSearch() {
+    await this.searchButton.click();
+    await this.waitForSearchComplete();
+  }
+
+  async hasSearchResults(): Promise<boolean> {
+    const resultCount = await this.getSearchResults();
+    return resultCount > 0;
+  }
+
+  async waitForLoadingToComplete() {
+    const loadingIndicator = this.page.locator('[data-testid="loading-indicator"]');
+    await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+  }
+
+  async getEmptyStateMessage(): Promise<string | null> {
+    const emptyMessage = this.page.locator('[data-testid="empty-results"]');
+    if (await emptyMessage.isVisible()) {
+      return await emptyMessage.textContent();
+    }
+    return null;
+  }
 }
