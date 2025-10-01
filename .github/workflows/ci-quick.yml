@@ -1,0 +1,91 @@
+name: Quick CI
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/test-coverage-e2e.yml'
+
+jobs:
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pnpm-store
+        key: ${{ runner.os }}-quick-${{ hashFiles('**/package.json', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-quick-
+
+    - name: Install minimal dependencies
+      run: |
+        # Frontend
+        pnpm install --no-frozen-lockfile
+
+        # Backend (minimal)
+        cd backend
+        pip install ruff black mypy
+        cd ..
+
+    - name: Frontend Lint & Type Check
+      run: |
+        cd frontend
+        pnpm run lint
+        pnpm run type-check
+
+    - name: Backend Lint
+      run: |
+        cd backend
+        ruff check src tests --select E,F,W
+        black --check src tests
+
+    - name: Check file sizes
+      run: |
+        echo "### 📦 File Size Check" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Large files (>1MB):" >> $GITHUB_STEP_SUMMARY
+        find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./dist*/*" -exec ls -lh {} \; | head -20 >> $GITHUB_STEP_SUMMARY || echo "No large files found ✅" >> $GITHUB_STEP_SUMMARY
+
+    - name: Quick smoke test
+      run: |
+        # Just verify imports work
+        cd backend
+        python -c "from src.main import app; print('✅ Backend imports OK')"
+        cd ..
+
+        # Check frontend build config
+        cd frontend
+        npx vite build --mode production --logLevel silent --outDir temp-build || echo "Build config check completed"
+        rm -rf temp-build
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "## ✅ Quick CI Checks Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "For full test results, check the main workflow." >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,7 @@
 # 🥽 Ideal Goggles - Desktop App
 
-[![CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci.yml)
-[![Tests & Coverage](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/test-and-coverage.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/test-and-coverage.yml)
+[![Quick CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml)
+[![Tests & Coverage](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/test-coverage-e2e.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/test-coverage-e2e.yml)
 [![codecov](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
 [![Coverage Report](https://img.shields.io/badge/coverage-report-blue)](https://sarvarunajvm.github.io/ideal-goggles/)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)

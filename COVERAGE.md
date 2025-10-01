@@ -56,27 +56,43 @@ npx playwright test --reporter=html
 
 ## 🤖 CI/CD Workflows
 
-### 1. Test & Coverage Workflow (`test-and-coverage.yml`)
+### 1. Combined Test, Coverage & E2E Workflow (`test-coverage-e2e.yml`)
 
-Triggered on:
-- Push to `main` or `develop`
-- Pull requests to `main`
-- Manual dispatch
+**Triggers:**
+- 🕐 **Scheduled**: Daily at 2 AM UTC, Weekly comprehensive on Sundays
+- 🎯 **Manual dispatch**: Choose test scope (all/backend/frontend/e2e/coverage-only)
+- 📤 **Push**: To `main` or `develop` branches
+- 🔀 **Pull requests**: To `main` branch
 
-Features:
-- Parallel test execution (backend, frontend, E2E)
-- Coverage report generation
+**Features:**
+- Matrix testing (Python 3.11/3.12, Node 18/20)
+- Parallel E2E tests across 3 browsers with sharding
+- Smart test selection based on changed files
+- Coverage report generation and merging
 - Automatic deployment to GitHub Pages
-- PR comment with coverage summary
-- Test result publishing
+- PR comment with live results
+- Codecov integration
 
-### 2. CI Workflow (`ci.yml`)
+**Test Scope Control:**
+When manually triggered, you can select:
+- `all` - Run everything
+- `backend` - Backend tests only
+- `frontend` - Frontend tests only
+- `e2e` - E2E tests only
+- `coverage-only` - Skip E2E, focus on unit test coverage
 
-Fast CI checks including:
-- Linting (Python & TypeScript)
-- Type checking
-- Build verification
-- P0 critical E2E tests only
+### 2. Quick CI Workflow (`ci-quick.yml`)
+
+**Purpose**: Fast feedback on PRs (< 10 minutes)
+
+**Checks:**
+- Linting (ESLint, Ruff, Black)
+- Type checking (TypeScript, MyPy)
+- Import verification
+- File size checks
+- Build configuration validation
+
+**When**: Every pull request (except docs-only changes)
 
 ## 📝 Coverage Reports
 

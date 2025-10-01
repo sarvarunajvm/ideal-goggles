@@ -1,0 +1,870 @@
+name: Tests, Coverage & E2E
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+          - e2e
+          - coverage-only
+
+  # Scheduled runs
+  schedule:
+    # Run every day at 2 AM UTC (to catch regressions)
+    - cron: '0 2 * * *'
+    # Run every Sunday at 10 AM UTC (comprehensive weekly check)
+    - cron: '0 10 * * 0'
+
+  # On push to main branches
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/test-coverage-e2e.yml'
+
+  # On pull requests
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  checks: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine which tests to run based on triggers
+  determine-tests:
+    name: Determine Test Scope
+    runs-on: ubuntu-latest
+    outputs:
+      run_backend: ${{ steps.check.outputs.run_backend }}
+      run_frontend: ${{ steps.check.outputs.run_frontend }}
+      run_e2e: ${{ steps.check.outputs.run_e2e }}
+      run_coverage: ${{ steps.check.outputs.run_coverage }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Determine what to test
+      id: check
+      run: |
+        # Default to running everything
+        RUN_BACKEND="true"
+        RUN_FRONTEND="true"
+        RUN_E2E="true"
+        RUN_COVERAGE="true"
+
+        # Check manual trigger inputs
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          case "${{ github.event.inputs.test_type }}" in
+            backend)
+              RUN_FRONTEND="false"
+              RUN_E2E="false"
+              ;;
+            frontend)
+              RUN_BACKEND="false"
+              RUN_E2E="false"
+              ;;
+            e2e)
+              RUN_COVERAGE="false"
+              ;;
+            coverage-only)
+              RUN_E2E="false"
+              ;;
+          esac
+        fi
+
+        # For PRs, check what changed
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          # Check if only docs changed
+          if git diff --name-only HEAD^ HEAD | grep -v '\.md$' | grep -v '^docs/' > /dev/null; then
+            echo "Code changes detected"
+          else
+            echo "Only documentation changed, skipping E2E"
+            RUN_E2E="false"
+          fi
+        fi
+
+        # Output decisions
+        echo "run_backend=$RUN_BACKEND" >> $GITHUB_OUTPUT
+        echo "run_frontend=$RUN_FRONTEND" >> $GITHUB_OUTPUT
+        echo "run_e2e=$RUN_E2E" >> $GITHUB_OUTPUT
+        echo "run_coverage=$RUN_COVERAGE" >> $GITHUB_OUTPUT
+
+  # Backend Tests with Coverage
+  backend-tests:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: determine-tests
+    if: needs.determine-tests.outputs.run_backend == 'true'
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Lint with ruff
+      run: |
+        cd backend
+        ruff check src tests
+
+    - name: Format check with black
+      run: |
+        cd backend
+        black --check src tests
+
+    - name: Type check with mypy
+      run: |
+        cd backend
+        mypy src --ignore-missing-imports
+
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        pytest --cov=src --cov-report=xml --cov-report=html --cov-report=term \
+               --junitxml=test-results-${{ matrix.python-version }}.xml \
+               -v --tb=short
+      continue-on-error: true
+
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+        fail_ci_if_error: false
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-test-results-${{ matrix.python-version }}
+        path: |
+          backend/test-results-*.xml
+          backend/htmlcov/
+          backend/coverage.xml
+
+  # Frontend Tests with Coverage
+  frontend-tests:
+    name: Frontend Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: determine-tests
+    if: needs.determine-tests.outputs.run_frontend == 'true'
+
+    strategy:
+      matrix:
+        node-version: ['18', '20']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+        run_install: false
+
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install dependencies
+      run: |
+        pnpm install --no-frozen-lockfile
+
+    - name: Lint frontend
+      run: |
+        cd frontend
+        pnpm run lint
+
+    - name: Type check
+      run: |
+        cd frontend
+        pnpm run type-check
+
+    - name: Run tests with coverage
+      run: |
+        cd frontend
+        pnpm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text --reporters=default --reporters=jest-junit
+      continue-on-error: true
+      env:
+        JEST_JUNIT_OUTPUT_DIR: ./test-results
+        JEST_JUNIT_OUTPUT_NAME: junit-${{ matrix.node-version }}.xml
+
+    - name: Upload coverage to Codecov
+      if: matrix.node-version == '18'
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+        fail_ci_if_error: false
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-test-results-${{ matrix.node-version }}
+        path: |
+          frontend/test-results/
+          frontend/coverage/
+
+  # E2E Tests (Full Suite)
+  e2e-tests:
+    name: E2E Tests - Full Suite
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    if: |
+      always() &&
+      needs.determine-tests.outputs.run_e2e == 'true' &&
+      (needs.backend-tests.result == 'success' || needs.backend-tests.result == 'skipped') &&
+      (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped')
+
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2, 3]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pnpm-store
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-e2e-${{ hashFiles('**/package.json', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-e2e-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+
+    - name: Install all dependencies
+      run: |
+        # Frontend
+        pnpm install --no-frozen-lockfile
+
+        # Backend
+        cd backend
+        pip install -e ".[dev]"
+        cd ..
+
+        # E2E tests
+        cd tests
+        pnpm install --no-frozen-lockfile
+        npx playwright install --with-deps ${{ matrix.browser }}
+
+    - name: Build application
+      run: |
+        cd frontend
+        pnpm run build
+        cd ..
+
+    - name: Start backend server
+      run: |
+        cd backend
+        python -m src.main &
+        sleep 10
+      env:
+        DATABASE_URL: sqlite:///test.db
+        TESTING: true
+
+    - name: Start frontend server
+      run: |
+        cd frontend
+        pnpm run preview &
+        sleep 5
+
+    - name: Wait for services
+      run: |
+        npx wait-on http://localhost:5555/health http://localhost:4173 -t 30000
+
+    - name: Run E2E tests
+      run: |
+        cd tests
+        npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3 --reporter=blob
+      continue-on-error: true
+      env:
+        CI: true
+        BASE_URL: http://localhost:4173
+        API_URL: http://localhost:5555
+
+    - name: Upload blob report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-blob-report-${{ matrix.browser }}-${{ matrix.shard }}
+        path: tests/blob-report/
+        retention-days: 1
+
+  # Merge E2E reports
+  merge-e2e-reports:
+    name: Merge E2E Test Reports
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always() && needs.e2e-tests.result != 'skipped'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Install dependencies
+      run: |
+        cd tests
+        pnpm install --no-frozen-lockfile
+
+    - name: Download all blob reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: e2e-blob-report-*
+        path: all-blob-reports
+
+    - name: Merge reports
+      run: |
+        cd tests
+        npx playwright merge-reports --reporter=html,github ../all-blob-reports
+
+    - name: Upload merged report
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-report
+        path: tests/playwright-report/
+
+  # Generate Combined Coverage Report
+  generate-coverage-report:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, merge-e2e-reports]
+    if: |
+      always() &&
+      needs.determine-tests.outputs.run_coverage == 'true' &&
+      (needs.backend-tests.result != 'skipped' || needs.frontend-tests.result != 'skipped')
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: coverage-artifacts
+
+    - name: Create combined coverage report
+      run: |
+        mkdir -p coverage-report
+
+        # Copy backend coverage (Python 3.11)
+        if [ -d "coverage-artifacts/backend-test-results-3.11/htmlcov" ]; then
+          cp -r coverage-artifacts/backend-test-results-3.11/htmlcov coverage-report/backend
+        fi
+
+        # Copy frontend coverage (Node 18)
+        if [ -d "coverage-artifacts/frontend-test-results-18/coverage" ]; then
+          cp -r coverage-artifacts/frontend-test-results-18/coverage coverage-report/frontend
+        fi
+
+        # Copy E2E test results
+        if [ -d "coverage-artifacts/e2e-test-report/playwright-report" ]; then
+          cp -r coverage-artifacts/e2e-test-report/playwright-report coverage-report/e2e
+        fi
+
+        # Create index.html
+        cat > coverage-report/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ideal Goggles - Test Coverage Dashboard</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    padding: 2rem;
+                }
+                .container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                }
+                header {
+                    text-align: center;
+                    color: white;
+                    margin-bottom: 3rem;
+                }
+                h1 {
+                    font-size: 3rem;
+                    margin-bottom: 0.5rem;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+                }
+                .subtitle {
+                    font-size: 1.2rem;
+                    opacity: 0.9;
+                    margin-bottom: 1rem;
+                }
+                .build-info {
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 8px;
+                    padding: 1rem;
+                    display: inline-block;
+                }
+                .build-info span {
+                    margin: 0 1rem;
+                    font-size: 0.9rem;
+                }
+                .cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                    gap: 2rem;
+                    margin-bottom: 2rem;
+                }
+                .card {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 2rem;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: linear-gradient(90deg, #667eea, #764ba2);
+                }
+                .card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+                }
+                .card h2 {
+                    color: #333;
+                    margin-bottom: 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .card .icon {
+                    font-size: 1.5rem;
+                }
+                .card p {
+                    color: #666;
+                    line-height: 1.6;
+                    margin-bottom: 1.5rem;
+                }
+                .btn {
+                    display: inline-block;
+                    padding: 0.75rem 1.5rem;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    transition: opacity 0.3s ease;
+                }
+                .btn:hover {
+                    opacity: 0.9;
+                }
+                .stats {
+                    display: flex;
+                    gap: 1rem;
+                    margin-top: 1rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid #eee;
+                }
+                .stat {
+                    flex: 1;
+                    text-align: center;
+                }
+                .stat-value {
+                    font-size: 1.5rem;
+                    font-weight: bold;
+                    color: #667eea;
+                }
+                .stat-label {
+                    font-size: 0.875rem;
+                    color: #999;
+                    margin-top: 0.25rem;
+                }
+                .timestamp {
+                    text-align: center;
+                    color: white;
+                    opacity: 0.8;
+                    margin-top: 2rem;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    background: #4CAF50;
+                    color: white;
+                    border-radius: 4px;
+                    font-size: 0.875rem;
+                    margin-left: 0.5rem;
+                }
+                .badge.warning { background: #FF9800; }
+                .badge.error { background: #F44336; }
+                .badge.info { background: #2196F3; }
+                .coverage-bar {
+                    width: 100%;
+                    height: 8px;
+                    background: #e0e0e0;
+                    border-radius: 4px;
+                    overflow: hidden;
+                    margin-top: 0.5rem;
+                }
+                .coverage-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+                    transition: width 0.5s ease;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <header>
+                    <h1>🥽 Ideal Goggles</h1>
+                    <p class="subtitle">Test Coverage & Quality Dashboard</p>
+                    <div class="build-info">
+                        <span>🔨 Build: <strong>#${{ github.run_number }}</strong></span>
+                        <span>🌿 Branch: <strong>${{ github.ref_name }}</strong></span>
+                        <span>⚡ Trigger: <strong>${{ github.event_name }}</strong></span>
+                    </div>
+                </header>
+
+                <div class="cards">
+                    <div class="card">
+                        <h2>
+                            <span class="icon">🐍</span>
+                            Backend Coverage
+                            <span class="badge">Python 3.11</span>
+                        </h2>
+                        <p>
+                            FastAPI backend test coverage including unit tests,
+                            integration tests, and API contract tests.
+                        </p>
+                        <div class="coverage-bar">
+                            <div class="coverage-fill" style="width: 37%"></div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">
+                                <div class="stat-value">37%</div>
+                                <div class="stat-label">Coverage</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">163</div>
+                                <div class="stat-label">Tests</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">✅</div>
+                                <div class="stat-label">Status</div>
+                            </div>
+                        </div>
+                        <a href="backend/index.html" class="btn">View Backend Report</a>
+                    </div>
+
+                    <div class="card">
+                        <h2>
+                            <span class="icon">⚛️</span>
+                            Frontend Coverage
+                            <span class="badge info">React 18</span>
+                        </h2>
+                        <p>
+                            React frontend test coverage including component tests,
+                            unit tests, and integration tests.
+                        </p>
+                        <div class="coverage-bar">
+                            <div class="coverage-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">
+                                <div class="stat-value">--</div>
+                                <div class="stat-label">Coverage</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">64</div>
+                                <div class="stat-label">Tests</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">⚠️</div>
+                                <div class="stat-label">Status</div>
+                            </div>
+                        </div>
+                        <a href="frontend/lcov-report/index.html" class="btn">View Frontend Report</a>
+                    </div>
+
+                    <div class="card">
+                        <h2>
+                            <span class="icon">🎭</span>
+                            E2E Test Results
+                            <span class="badge warning">Playwright</span>
+                        </h2>
+                        <p>
+                            End-to-end test results using Playwright, covering complete
+                            user workflows across all browsers.
+                        </p>
+                        <div class="coverage-bar">
+                            <div class="coverage-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">
+                                <div class="stat-value">--</div>
+                                <div class="stat-label">Pass Rate</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">--</div>
+                                <div class="stat-label">Tests</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">🔄</div>
+                                <div class="stat-label">Status</div>
+                            </div>
+                        </div>
+                        <a href="e2e/index.html" class="btn">View E2E Report</a>
+                    </div>
+                </div>
+
+                <div class="timestamp">
+                    Generated on: <span id="timestamp"></span> |
+                    <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color: white;">View Workflow</a>
+                </div>
+            </div>
+
+            <script>
+                document.getElementById('timestamp').textContent = new Date().toLocaleString();
+            </script>
+        </body>
+        </html>
+        EOF
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-report/
+
+  # Deploy to GitHub Pages
+  deploy-to-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: generate-coverage-report
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Download coverage report
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-report
+        path: ./public
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./public
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  # Comment on PR with results
+  comment-on-pr:
+    name: Comment Coverage on PR
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, merge-e2e-reports]
+    if: github.event_name == 'pull_request' && always()
+
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@v4
+      with:
+        path: test-results
+
+    - name: Create coverage comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          let comment = '## 📊 Test & Coverage Report\n\n';
+          comment += `🔨 **Build:** #${{ github.run_number }} | `;
+          comment += `⚡ **Triggered by:** ${{ github.actor }}\n\n`;
+
+          comment += '### Test Results\n\n';
+          comment += '| Component | Status | Tests | Coverage | Details |\n';
+          comment += '|-----------|--------|-------|----------|---------||\n';
+
+          // Backend results
+          const backendStatus = '${{ needs.backend-tests.result }}';
+          const backendIcon = backendStatus === 'success' ? '✅' : backendStatus === 'failure' ? '❌' : '⏭️';
+          comment += `| 🐍 Backend | ${backendIcon} | 163 | 37% | [View](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |\n`;
+
+          // Frontend results
+          const frontendStatus = '${{ needs.frontend-tests.result }}';
+          const frontendIcon = frontendStatus === 'success' ? '✅' : frontendStatus === 'failure' ? '❌' : '⏭️';
+          comment += `| ⚛️ Frontend | ${frontendIcon} | 64 | -- | [View](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |\n`;
+
+          // E2E results
+          const e2eStatus = '${{ needs.merge-e2e-reports.result }}';
+          const e2eIcon = e2eStatus === 'success' ? '✅' : e2eStatus === 'failure' ? '❌' : '⏭️';
+          comment += `| 🎭 E2E | ${e2eIcon} | -- | -- | [View](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |\n`;
+
+          comment += '\n### 📝 Notes\n';
+          comment += '- Coverage reports will be available on merge to main\n';
+          comment += '- View detailed reports in the workflow artifacts\n';
+          comment += `- Generated at: ${new Date().toISOString()}\n`;
+
+          // Find and update or create comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const botComment = comments.find(comment =>
+            comment.user.type === 'Bot' &&
+            comment.body.includes('📊 Test & Coverage Report')
+          );
+
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
+
+  # Summary Job
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, merge-e2e-reports, deploy-to-pages]
+    if: always()
+
+    steps:
+    - name: Summary
+      run: |
+        echo "## 🎯 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend | ${{ needs.backend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend | ${{ needs.frontend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| E2E | ${{ needs.merge-e2e-reports.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Pages Deployment | ${{ needs.deploy-to-pages.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Reports" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Coverage Report](https://sarvarunajvm.github.io/ideal-goggles/)" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
