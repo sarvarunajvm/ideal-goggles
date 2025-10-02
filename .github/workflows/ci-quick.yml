@@ -57,13 +57,14 @@ jobs:
         # Backend (full dependencies for unit tests)
         cd backend
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        # Use regular install in CI (not editable) to avoid path issues
+        pip install ".[dev]"
         cd ..
 
     - name: Frontend Lint & Type Check
       run: |
-        pnpm run lint
-        pnpm run type-check
+        pnpm run lint:frontend
+        pnpm run typecheck:frontend
 
     - name: Backend Lint & Format Check
       run: |

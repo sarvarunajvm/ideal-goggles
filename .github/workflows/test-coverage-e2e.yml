@@ -167,7 +167,8 @@ jobs:
       run: |
         cd backend
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        # Use regular install in CI (not editable) to avoid path issues
+        pip install ".[dev]"
 
     - name: Lint with ruff
       run: |
@@ -243,11 +244,11 @@ jobs:
 
     - name: Lint frontend
       run: |
-        pnpm run lint
+        pnpm run lint:frontend
 
     - name: Type check
       run: |
-        pnpm run type-check
+        pnpm run typecheck:frontend
 
     - name: Run all frontend tests with coverage
       run: |
@@ -328,7 +329,8 @@ jobs:
         # Backend
         cd backend
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        # Use regular install in CI (not editable) to avoid path issues
+        pip install ".[dev]"
         # Verify the installation
         python -c "from src.main import app; print('Backend imports OK')"
         cd ..
