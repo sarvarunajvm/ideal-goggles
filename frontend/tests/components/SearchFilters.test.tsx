@@ -36,16 +36,16 @@ describe('SearchFilters Component', () => {
     render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
 
     // Initially filters should be hidden
-    expect(screen.queryByLabelText('From Date')).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('2023-01-01')).not.toBeInTheDocument()
 
     // Click to show filters
     await user.click(screen.getByText('Filters'))
 
     // Now filters should be visible
-    expect(screen.getByLabelText('From Date')).toBeInTheDocument()
-    expect(screen.getByLabelText('To Date')).toBeInTheDocument()
-    expect(screen.getByLabelText('Folder')).toBeInTheDocument()
-    expect(screen.getByLabelText('Results Limit')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2023-01-01')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2023-12-31')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('/photos/vacation')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('50')).toBeInTheDocument()
   })
 
   test('hides filters panel when toggle is clicked again', async () => {
@@ -54,11 +54,11 @@ describe('SearchFilters Component', () => {
 
     // Show filters
     await user.click(screen.getByText('Filters'))
-    expect(screen.getByLabelText('From Date')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2023-01-01')).toBeInTheDocument()
 
     // Hide filters
     await user.click(screen.getByText('Filters'))
-    expect(screen.queryByLabelText('From Date')).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('2023-01-01')).not.toBeInTheDocument()
   })
 
   test('rotates arrow icon when filters are shown/hidden', async () => {
@@ -80,15 +80,11 @@ describe('SearchFilters Component', () => {
   })
 
   describe('Filter Controls', () => {
-    beforeEach(async () => {
+    test('displays current filter values', async () => {
       const user = userEvent.setup()
       render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
-
-      // Show filters panel
       await user.click(screen.getByText('Filters'))
-    })
 
-    test('displays current filter values', () => {
       expect(screen.getByDisplayValue('2023-01-01')).toBeInTheDocument()
       expect(screen.getByDisplayValue('2023-12-31')).toBeInTheDocument()
       expect(screen.getByDisplayValue('/photos/vacation')).toBeInTheDocument()
@@ -97,45 +93,58 @@ describe('SearchFilters Component', () => {
 
     test('calls onChange when from date is changed', async () => {
       const user = userEvent.setup()
-      const fromDateInput = screen.getByLabelText('From Date')
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
 
-      await user.clear(fromDateInput)
-      await user.type(fromDateInput, '2023-06-01')
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
+
+      fireEvent.change(fromDateInput, { target: { value: '2023-06-01' } })
 
       expect(mockOnChange).toHaveBeenCalledWith({ from: '2023-06-01' })
     })
 
     test('calls onChange when to date is changed', async () => {
       const user = userEvent.setup()
-      const toDateInput = screen.getByLabelText('To Date')
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
 
-      await user.clear(toDateInput)
-      await user.type(toDateInput, '2023-06-30')
+      const toDateInput = screen.getByDisplayValue('2023-12-31')
+
+      fireEvent.change(toDateInput, { target: { value: '2023-06-30' } })
 
       expect(mockOnChange).toHaveBeenCalledWith({ to: '2023-06-30' })
     })
 
     test('calls onChange when folder is changed', async () => {
       const user = userEvent.setup()
-      const folderInput = screen.getByLabelText('Folder')
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
 
-      await user.clear(folderInput)
-      await user.type(folderInput, '/photos/new-folder')
+      const folderInput = screen.getByDisplayValue('/photos/vacation')
+
+      fireEvent.change(folderInput, { target: { value: '/photos/new-folder' } })
 
       expect(mockOnChange).toHaveBeenCalledWith({ folder: '/photos/new-folder' })
     })
 
     test('calls onChange when limit is changed', async () => {
       const user = userEvent.setup()
-      const limitSelect = screen.getByLabelText('Results Limit')
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
 
-      await user.selectOptions(limitSelect, '100')
+      const limitSelect = screen.getByDisplayValue('50')
+
+      fireEvent.change(limitSelect, { target: { value: '100' } })
 
       expect(mockOnChange).toHaveBeenCalledWith({ limit: 100 })
     })
 
-    test('shows correct limit options', () => {
-      const limitSelect = screen.getByLabelText('Results Limit')
+    test('shows correct limit options', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
+
+      const limitSelect = screen.getByDisplayValue('50')
       const options = limitSelect.querySelectorAll('option')
 
       expect(options).toHaveLength(5)
@@ -148,6 +157,9 @@ describe('SearchFilters Component', () => {
 
     test('clears all filters when clear button is clicked', async () => {
       const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
+
       const clearButton = screen.getByText('Clear All Filters')
 
       await user.click(clearButton)
@@ -160,15 +172,27 @@ describe('SearchFilters Component', () => {
       })
     })
 
-    test('has proper accessibility attributes', () => {
-      expect(screen.getByLabelText('From Date')).toHaveAttribute('type', 'date')
-      expect(screen.getByLabelText('To Date')).toHaveAttribute('type', 'date')
-      expect(screen.getByLabelText('Folder')).toHaveAttribute('type', 'text')
-      expect(screen.getByLabelText('Folder')).toHaveAttribute('placeholder', 'Filter by folder...')
+    test('has proper accessibility attributes', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
+
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
+      const toDateInput = screen.getByDisplayValue('2023-12-31')
+      const folderInput = screen.getByPlaceholderText('Filter by folder...')
+
+      expect(fromDateInput).toHaveAttribute('type', 'date')
+      expect(toDateInput).toHaveAttribute('type', 'date')
+      expect(folderInput).toHaveAttribute('type', 'text')
+      expect(folderInput).toHaveAttribute('placeholder', 'Filter by folder...')
     })
 
-    test('applies correct CSS classes', () => {
-      const fromDateInput = screen.getByLabelText('From Date')
+    test('applies correct CSS classes', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+      await user.click(screen.getByText('Filters'))
+
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
       expect(fromDateInput).toHaveClass(
         'w-full',
         'px-3',
@@ -256,6 +280,229 @@ describe('SearchFilters Component', () => {
       await user.type(folderInput, '/photos/café & "special" chars')
 
       expect(mockOnChange).toHaveBeenCalledWith({ folder: '/photos/café & "special" chars' })
+    })
+  })
+
+  describe('Additional Coverage Tests', () => {
+    test('handles all limit option values', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+      const limitSelect = screen.getByLabelText('Results Limit')
+
+      // Test each limit option
+      await user.selectOptions(limitSelect, '10')
+      expect(mockOnChange).toHaveBeenCalledWith({ limit: 10 })
+
+      await user.selectOptions(limitSelect, '25')
+      expect(mockOnChange).toHaveBeenCalledWith({ limit: 25 })
+
+      await user.selectOptions(limitSelect, '100')
+      expect(mockOnChange).toHaveBeenCalledWith({ limit: 100 })
+
+      await user.selectOptions(limitSelect, '200')
+      expect(mockOnChange).toHaveBeenCalledWith({ limit: 200 })
+    })
+
+    test('handles multiple filter changes in sequence', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const fromDateInput = screen.getByLabelText('From Date')
+      const toDateInput = screen.getByLabelText('To Date')
+      const folderInput = screen.getByLabelText('Folder')
+      const limitSelect = screen.getByLabelText('Results Limit')
+
+      await user.clear(fromDateInput)
+      await user.type(fromDateInput, '2024-01-01')
+
+      await user.clear(toDateInput)
+      await user.type(toDateInput, '2024-12-31')
+
+      await user.clear(folderInput)
+      await user.type(folderInput, '/new-folder')
+
+      await user.selectOptions(limitSelect, '100')
+
+      expect(mockOnChange).toHaveBeenCalledTimes(4)
+    })
+
+    test('clear button resets all filters to default', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+      const clearButton = screen.getByText('Clear All Filters')
+
+      await user.click(clearButton)
+
+      expect(mockOnChange).toHaveBeenCalledWith({
+        from: '',
+        to: '',
+        folder: '',
+        limit: 50,
+      })
+    })
+
+    test('filter panel has correct styling when shown', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const panel = screen.getByLabelText('From Date').closest('.p-4.bg-gray-50')
+      expect(panel).toHaveClass('rounded-lg', 'border', 'border-gray-200')
+    })
+
+    test('toggle button has hover state', () => {
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      const toggleButton = screen.getByText('Filters')
+      expect(toggleButton).toHaveClass('hover:text-gray-900')
+    })
+
+    test('grid layout is responsive', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const grid = document.querySelector('.grid-cols-1.md\\:grid-cols-4')
+      expect(grid).toBeInTheDocument()
+    })
+
+    test('limit select has correct default value', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const limitSelect = screen.getByDisplayValue('50') as HTMLSelectElement
+      expect(limitSelect.value).toBe('50')
+    })
+
+    test('handles onChange with single character input', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+      const folderInput = screen.getByDisplayValue('/photos/vacation')
+
+      fireEvent.change(folderInput, { target: { value: 'a' } })
+
+      expect(mockOnChange).toHaveBeenCalledWith({ folder: 'a' })
+    })
+
+    test('handles empty date string', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
+
+      fireEvent.change(fromDateInput, { target: { value: '' } })
+
+      expect(mockOnChange).toHaveBeenCalledWith({ from: '' })
+    })
+
+    test('filters panel uses proper spacing', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const panel = document.querySelector('.mt-4.p-4')
+      expect(panel).toBeInTheDocument()
+    })
+
+    test('input fields have proper focus styles', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
+      expect(fromDateInput).toHaveClass('focus:ring-2', 'focus:ring-blue-500', 'focus:border-transparent')
+    })
+
+    test('select dropdown has proper styling', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const limitSelect = screen.getByDisplayValue('50')
+      expect(limitSelect).toHaveClass('w-full', 'px-3', 'py-2', 'border', 'border-gray-300', 'rounded-md')
+    })
+
+    test('labels have correct text', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      expect(screen.getByText('From Date')).toHaveClass('text-sm', 'font-medium', 'text-gray-700')
+      expect(screen.getByText('To Date')).toHaveClass('text-sm', 'font-medium', 'text-gray-700')
+      expect(screen.getByText('Folder')).toHaveClass('text-sm', 'font-medium', 'text-gray-700')
+      expect(screen.getByText('Results Limit')).toHaveClass('text-sm', 'font-medium', 'text-gray-700')
+    })
+
+    test('toggle shows/hides with proper animation class', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      const arrow = screen.getByText('▼')
+      expect(arrow).toHaveClass('transform', 'transition-transform')
+
+      await user.click(screen.getByText('Filters'))
+      expect(arrow).toHaveClass('rotate-180')
+    })
+
+    test('handleChange is called with correct key-value pairs', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+
+      const fromDateInput = screen.getByDisplayValue('2023-01-01')
+      fireEvent.change(fromDateInput, { target: { value: '2024-06-15' } })
+
+      expect(mockOnChange).toHaveBeenCalledWith({ from: '2024-06-15' })
+    })
+
+    test('limit value is parsed as integer', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      await user.click(screen.getByText('Filters'))
+      const limitSelect = screen.getByLabelText('Results Limit')
+
+      await user.selectOptions(limitSelect, '100')
+
+      expect(mockOnChange).toHaveBeenCalledWith({ limit: 100 })
+      expect(typeof mockOnChange.mock.calls[0][0].limit).toBe('number')
+    })
+
+    test('maintains filter state between toggles', async () => {
+      const user = userEvent.setup()
+      render(<SearchFilters filters={mockFilters} onChange={mockOnChange} />)
+
+      // Show filters
+      await user.click(screen.getByText('Filters'))
+      const fromInput1 = screen.getByDisplayValue('2023-01-01')
+      expect(fromInput1).toBeInTheDocument()
+
+      // Hide filters
+      await user.click(screen.getByText('Filters'))
+      expect(screen.queryByDisplayValue('2023-01-01')).not.toBeInTheDocument()
+
+      // Show again - values should still be there
+      await user.click(screen.getByText('Filters'))
+      const fromInput2 = screen.getByDisplayValue('2023-01-01')
+      expect(fromInput2).toBeInTheDocument()
     })
   })
 })

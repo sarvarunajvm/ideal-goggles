@@ -306,4 +306,164 @@ describe('StatusBar Component', () => {
       expect(indexingBadge).toBeInTheDocument()
     })
   })
+
+  test('handles unknown status with default badge variant', async () => {
+    const unknownStatus = {
+      status: 'unknown',
+      progress: {
+        current_phase: 'waiting',
+        processed_files: 0,
+        total_files: 0,
+      },
+      errors: [],
+    }
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(unknownStatus)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Unknown')).toBeInTheDocument()
+    })
+  })
+
+  test('handles unknown status icon correctly', async () => {
+    const unknownStatus = {
+      status: 'pending',
+      progress: {
+        current_phase: 'waiting',
+        processed_files: 0,
+        total_files: 0,
+      },
+      errors: [],
+    }
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(unknownStatus)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pending')).toBeInTheDocument()
+    })
+  })
+
+  test('displays mobile progress correctly with files', async () => {
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(mockIndexStatusIndexing)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      // Mobile sections should show the same progress info
+      const progressTexts = screen.getAllByText('50/100')
+      expect(progressTexts.length).toBeGreaterThan(0)
+    })
+  })
+
+  test('handles zero progress percentage correctly', async () => {
+    const zeroProgressStatus = {
+      status: 'indexing',
+      progress: {
+        current_phase: 'Starting',
+        processed_files: 0,
+        total_files: 100,
+      },
+      errors: [],
+    }
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(zeroProgressStatus)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      const progressBar = screen.getByRole('progressbar')
+      expect(progressBar).toHaveAttribute('aria-valuenow', '0')
+    })
+  })
+
+  test('handles 100% progress correctly', async () => {
+    const completeStatus = {
+      status: 'indexing',
+      progress: {
+        current_phase: 'Finishing up',
+        processed_files: 100,
+        total_files: 100,
+      },
+      errors: [],
+    }
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(completeStatus)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      const progressBar = screen.getByRole('progressbar')
+      expect(progressBar).toHaveAttribute('aria-valuenow', '100')
+    })
+  })
+
+  test('shows error badge with pulse animation', async () => {
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(mockIndexStatusError)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      const errorBadge = screen.getByText('2 errors').closest('span')
+      expect(errorBadge).toHaveClass('animate-pulse')
+    })
+  })
+
+  test('handles connection checking state icon animation', async () => {
+    render(<StatusBar />)
+
+    const badge = screen.getByTestId('connection-badge')
+    expect(badge).toHaveClass('animate-pulse')
+  })
+
+  test('displays appropriate classes for different badge variants', async () => {
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(mockIndexStatusIdle)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      const idleBadge = screen.getByText('Idle').closest('span')
+      expect(idleBadge).toHaveClass('bg-secondary')
+    })
+  })
+
+  test('handles mobile view without total files', async () => {
+    const noFilesStatus = {
+      status: 'indexing',
+      progress: {
+        current_phase: 'Initializing',
+        processed_files: 0,
+        total_files: 0,
+      },
+      errors: [],
+    }
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(noFilesStatus)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Initializing')).toBeInTheDocument()
+    })
+  })
+
+  test('correctly formats status text with capitalization', async () => {
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(mockIndexStatusIndexing)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      // Should capitalize first letter of status
+      expect(screen.getByText('Indexing')).toBeInTheDocument()
+    })
+  })
+
+  test('API docs button has correct accessibility attributes', async () => {
+    ;(apiService.getIndexStatus as jest.Mock).mockResolvedValue(mockIndexStatusIdle)
+
+    render(<StatusBar />)
+
+    await waitFor(() => {
+      const apiDocsButton = screen.getByTitle('Open API Documentation')
+      expect(apiDocsButton).toHaveClass('hover:scale-105')
+    })
+  })
 })

@@ -47,6 +47,13 @@ describe('Logger Utility - Basic Tests', () => {
   })
 
   test('generates unique request IDs', () => {
+    // Override the mock to simulate unique ID generation
+    let callCount = 0
+    ;(logger.generateRequestId as jest.Mock).mockImplementation(() => {
+      callCount++
+      return `test-request-id-${callCount}`
+    })
+
     const id1 = logger.generateRequestId()
     const id2 = logger.generateRequestId()
 

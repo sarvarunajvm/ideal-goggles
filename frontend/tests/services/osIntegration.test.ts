@@ -36,6 +36,11 @@ describe('OSIntegration Service', () => {
     // Reset mocks
     jest.clearAllMocks()
 
+    // Re-create the clipboard mock to ensure it's fresh
+    mockNavigator.clipboard = {
+      writeText: jest.fn(),
+    }
+
     // Mock DOM methods
     documentBodyAppendChild = jest.spyOn(document.body, 'appendChild').mockImplementation()
     documentBodyRemoveChild = jest.spyOn(document.body, 'removeChild').mockImplementation()
@@ -60,6 +65,7 @@ describe('OSIntegration Service', () => {
     Object.defineProperty(window, 'navigator', {
       value: mockNavigator,
       writable: true,
+      configurable: true,
     })
 
     Object.defineProperty(window, 'Notification', {
