@@ -1,45 +1,55 @@
-/**
- * Unit tests for People Page
- * Priority: P2 (Page-level functionality)
- */
-
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+// Vitest to Jest conversion
 import { MemoryRouter } from 'react-router-dom'
 import PeoplePage from '../../src/pages/PeoplePage'
 import { apiService } from '../../src/services/apiClient'
 
-// Mock API service
+// Mock dependencies
 jest.mock('../../src/services/apiClient', () => ({
   apiService: {
-    getPeople: jest.fn(),
-    createPerson: jest.fn(),
-    searchFaces: jest.fn()
-  }
+    getConfig: jest.fn(),
+  },
 }))
 
-const mockPeople = [
-  {
-    id: 1,
-    name: 'John Doe',
-    sample_count: 5,
-    last_seen: '2024-01-15T10:00:00Z'
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    sample_count: 3,
-    last_seen: '2024-01-14T15:30:00Z'
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: jest.fn(),
   }
-]
+})
 
-describe('People Page', () => {
+const mockNavigate = jest.fn()
+
+describe('PeoplePage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(apiService.getPeople as jest.Mock).mockResolvedValue(mockPeople)
+    jest.useFakeTimers()
+
+    // Mock useNavigate
+    const { useNavigate } = require('react-router-dom')
+    useNavigate.mockReturnValue(mockNavigate)
+
+    // Mock getConfig
+    jest.mocked(apiService.getConfig).mockResolvedValue({
+      roots: [],
+      ocr_languages: [],
+      face_search_enabled: true,
+      index_version: '1.0.0',
+    })
+
+    // Mock URL.createObjectURL
+    global.URL.createObjectURL = jest.fn(() => 'blob:mock-url')
+    global.URL.revokeObjectURL = jest.fn()
   })
 
-  const renderPeoplePage = () => {
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
+  })
+
+  const renderComponent = () => {
     return render(
       <MemoryRouter>
         <PeoplePage />
@@ -47,244 +57,789 @@ describe('People Page', () => {
     )
   }
 
-  test('renders people page with header', async () => {
-    renderPeoplePage()
-
-    expect(screen.getByText(/People/i)).toBeInTheDocument()
-    expect(screen.getByText(/Manage recognized people/i)).toBeInTheDocument()
-  })
-
-  test('loads and displays people list', async () => {
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(apiService.getPeople).toHaveBeenCalled()
+  describe('Initial Rendering', () => {
+    it('should render the page title', () => {
+      renderComponent()
+      expect(screen.getByText('People')).toBeInTheDocument()
     })
 
-    await waitFor(() => {
+    it('should render add person button', () => {
+      renderComponent()
+      expect(screen.getByText('➕ Add Person')).toBeInTheDocument()
+    })
+
+    it('should render search input', () => {
+      renderComponent()
+      expect(screen.getByPlaceholderText('Search people by name')).toBeInTheDocument()
+    })
+
+    it('should check face search enabled status on mount', () => {
+      renderComponent()
+      await waitFor(() => {
+        expect(apiService.getConfig).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('Add Person Form', () => {
+    it('should open add person form when clicking add button', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      const addButton = screen.getByText('➕ Add Person')
+      await user.click(addButton)
+
+      expect(screen.getByText('Add Person')).toBeInTheDocument()
+      expect(screen.getByLabelText('Name')).toBeInTheDocument()
+      expect(screen.getByText('Upload Photos')).toBeInTheDocument()
+    })
+
+    it('should allow entering person name', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      expect(nameInput).toHaveValue('John Doe')
+    })
+
+    it('should show error when saving without name', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      expect(screen.getByText('Person name cannot be empty')).toBeInTheDocument()
+    })
+
+    it('should show error when saving without photos', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      expect(screen.getByText('At least one photo is required')).toBeInTheDocument()
+    })
+
+    it('should handle file upload', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+
+      await user.upload(input, file)
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled()
+    })
+
+    it('should display uploaded photos in gallery', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, file)
+
+      const gallery = screen.getByTestId('photo-gallery')
+      expect(gallery).toBeInTheDocument()
+      expect(gallery.querySelector('img')).toBeInTheDocument()
+    })
+
+    it('should create new person when form is valid', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, file)
+
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      // Should show in people list
+      await waitFor(() => {
+        expect(screen.getByText('John Doe')).toBeInTheDocument()
+      })
+    })
+
+    it('should close form after successful save', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, file)
+
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Add Person')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should show toast notification after save', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, file)
+
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      expect(screen.getByText('Saved')).toBeInTheDocument()
+    })
+
+    it('should hide toast after timeout', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' })
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, file)
+
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+
+      expect(screen.getByText('Saved')).toBeInTheDocument()
+
+      jest.advanceTimersByTime(1200)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Saved')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should cancel form and reset state', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.type(nameInput, 'John Doe')
+
+      const cancelButton = screen.getByText('Cancel')
+      await user.click(cancelButton)
+
+      expect(screen.queryByText('Add Person')).not.toBeInTheDocument()
+
+      // Reopen form to verify reset
+      await user.click(screen.getByText('➕ Add Person'))
+      const nameInputAgain = screen.getByLabelText('Name')
+      expect(nameInputAgain).toHaveValue('')
+    })
+
+    it('should handle multiple file uploads', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const files = [
+        new File(['content1'], 'test1.jpg', { type: 'image/jpeg' }),
+        new File(['content2'], 'test2.jpg', { type: 'image/jpeg' }),
+      ]
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      await user.upload(input, files)
+
+      const gallery = screen.getByTestId('photo-gallery')
+      const images = gallery.querySelectorAll('img')
+      expect(images).toHaveLength(2)
+    })
+  })
+
+  describe('Search Functionality', () => {
+    it('should filter people by name', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      // Add two people
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file1 = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file1)
+      await user.click(screen.getByText('Save Person'))
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'Jane Smith')
+      const file2 = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file2)
+      await user.click(screen.getByText('Save Person'))
+
+      // Search for John
+      const searchInput = screen.getByPlaceholderText('Search people by name')
+      await user.type(searchInput, 'John')
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument()
+    })
+
+    it('should be case insensitive', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const searchInput = screen.getByPlaceholderText('Search people by name')
+      await user.type(searchInput, 'JOHN')
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument()
+    })
+
+    it('should show all people when search is cleared', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file1 = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file1)
+      await user.click(screen.getByText('Save Person'))
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'Jane Smith')
+      const file2 = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file2)
+      await user.click(screen.getByText('Save Person'))
+
+      const searchInput = screen.getByPlaceholderText('Search people by name')
+      await user.type(searchInput, 'John')
+      expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument()
+
+      await user.clear(searchInput)
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     })
   })
 
-  test('displays person sample count', async () => {
-    renderPeoplePage()
+  describe('Person Details', () => {
+    it('should display person card with details', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
 
-    await waitFor(() => {
-      expect(screen.getByText(/5 samples/i)).toBeInTheDocument()
-      expect(screen.getByText(/3 samples/i)).toBeInTheDocument()
-    })
-  })
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
 
-  test('handles empty people list', async () => {
-    ;(apiService.getPeople as jest.Mock).mockResolvedValue([])
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText(/No people found/i)).toBeInTheDocument()
-    })
-  })
-
-  test('handles loading state', () => {
-    renderPeoplePage()
-
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument()
-  })
-
-  test('handles error state', async () => {
-    ;(apiService.getPeople as jest.Mock).mockRejectedValue(
-      new Error('Failed to load people')
-    )
-
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText(/Error loading people/i)).toBeInTheDocument()
-    })
-  })
-
-  test('opens add person dialog', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    const addButton = await screen.findByText(/Add Person/i)
-    await user.click(addButton)
-
-    expect(screen.getByText(/Create New Person/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Person name/i)).toBeInTheDocument()
-  })
-
-  test('creates new person', async () => {
-    const user = userEvent.setup()
-    ;(apiService.createPerson as jest.Mock).mockResolvedValue({
-      id: 3,
-      name: 'New Person'
-    })
-
-    renderPeoplePage()
-
-    const addButton = await screen.findByText(/Add Person/i)
-    await user.click(addButton)
-
-    const nameInput = screen.getByPlaceholderText(/Person name/i)
-    await user.type(nameInput, 'New Person')
-
-    const createButton = screen.getByRole('button', { name: /Create/i })
-    await user.click(createButton)
-
-    await waitFor(() => {
-      expect(apiService.createPerson).toHaveBeenCalledWith('New Person', [])
-    })
-  })
-
-  test('searches for person faces', async () => {
-    const user = userEvent.setup()
-    ;(apiService.searchFaces as jest.Mock).mockResolvedValue({
-      items: [],
-      total_matches: 10
-    })
-
-    renderPeoplePage()
-
-    await waitFor(() => {
+      const personCard = screen.getByTestId('person-item')
+      expect(personCard).toBeInTheDocument()
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    const searchButton = screen.getAllByText(/Search/i)[0]
-    await user.click(searchButton)
+    it('should show photo count', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
 
-    await waitFor(() => {
-      expect(apiService.searchFaces).toHaveBeenCalledWith(1, 100)
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const files = [
+        new File(['content1'], 'test1.jpg', { type: 'image/jpeg' }),
+        new File(['content2'], 'test2.jpg', { type: 'image/jpeg' }),
+      ]
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, files)
+      await user.click(screen.getByText('Save Person'))
+
+      expect(screen.getByText('2 sample photos')).toBeInTheDocument()
+    })
+
+    it('should show singular photo text for one photo', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      expect(screen.getByText('1 sample photo')).toBeInTheDocument()
+    })
+
+    it('should show enrolled date', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const enrolledDate = screen.getByTestId('enrolled-date')
+      expect(enrolledDate).toBeInTheDocument()
+      expect(enrolledDate.textContent).toContain('Added')
+    })
+
+    it('should show active badge', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      expect(screen.getByText('Active')).toBeInTheDocument()
     })
   })
 
-  test('filters people by name', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
+  describe('Person Selection and Details', () => {
+    it('should expand person details when clicking card', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
 
-    await waitFor(() => {
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      expect(screen.getByText('Photos')).toBeInTheDocument()
+      expect(screen.getByText('Delete John Doe?')).toBeInTheDocument()
+    })
+
+    it('should show photo gallery in expanded view', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      const galleries = screen.getAllByTestId('photo-gallery')
+      expect(galleries.length).toBeGreaterThan(0)
+    })
+
+    it('should allow uploading additional photos to existing person', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file1 = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file1)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      // Get the person's file input from the expanded view
+      const fileInputs = document.querySelectorAll('input[type="file"]')
+      const personFileInput = Array.from(fileInputs).find(input =>
+        input.id.startsWith('file-')
+      ) as HTMLInputElement
+
+      const file2 = new File(['content2'], 'test2.jpg', { type: 'image/jpeg' })
+      await user.upload(personFileInput, file2)
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled()
+    })
+  })
+
+  describe('Edit Person', () => {
+    it('should open edit form when clicking edit button', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const editButton = screen.getByText('Edit')
+      await user.click(editButton)
+
+      expect(screen.getByText('Edit Person')).toBeInTheDocument()
+      expect(screen.getByLabelText('Name')).toHaveValue('John Doe')
+    })
+
+    it('should update person when saving edited form', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const editButton = screen.getByText('Edit')
+      await user.click(editButton)
+
+      const nameInput = screen.getByLabelText('Name')
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Jane Doe')
+
+      await user.click(screen.getByText('Save Person'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Jane Doe')).toBeInTheDocument()
+        expect(screen.queryByText('John Doe')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Delete Person', () => {
+    it('should show delete confirmation when clicking delete', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const deleteButton = screen.getByText('Delete')
+      await user.click(deleteButton)
+
+      expect(screen.getByText('Delete John Doe?')).toBeInTheDocument()
+      expect(screen.getByText('Confirm Delete')).toBeInTheDocument()
+    })
+
+    it('should delete person when confirmed', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const deleteButton = screen.getByText('Delete')
+      await user.click(deleteButton)
+
+      const confirmButton = screen.getByText('Confirm Delete')
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.queryByText('John Doe')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should show deleted toast after deletion', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const deleteButton = screen.getByText('Delete')
+      await user.click(deleteButton)
+
+      const confirmButton = screen.getByText('Confirm Delete')
+      await user.click(confirmButton)
+
+      expect(screen.getByText('Deleted')).toBeInTheDocument()
+    })
+
+    it('should cancel deletion', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const deleteButton = screen.getByText('Delete')
+      await user.click(deleteButton)
+
+      const cancelButton = screen.getAllByText('Cancel').find(btn =>
+        btn.textContent === 'Cancel' && btn.closest('[role="button"]')
+      )
+      await user.click(cancelButton!)
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      expect(screen.queryByText('Delete John Doe?')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Photo Management', () => {
+    it('should show remove button on photo hover', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      const removeButton = screen.getByTestId('remove-photo')
+      expect(removeButton).toBeInTheDocument()
+    })
+
+    it('should show photo removal confirmation', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      const removeButton = screen.getByTestId('remove-photo')
+      await user.click(removeButton)
+
+      expect(screen.getByText('Remove this photo?')).toBeInTheDocument()
+      expect(screen.getByText('Confirm')).toBeInTheDocument()
+    })
+
+    it('should remove photo when confirmed', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const files = [
+        new File(['content1'], 'test1.jpg', { type: 'image/jpeg' }),
+        new File(['content2'], 'test2.jpg', { type: 'image/jpeg' }),
+      ]
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, files)
+      await user.click(screen.getByText('Save Person'))
+
+      expect(screen.getByText('2 sample photos')).toBeInTheDocument()
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      const removeButton = screen.getByTestId('remove-photo')
+      await user.click(removeButton)
+
+      const confirmButton = screen.getByText('Confirm')
+      await user.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('1 sample photo')).toBeInTheDocument()
+      })
+    })
+
+    it('should cancel photo removal', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const personCard = screen.getByTestId('person-item')
+      await user.click(personCard)
+
+      const removeButton = screen.getByTestId('remove-photo')
+      await user.click(removeButton)
+
+      const cancelButtons = screen.getAllByText('Cancel')
+      const photoRemovalCancel = cancelButtons.find(btn =>
+        btn.closest('div')?.textContent?.includes('Remove this photo?')
+      )
+      await user.click(photoRemovalCancel!)
+
+      expect(screen.queryByText('Remove this photo?')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Face Search Integration', () => {
+    it('should navigate to search when clicking search photos button', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const searchButton = screen.getByText('Search Photos of this Person')
+      await user.click(searchButton)
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalled()
+      })
+    })
+
+    it('should disable search button when face search is disabled', () => {
+      jest.mocked(apiService.getConfig).mockResolvedValue({
+        roots: [],
+        ocr_languages: [],
+        face_search_enabled: false,
+        index_version: '1.0.0',
+      })
+
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      // Wait for config to load
+      await waitFor(() => {
+        expect(apiService.getConfig).toHaveBeenCalled()
+      })
+
+      jest.advanceTimersByTime(1000)
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
+      const searchButton = screen.getByText('Search Photos of this Person')
+      expect(searchButton).toBeDisabled()
+    })
+
+    it('should poll config status periodically', () => {
+      renderComponent()
+
+      expect(apiService.getConfig).toHaveBeenCalledTimes(1)
+
+      jest.advanceTimersByTime(1000)
+      await waitFor(() => {
+        expect(apiService.getConfig).toHaveBeenCalledTimes(2)
+      })
+
+      jest.advanceTimersByTime(1000)
+      await waitFor(() => {
+        expect(apiService.getConfig).toHaveBeenCalledTimes(3)
+      })
+    })
+
+    it('should handle config polling errors silently', () => {
+      jest.mocked(apiService.getConfig).mockRejectedValue(new Error('Config error'))
+
+      renderComponent()
+
+      await waitFor(() => {
+        expect(apiService.getConfig).toHaveBeenCalled()
+      })
+
+      // Should not throw or show error
+      expect(screen.getByText('People')).toBeInTheDocument()
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle empty file list gracefully', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+
+      const input = document.getElementById('new-person-file') as HTMLInputElement
+      fireEvent.change(input, { target: { files: null } })
+
+      // Should not crash
+      expect(screen.getByText('Add Person')).toBeInTheDocument()
+    })
+
+    it('should trim whitespace from person name', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
+
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), '  John Doe  ')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
+
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    const searchInput = screen.getByPlaceholderText(/Search people/i)
-    await user.type(searchInput, 'John')
+    it('should prevent saving with whitespace-only name', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
 
-    expect(screen.getByText('John Doe')).toBeInTheDocument()
-    expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument()
-  })
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), '   ')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
+      await user.click(screen.getByText('Save Person'))
 
-  test('sorts people by name', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      expect(screen.getByText('Person name cannot be empty')).toBeInTheDocument()
     })
 
-    const sortButton = screen.getByText(/Sort by Name/i)
-    await user.click(sortButton)
+    it('should handle clicking save person button multiple times', () => {
+      const user = userEvent.setup({ delay: null })
+      renderComponent()
 
-    const peopleNames = screen.getAllByTestId('person-name')
-    expect(peopleNames[0]).toHaveTextContent('Jane Smith')
-    expect(peopleNames[1]).toHaveTextContent('John Doe')
-  })
+      await user.click(screen.getByText('➕ Add Person'))
+      await user.type(screen.getByLabelText('Name'), 'John Doe')
+      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      await user.upload(document.getElementById('new-person-file') as HTMLInputElement, file)
 
-  test('sorts people by sample count', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
+      const saveButton = screen.getByText('Save Person')
+      await user.click(saveButton)
+      await user.click(saveButton)
 
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      // Should only create one person
+      const peopleList = screen.getByTestId('people-list')
+      const personCards = peopleList.querySelectorAll('[data-testid="person-item"]')
+      expect(personCards).toHaveLength(1)
     })
-
-    const sortButton = screen.getByText(/Sort by Samples/i)
-    await user.click(sortButton)
-
-    const peopleNames = screen.getAllByTestId('person-name')
-    expect(peopleNames[0]).toHaveTextContent('John Doe') // 5 samples
-    expect(peopleNames[1]).toHaveTextContent('Jane Smith') // 3 samples
-  })
-
-  test('handles pagination', async () => {
-    const manyPeople = Array.from({ length: 25 }, (_, i) => ({
-      id: i + 1,
-      name: `Person ${i + 1}`,
-      sample_count: i,
-      last_seen: '2024-01-15T10:00:00Z'
-    }))
-
-    ;(apiService.getPeople as jest.Mock).mockResolvedValue(manyPeople)
-
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText('Person 1')).toBeInTheDocument()
-    })
-
-    // Should show first 20 items
-    expect(screen.getByText('Person 1')).toBeInTheDocument()
-    expect(screen.getByText('Person 20')).toBeInTheDocument()
-    expect(screen.queryByText('Person 21')).not.toBeInTheDocument()
-
-    // Click next page
-    const nextButton = screen.getByText(/Next/i)
-    await user.click(nextButton)
-
-    expect(screen.queryByText('Person 1')).not.toBeInTheDocument()
-    expect(screen.getByText('Person 21')).toBeInTheDocument()
-  })
-
-  test('deletes person with confirmation', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
-    })
-
-    const deleteButton = screen.getAllByText(/Delete/i)[0]
-    await user.click(deleteButton)
-
-    // Confirm deletion
-    const confirmButton = screen.getByRole('button', { name: /Confirm/i })
-    await user.click(confirmButton)
-
-    await waitFor(() => {
-      expect(screen.queryByText('John Doe')).not.toBeInTheDocument()
-    })
-  })
-
-  test('cancels person deletion', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
-    })
-
-    const deleteButton = screen.getAllByText(/Delete/i)[0]
-    await user.click(deleteButton)
-
-    // Cancel deletion
-    const cancelButton = screen.getByRole('button', { name: /Cancel/i })
-    await user.click(cancelButton)
-
-    expect(screen.getByText('John Doe')).toBeInTheDocument()
-  })
-
-  test('shows person details on click', async () => {
-    const user = userEvent.setup()
-    renderPeoplePage()
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
-    })
-
-    const personCard = screen.getByText('John Doe').closest('div')!
-    await user.click(personCard)
-
-    expect(screen.getByText(/Last seen:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Sample photos/i)).toBeInTheDocument()
   })
 })
