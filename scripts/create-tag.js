@@ -72,8 +72,9 @@ function createTag(version) {
   console.log('\n📦 Committing version changes...');
   exec('git add package.json backend/pyproject.toml');
 
-  const hasChanges = exec('git diff --cached --quiet', true).length === 0;
-  if (!hasChanges) {
+  // Check if any files are staged for commit; using name-only avoids non-zero exit codes
+  const staged = exec('git diff --cached --name-only', true);
+  if (staged && staged.trim().length > 0) {
     exec(`git commit -m "chore: release v${version}
 
 Updated versions in:
