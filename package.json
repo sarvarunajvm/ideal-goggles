@@ -22,6 +22,7 @@
     "lint:backend": "pnpm run backend:lint",
     "lint:fix": "pnpm run format:frontend && pnpm run backend:format",
     "format:frontend": "eslint -c frontend/eslint.config.mjs --fix frontend",
+    "format:backend": "pnpm run backend:format",
     "format:all": "pnpm run format:frontend && pnpm run backend:format",
     "type-check": "pnpm run typecheck:frontend",
     "typecheck:frontend": "tsc --noEmit -p frontend/tsconfig.json",
