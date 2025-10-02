@@ -1,3 +1,11 @@
+# Quick CI Workflow
+# Purpose: Run on every PR for fast feedback
+# Scope:
+#   - All linting and formatting checks
+#   - All unit tests (frontend & backend)
+#   - Only P0 critical E2E tests (smoke tests)
+# Time: ~10 minutes
+
 name: Quick CI
 
 on:
