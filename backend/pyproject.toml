@@ -94,6 +94,9 @@ ignore = [
     "B007",                     # allow unused loop variable naming in tests
     "F841",                     # allow unused local variables in tests
     "SIM117",                   # allow nested with statements in tests
+    "TRY002",                   # allow raising Exception in tests
+    "DTZ001",                   # allow naive datetime in tests
+    "ERA001",                   # allow commented-out code in tests
 ]
 
 [tool.black]
