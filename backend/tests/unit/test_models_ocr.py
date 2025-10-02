@@ -58,7 +58,11 @@ class TestOCRResultModel:
         """Test creating OCRResult from detailed Tesseract result."""
         # Note: The code uses "text" as a key check, so we use different key for word-level data
         tesseract_data = {
-            "words": ["Hello", "World", "Test"],  # Different key to trigger detailed path
+            "words": [
+                "Hello",
+                "World",
+                "Test",
+            ],  # Different key to trigger detailed path
             "conf": [90, 85, 80],
         }
 
@@ -70,7 +74,9 @@ class TestOCRResultModel:
             "conf": 85,
         }
 
-        ocr = OCRResult.from_tesseract_result(file_id=1, tesseract_data=tesseract_data_simple)
+        ocr = OCRResult.from_tesseract_result(
+            file_id=1, tesseract_data=tesseract_data_simple
+        )
 
         assert ocr.file_id == 1
         assert "Hello" in ocr.text
@@ -84,7 +90,11 @@ class TestOCRResultModel:
         # and the code doesn't have "text" in simple string form
         # This tests the else branch by NOT having "text" key at all
         tesseract_data = {
-            "words": ["Good", "Bad", "Ugly"],  # Using different key to avoid the if branch
+            "words": [
+                "Good",
+                "Bad",
+                "Ugly",
+            ],  # Using different key to avoid the if branch
         }
 
         # Since "text" is not in tesseract_data, it will iterate over get("text", []) which is []
@@ -184,9 +194,7 @@ class TestOCRResultModel:
 
     def test_validate_valid_ocr(self):
         """Test validation of valid OCRResult."""
-        ocr = OCRResult(
-            file_id=1, text="Valid text", language="eng", confidence=0.85
-        )
+        ocr = OCRResult(file_id=1, text="Valid text", language="eng", confidence=0.85)
 
         errors = ocr.validate()
 
@@ -502,7 +510,7 @@ class TestOCRResultModel:
 
     def test_clean_ocr_text_quotes(self):
         """Test normalizing quotes."""
-        result = OCRResult._clean_ocr_text('Hello \'World\' "Test"')
+        result = OCRResult._clean_ocr_text("Hello 'World' \"Test\"")
 
         # Various quote types should be normalized
         assert '"' in result or "'" in result
@@ -680,7 +688,9 @@ class TestOCRStats:
     def test_to_dict(self):
         """Test converting OCRStats to dictionary."""
         stats = OCRStats()
-        ocr1 = OCRResult(file_id=1, text="one two three", language="eng", confidence=0.8)
+        ocr1 = OCRResult(
+            file_id=1, text="one two three", language="eng", confidence=0.8
+        )
         ocr2 = OCRResult(file_id=2, text="quatre cinq", language="fra", confidence=0.9)
 
         stats.add_result(ocr1, success=True)

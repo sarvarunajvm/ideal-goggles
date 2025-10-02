@@ -50,9 +50,7 @@ class TestFAISSVectorSearchService:
         metadata_path = temp_index_path.replace(".bin", "_metadata.pkl")
         Path(metadata_path).touch()
 
-        with patch.object(
-            FAISSVectorSearchService, "_load_index"
-        ) as mock_load:
+        with patch.object(FAISSVectorSearchService, "_load_index") as mock_load:
             mock_index = Mock()
             mock_index.ntotal = 100
             mock_load.return_value = None

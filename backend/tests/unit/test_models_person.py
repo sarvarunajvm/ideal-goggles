@@ -108,7 +108,9 @@ class TestPersonModel:
         vector1 = np.array([1.0, 0.0], dtype=np.float32)
         vector2 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
 
-        with pytest.raises(ValueError, match="All face vectors must have the same dimension"):
+        with pytest.raises(
+            ValueError, match="All face vectors must have the same dimension"
+        ):
             Person.create_from_face_vectors("Dave", [vector1, vector2])
 
     def test_create_from_face_vectors_strips_name(self):

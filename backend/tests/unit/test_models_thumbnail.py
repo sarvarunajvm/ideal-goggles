@@ -258,9 +258,7 @@ class TestThumbnailModel:
     def test_file_exists_true(self):
         """Test file_exists when file exists."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            thumb = Thumbnail(
-                file_id=1, thumb_path="test.webp", width=512, height=384
-            )
+            thumb = Thumbnail(file_id=1, thumb_path="test.webp", width=512, height=384)
 
             # Create the file
             test_file = Path(tmpdir) / "test.webp"
@@ -280,9 +278,7 @@ class TestThumbnailModel:
     def test_get_file_size(self):
         """Test getting file size."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            thumb = Thumbnail(
-                file_id=1, thumb_path="test.webp", width=512, height=384
-            )
+            thumb = Thumbnail(file_id=1, thumb_path="test.webp", width=512, height=384)
 
             # Create the file
             test_file = Path(tmpdir) / "test.webp"

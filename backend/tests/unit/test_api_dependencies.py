@@ -250,9 +250,7 @@ class TestInstallDependencies:
     @patch("subprocess.run")
     def test_install_dependency_failure(self, mock_run):
         """Test failed dependency installation."""
-        mock_run.return_value = Mock(
-            returncode=1, stderr="Error installing package"
-        )
+        mock_run.return_value = Mock(returncode=1, stderr="Error installing package")
 
         response = client.post(
             "/api/dependencies/install", json={"package": "bad_package"}

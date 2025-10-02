@@ -337,9 +337,7 @@ class TestAdvancedEXIFExtractor:
         with patch.object(
             EXIFExtractor, "_extract_exif_sync", return_value={"Make": "Canon"}
         ):
-            with patch.object(
-                extractor, "_extract_with_exifread"
-            ) as mock_exifread:
+            with patch.object(extractor, "_extract_with_exifread") as mock_exifread:
                 mock_exifread.return_value = {
                     "Make": "Canon",
                     "Model": "EOS R5",
@@ -360,11 +358,11 @@ class TestAdvancedEXIFExtractor:
 
         # Mock exifread tags
         mock_tags = {
-            "Image Make": Mock(__str__=lambda x: "Canon"),
-            "Image Model": Mock(__str__=lambda x: "EOS R5"),
-            "EXIF DateTimeOriginal": Mock(__str__=lambda x: "2024:01:15 10:30:45"),
-            "GPS GPSLatitude": Mock(__str__=lambda x: "[37, 46, 30]"),
-            "Image Thumbnail": Mock(__str__=lambda x: "thumbnail_data"),  # Should skip
+            "Image Make": Mock(__str__=lambda _: "Canon"),
+            "Image Model": Mock(__str__=lambda _: "EOS R5"),
+            "EXIF DateTimeOriginal": Mock(__str__=lambda _: "2024:01:15 10:30:45"),
+            "GPS GPSLatitude": Mock(__str__=lambda _: "[37, 46, 30]"),
+            "Image Thumbnail": Mock(__str__=lambda _: "thumbnail_data"),  # Should skip
         }
 
         extractor.exifread.process_file = Mock(return_value=mock_tags)
@@ -402,8 +400,8 @@ class TestAdvancedEXIFExtractor:
             return
 
         mock_tags = {
-            "GPS GPSLatitudeRef": Mock(__str__=lambda x: "N"),
-            "GPS GPSLatitude": Mock(__str__=lambda x: "[37, 46, 30]"),
+            "GPS GPSLatitudeRef": Mock(__str__=lambda _: "N"),
+            "GPS GPSLatitude": Mock(__str__=lambda _: "[37, 46, 30]"),
         }
 
         extractor.exifread.process_file = Mock(return_value=mock_tags)
@@ -574,9 +572,7 @@ class TestEXIFExtractionPipeline:
 
         photos = [mock_photo, mock_photo]
 
-        with patch.object(
-            pipeline.extractor, "extract_batch"
-        ) as mock_extract:
+        with patch.object(pipeline.extractor, "extract_batch") as mock_extract:
             mock_extract.return_value = [sample_exif_data, sample_exif_data]
 
             results = await pipeline.process_photos(photos)
@@ -592,9 +588,7 @@ class TestEXIFExtractionPipeline:
 
         photos = [mock_photo, mock_photo, mock_photo]
 
-        with patch.object(
-            pipeline.extractor, "extract_batch"
-        ) as mock_extract:
+        with patch.object(pipeline.extractor, "extract_batch") as mock_extract:
             mock_extract.return_value = [sample_exif_data, None, sample_exif_data]
 
             results = await pipeline.process_photos(photos)
@@ -605,15 +599,15 @@ class TestEXIFExtractionPipeline:
             assert results[2]["extraction_successful"]
 
     @pytest.mark.asyncio
-    async def test_process_photos_without_validation(self, mock_photo, sample_exif_data):
+    async def test_process_photos_without_validation(
+        self, mock_photo, sample_exif_data
+    ):
         """Test processing without validation."""
         pipeline = EXIFExtractionPipeline(validate_results=False)
 
         photos = [mock_photo]
 
-        with patch.object(
-            pipeline.extractor, "extract_batch"
-        ) as mock_extract:
+        with patch.object(pipeline.extractor, "extract_batch") as mock_extract:
             mock_extract.return_value = [sample_exif_data]
 
             results = await pipeline.process_photos(photos)
@@ -628,9 +622,7 @@ class TestEXIFExtractionPipeline:
 
         photos = [mock_photo, mock_photo]
 
-        with patch.object(
-            pipeline.extractor, "extract_batch"
-        ) as mock_extract:
+        with patch.object(pipeline.extractor, "extract_batch") as mock_extract:
             mock_extract.return_value = [sample_exif_data, sample_exif_data]
 
             await pipeline.process_photos(photos)
@@ -648,9 +640,7 @@ class TestEXIFExtractionPipeline:
 
         photos = [mock_photo]
 
-        with patch.object(
-            pipeline.extractor, "extract_batch"
-        ) as mock_extract:
+        with patch.object(pipeline.extractor, "extract_batch") as mock_extract:
             mock_extract.return_value = [sample_exif_data]
 
             with patch.object(

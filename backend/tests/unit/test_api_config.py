@@ -316,16 +316,19 @@ class TestGetConfigFromDb:
     def test_get_config_from_db_with_data(self, db_manager):
         """Test getting config from database with data."""
         # Insert test settings
+        import time
+        current_time = int(time.time())
         db_manager.execute_update(
-            "INSERT INTO settings (key, value) VALUES (?, ?)",
-            ("roots", '["path1", "path2"]'),
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+            ("roots", '["path1", "path2"]', current_time),
         )
         db_manager.execute_update(
-            "INSERT INTO settings (key, value) VALUES (?, ?)",
-            ("face_search_enabled", "true"),
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+            ("face_search_enabled", "true", current_time),
         )
         db_manager.execute_update(
-            "INSERT INTO settings (key, value) VALUES (?, ?)", ("batch_size", "100")
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+            ("batch_size", "100", current_time)
         )
 
         config = _get_config_from_db(db_manager)
@@ -336,8 +339,11 @@ class TestGetConfigFromDb:
     def test_get_config_from_db_applies_defaults(self, db_manager):
         """Test that missing settings get default values."""
         # Insert only one setting
+        import time
+        current_time = int(time.time())
         db_manager.execute_update(
-            "INSERT INTO settings (key, value) VALUES (?, ?)", ("batch_size", "75")
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+            ("batch_size", "75", current_time)
         )
 
         config = _get_config_from_db(db_manager)
@@ -354,7 +360,8 @@ class TestGetConfigFromDb:
 
         def mock_execute_query(query, params=None):
             if "settings" in query:
-                raise Exception("Database error")
+                error_msg = "Database error"
+                raise Exception(error_msg)
             return original_execute_query(query, params)
 
         db_manager.execute_query = mock_execute_query
@@ -373,13 +380,15 @@ class TestUpdateConfigInDb:
         """Test updating config with list value."""
         _update_config_in_db(db_manager, "roots", ["/path1", "/path2"])
 
-        rows = db_manager.execute_query("SELECT value FROM settings WHERE key = ?", ("roots",))
+        rows = db_manager.execute_query(
+            "SELECT value FROM settings WHERE key = ?", ("roots",)
+        )
         assert len(rows) == 1
-        assert '"path1"' in rows[0][0]
+        assert '"/path1"' in rows[0][0]
 
     def test_update_config_in_db_boolean_value(self, db_manager):
         """Test updating config with boolean value."""
-        _update_config_in_db(db_manager, "face_search_enabled", True)
+        _update_config_in_db(db_manager, "face_search_enabled", value=True)
 
         rows = db_manager.execute_query(
             "SELECT value FROM settings WHERE key = ?", ("face_search_enabled",)
@@ -387,7 +396,7 @@ class TestUpdateConfigInDb:
         assert len(rows) == 1
         assert rows[0][0] == "true"
 
-        _update_config_in_db(db_manager, "face_search_enabled", False)
+        _update_config_in_db(db_manager, "face_search_enabled", value=False)
 
         rows = db_manager.execute_query(
             "SELECT value FROM settings WHERE key = ?", ("face_search_enabled",)
@@ -462,9 +471,11 @@ class TestGetConfiguration:
 
     async def test_get_configuration_database_error(self, mock_db_manager, db_manager):
         """Test handling database error when getting configuration."""
+
         # Mock execute_query to raise an exception that can't be caught
         def mock_execute_query(query, params=None):
-            raise RuntimeError("Database error")
+            error_msg = "Database error"
+            raise RuntimeError(error_msg)
 
         db_manager.execute_query = mock_execute_query
 
@@ -584,11 +595,15 @@ class TestUpdateConfiguration:
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "No configuration fields provided" in exc_info.value.detail
 
-    async def test_update_configuration_database_error(self, mock_db_manager, db_manager):
+    async def test_update_configuration_database_error(
+        self, mock_db_manager, db_manager
+    ):
         """Test handling database error during update."""
+
         # Mock execute_update to raise an exception
         def mock_execute_update(query, params):
-            raise Exception("Database error")
+            error_msg = "Database error"
+            raise Exception(error_msg)
 
         db_manager.execute_update = mock_execute_update
 
@@ -687,9 +702,11 @@ class TestRemoveRootFolder:
 
     async def test_remove_root_folder_database_error(self, mock_db_manager, db_manager):
         """Test handling database error when removing root folder."""
+
         # Mock execute_query to raise an exception
         def mock_execute_query(query, params=None):
-            raise Exception("Database error")
+            error_msg = "Database error"
+            raise Exception(error_msg)
 
         db_manager.execute_query = mock_execute_query
 
@@ -708,7 +725,7 @@ class TestResetConfiguration:
         """Test resetting configuration successfully."""
         # Set some custom values first
         _update_config_in_db(db_manager, "roots", ["/custom/path"])
-        _update_config_in_db(db_manager, "face_search_enabled", True)
+        _update_config_in_db(db_manager, "face_search_enabled", value=True)
         _update_config_in_db(db_manager, "batch_size", 200)
 
         result = await reset_configuration()
@@ -724,11 +741,15 @@ class TestResetConfiguration:
         assert config["roots"] == []
         assert config["face_search_enabled"] is False
 
-    async def test_reset_configuration_database_error(self, mock_db_manager, db_manager):
+    async def test_reset_configuration_database_error(
+        self, mock_db_manager, db_manager
+    ):
         """Test handling database error during reset."""
+
         # Mock execute_update to raise an exception
         def mock_execute_update(query, params):
-            raise Exception("Database error")
+            error_msg = "Database error"
+            raise Exception(error_msg)
 
         db_manager.execute_update = mock_execute_update
 

@@ -1,6 +1,7 @@
 """Unit tests for CLIP embedding worker."""
 
 import asyncio
+import contextlib
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -63,10 +64,8 @@ def test_photo():
     yield photo
 
     # Cleanup
-    try:
+    with contextlib.suppress(Exception):
         Path(temp_path).unlink()
-    except Exception:
-        pass
 
 
 @pytest.fixture
@@ -101,10 +100,8 @@ def test_photos():
 
     # Cleanup
     for path in temp_paths:
-        try:
+        with contextlib.suppress(Exception):
             Path(path).unlink()
-        except Exception:
-            pass
 
 
 class TestCLIPEmbeddingWorkerInitialization:
@@ -162,9 +159,7 @@ class TestCLIPEmbeddingWorkerInitialization:
 class TestGenerateEmbedding:
     """Test generate_embedding method."""
 
-    async def test_generate_embedding_success(
-        self, mock_clip, mock_torch, test_photo
-    ):
+    async def test_generate_embedding_success(self, mock_clip, mock_torch, test_photo):
         """Test generating embedding successfully."""
         worker = CLIPEmbeddingWorker()
 
@@ -298,9 +293,10 @@ class TestGenerateEmbeddingSync:
         """Test error handling in sync embedding generation."""
         worker = CLIPEmbeddingWorker()
 
-        with patch(
-            "src.workers.embedding_worker.Image"
-        ) as mock_pil, patch.object(worker.model, "encode_image") as mock_encode:
+        with (
+            patch("src.workers.embedding_worker.Image") as mock_pil,
+            patch.object(worker.model, "encode_image") as mock_encode,
+        ):
             mock_pil.open.side_effect = Exception("Image load error")
 
             result = worker._generate_embedding_sync(test_photo.path)
@@ -426,7 +422,8 @@ class TestGenerateBatch:
         def mock_generate(path):
             call_count[0] += 1
             if call_count[0] == 2:
-                raise Exception("Processing error")
+                msg = "Processing error"
+                raise Exception(msg)
             return np.random.randn(512).astype(np.float32)
 
         worker._generate_embedding_sync = Mock(side_effect=mock_generate)
@@ -597,9 +594,10 @@ class TestOptimizedCLIPWorker:
         worker.model.encode_image.return_value = mock_batch_features
         mock_batch_features.__truediv__.return_value = mock_batch_features
 
-        with patch("src.workers.embedding_worker.Image") as mock_pil, patch(
-            "src.workers.embedding_worker.torch"
-        ) as mock_torch_local:
+        with (
+            patch("src.workers.embedding_worker.Image") as mock_pil,
+            patch("src.workers.embedding_worker.torch") as mock_torch_local,
+        ):
             mock_pil.open.return_value.__enter__ = Mock(return_value=mock_image)
             mock_pil.open.return_value.__exit__ = Mock()
             mock_torch_local.stack.return_value.to.return_value = mock_tensor
@@ -708,9 +706,7 @@ class TestEmbeddingValidator:
         """Test validation warnings for high mean."""
         # Create embedding with high mean
         vector = np.ones(512, dtype=np.float32)
-        embedding = Embedding(
-            file_id=1, clip_vector=vector, embedding_model="ViT-B/32"
-        )
+        embedding = Embedding(file_id=1, clip_vector=vector, embedding_model="ViT-B/32")
 
         result = EmbeddingValidator.validate_embedding(embedding)
 
@@ -721,9 +717,7 @@ class TestEmbeddingValidator:
         """Test validation warnings for low standard deviation."""
         # Create embedding with low std
         vector = np.full(512, 0.1, dtype=np.float32)
-        embedding = Embedding(
-            file_id=1, clip_vector=vector, embedding_model="ViT-B/32"
-        )
+        embedding = Embedding(file_id=1, clip_vector=vector, embedding_model="ViT-B/32")
 
         result = EmbeddingValidator.validate_embedding(embedding)
 

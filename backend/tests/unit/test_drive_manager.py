@@ -20,7 +20,9 @@ class TestDriveManagerInitialization:
     @patch("src.services.drive_manager.get_settings")
     @patch("src.services.drive_manager.get_database")
     @patch("src.services.drive_manager.platform.system")
-    def test_initialization_windows(self, mock_platform, mock_get_db, mock_get_settings):
+    def test_initialization_windows(
+        self, mock_platform, mock_get_db, mock_get_settings
+    ):
         """Test DriveManager initialization on Windows."""
         mock_platform.return_value = "Windows"
         mock_settings = Mock()
@@ -168,10 +170,11 @@ class TestWindowsDriveScanning:
             mock_win32file.DRIVE_FIXED = 3
 
             import sys
-            with patch.dict(sys.modules, {'win32api': mock_win32api, 'win32file': mock_win32file}):
-                with patch.object(
-                    manager, "_update_drive_mapping"
-                ) as mock_update:
+
+            with patch.dict(
+                sys.modules, {"win32api": mock_win32api, "win32file": mock_win32file}
+            ):
+                with patch.object(manager, "_update_drive_mapping") as mock_update:
                     manager._scan_windows_drives()
 
                     # Should have called update for each drive
@@ -200,24 +203,26 @@ class TestWindowsDriveScanning:
 
             # Mock ImportError for pywin32 by not having the module
             import sys
+
             # Make sure win32api doesn't exist in sys.modules
-            win32api_backup = sys.modules.get('win32api')
-            win32file_backup = sys.modules.get('win32file')
+            win32api_backup = sys.modules.get("win32api")
+            win32file_backup = sys.modules.get("win32file")
 
             try:
                 # Remove from sys.modules if it exists
-                sys.modules.pop('win32api', None)
-                sys.modules.pop('win32file', None)
+                sys.modules.pop("win32api", None)
+                sys.modules.pop("win32file", None)
 
                 with patch("os.path.exists") as mock_exists:
                     # Mock C: and D: drives exist
-                    mock_exists.side_effect = (
-                        lambda p: p in ["C:\\", "D:\\", "C:\\\\", "D:\\\\"]
-                    )
+                    mock_exists.side_effect = lambda p: p in [
+                        "C:\\",
+                        "D:\\",
+                        "C:\\\\",
+                        "D:\\\\",
+                    ]
 
-                    with patch.object(
-                        manager, "_update_drive_mapping"
-                    ) as mock_update:
+                    with patch.object(manager, "_update_drive_mapping") as mock_update:
                         manager._scan_windows_drives()
 
                         # Should use fallback method
@@ -225,9 +230,9 @@ class TestWindowsDriveScanning:
             finally:
                 # Restore original state
                 if win32api_backup is not None:
-                    sys.modules['win32api'] = win32api_backup
+                    sys.modules["win32api"] = win32api_backup
                 if win32file_backup is not None:
-                    sys.modules['win32file'] = win32file_backup
+                    sys.modules["win32file"] = win32file_backup
 
     @patch("src.services.drive_manager.get_settings")
     @patch("src.services.drive_manager.get_database")
@@ -255,7 +260,8 @@ class TestWindowsDriveScanning:
             mock_win32api.GetLogicalDriveStrings.side_effect = Exception("Win32 error")
 
             import sys
-            with patch.dict(sys.modules, {'win32api': mock_win32api}):
+
+            with patch.dict(sys.modules, {"win32api": mock_win32api}):
                 # Should not raise exception
                 manager._scan_windows_drives()
 
@@ -351,7 +357,9 @@ class TestUnixDriveScanning:
                 assert manager._is_removable_device("/dev/mmcblk0") is True
 
                 # Fixed drive
-                assert manager._is_removable_device("/dev/sda1") is True  # Matches pattern
+                assert (
+                    manager._is_removable_device("/dev/sda1") is True
+                )  # Matches pattern
 
                 # Network drive
                 assert manager._is_removable_device("//server/share") is False
@@ -505,7 +513,9 @@ class TestPathResolution:
                 manager = DriveManager()
 
                 with patch("os.path.exists", return_value=True):
-                    with patch("pathlib.Path.resolve", return_value=Path("/test/file.jpg")):
+                    with patch(
+                        "pathlib.Path.resolve", return_value=Path("/test/file.jpg")
+                    ):
                         result = manager.resolve_path("/test/file.jpg")
                         assert result == "/test/file.jpg"
 
@@ -630,7 +640,10 @@ class TestStablePaths:
                 manager.current_mounts["device_1"] = "/mnt/usb"
                 manager.drive_mappings["device_1"] = "myusb"
 
-                with patch("pathlib.Path.resolve", return_value=Path("/mnt/usb/photos/image.jpg")):
+                with patch(
+                    "pathlib.Path.resolve",
+                    return_value=Path("/mnt/usb/photos/image.jpg"),
+                ):
                     result = manager.create_stable_path("/mnt/usb/photos/image.jpg")
                     assert result == f"$myusb${os.sep}photos{os.sep}image.jpg"
 
@@ -656,7 +669,9 @@ class TestStablePaths:
             with patch.object(DriveManager, "start_monitoring"):
                 manager = DriveManager()
 
-                with patch("pathlib.Path.resolve", return_value=Path("/other/path/file.jpg")):
+                with patch(
+                    "pathlib.Path.resolve", return_value=Path("/other/path/file.jpg")
+                ):
                     result = manager.create_stable_path("/other/path/file.jpg")
                     # Should return original path as fallback
                     assert result == "/other/path/file.jpg"

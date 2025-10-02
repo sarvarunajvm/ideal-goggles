@@ -116,9 +116,7 @@ class TestTesseractOCRWorker:
         with patch.object(TesseractOCRWorker, "_validate_tesseract"):
             worker = TesseractOCRWorker()
 
-            with patch.object(
-                worker, "_extract_text_sync"
-            ) as mock_extract:
+            with patch.object(worker, "_extract_text_sync") as mock_extract:
                 mock_ocr_result = OCRResult(
                     file_id=1, text="Hello World", language="eng", confidence=0.9
                 )
@@ -149,9 +147,7 @@ class TestTesseractOCRWorker:
         with patch.object(TesseractOCRWorker, "_validate_tesseract"):
             worker = TesseractOCRWorker(languages=["eng", "fra"])
 
-            with patch.object(
-                worker, "_extract_text_sync"
-            ) as mock_extract:
+            with patch.object(worker, "_extract_text_sync") as mock_extract:
                 mock_ocr_result = OCRResult(
                     file_id=1, text="Bonjour", language="fra", confidence=0.9
                 )
@@ -372,9 +368,7 @@ class TestSmartOCRWorker:
             worker = SmartOCRWorker(enable_preprocessing=True)
             worker.pil_available = True
 
-            with patch.object(
-                worker, "_extract_with_preprocessing"
-            ) as mock_preprocess:
+            with patch.object(worker, "_extract_with_preprocessing") as mock_preprocess:
                 mock_result = OCRResult(
                     file_id=1, text="Test", language="eng", confidence=0.9
                 )
@@ -420,7 +414,10 @@ class TestSmartOCRWorker:
                                 worker, "_run_tesseract_on_file"
                             ) as mock_tesseract:
                                 mock_result = OCRResult(
-                                    file_id=1, text="Test", language="eng", confidence=0.9
+                                    file_id=1,
+                                    text="Test",
+                                    language="eng",
+                                    confidence=0.9,
                                 )
                                 mock_tesseract.return_value = mock_result
 
@@ -523,11 +520,15 @@ class TestSmartOCRWorker:
                         for conf in [0.7, 0.9, 0.6]:
                             mock_result = Mock()
                             mock_result.returncode = 0
-                            mock_result.stdout = f"level\tconf\ttext\n5\t{int(conf*100)}\tTest\n"
+                            mock_result.stdout = (
+                                f"level\tconf\ttext\n5\t{int(conf*100)}\tTest\n"
+                            )
                             results.append(mock_result)
 
                         with patch("subprocess.run", side_effect=results):
-                            with patch.object(worker, "_parse_tesseract_output") as mock_parse:
+                            with patch.object(
+                                worker, "_parse_tesseract_output"
+                            ) as mock_parse:
                                 ocr_results = [
                                     OCRResult(
                                         file_id=1,
@@ -559,7 +560,9 @@ class TestSmartOCRWorker:
                             "subprocess.run",
                             side_effect=subprocess.TimeoutExpired("cmd", 30),
                         ):
-                            result = worker._run_tesseract_on_file("/path/to/photo.jpg", "eng")
+                            result = worker._run_tesseract_on_file(
+                                "/path/to/photo.jpg", "eng"
+                            )
 
                             assert result is None
 
@@ -620,9 +623,7 @@ class TestOCRQualityFilter:
         """Test filter keeps good quality results."""
         filter_obj = OCRQualityFilter()
 
-        result = OCRResult(
-            file_id=1, text="This is good quality text", confidence=0.9
-        )
+        result = OCRResult(file_id=1, text="This is good quality text", confidence=0.9)
 
         assert filter_obj.should_keep_result(result)
 
@@ -652,9 +653,7 @@ class TestOCRQualityFilter:
         """Test filter rejects gibberish text."""
         filter_obj = OCRQualityFilter()
 
-        result = OCRResult(
-            file_id=1, text="xyz qwerty asdfgh zxcvbn", confidence=0.9
-        )
+        result = OCRResult(file_id=1, text="xyz qwerty asdfgh zxcvbn", confidence=0.9)
 
         # Should be rejected as gibberish
         assert not filter_obj.should_keep_result(result)

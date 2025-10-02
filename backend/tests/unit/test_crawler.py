@@ -384,9 +384,7 @@ class TestFileCrawler:
         crawler = FileCrawler()
         crawler.add_root_path(sample_photos_dir)
 
-        with patch.object(
-            Photo, "from_file_path", side_effect=Exception("Test error")
-        ):
+        with patch.object(Photo, "from_file_path", side_effect=Exception("Test error")):
             result = await crawler.crawl_all_paths()
 
             # Should record errors instead of failing
@@ -694,15 +692,15 @@ class TestBatchFileCrawler:
         crawler = BatchFileCrawler(batch_size=2)
         callback = AsyncMock()
 
-        with patch.object(
-            Photo, "from_file_path", side_effect=Exception("Test error")
-        ):
+        with patch.object(Photo, "from_file_path", side_effect=Exception("Test error")):
             result = await crawler.crawl_in_batches([sample_photos_dir], callback)
 
             # Should complete despite errors - errors are counted in _process_batch
             # The error counting happens when exceptions are returned from gather
             assert result.total_files == 4
-            assert result.errors >= 0  # May or may not record errors depending on implementation
+            assert (
+                result.errors >= 0
+            )  # May or may not record errors depending on implementation
 
     @pytest.mark.asyncio
     async def test_collect_files(self, sample_photos_dir):

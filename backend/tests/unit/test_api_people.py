@@ -215,7 +215,8 @@ class TestListPeople:
         original_execute_query = db_manager.execute_query
 
         def mock_execute_query(query, params=None):
-            raise Exception("Database error")
+            msg = "Database error"
+            raise Exception(msg)
 
         db_manager.execute_query = mock_execute_query
 
@@ -265,9 +266,11 @@ class TestGetPerson:
 
     async def test_get_person_database_error(self, mock_db_manager, db_manager):
         """Test handling database errors when getting person."""
+
         # Mock execute_query to raise an exception
         def mock_execute_query(query, params=None):
-            raise Exception("Database error")
+            msg = "Database error"
+            raise Exception(msg)
 
         db_manager.execute_query = mock_execute_query
 
@@ -316,9 +319,13 @@ class TestCreatePerson:
         # Mock config
         mock_config = {"face_search_enabled": True}
 
-        with patch(
-            "src.workers.face_worker.FaceDetectionWorker", return_value=mock_face_worker
-        ), patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with (
+            patch(
+                "src.workers.face_worker.FaceDetectionWorker",
+                return_value=mock_face_worker,
+            ),
+            patch("src.api.people._get_config_from_db", return_value=mock_config),
+        ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
             result = await create_person(request)
 
@@ -411,9 +418,13 @@ class TestCreatePerson:
 
         mock_config = {"face_search_enabled": True}
 
-        with patch(
-            "src.workers.face_worker.FaceDetectionWorker", return_value=mock_face_worker
-        ), patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with (
+            patch(
+                "src.workers.face_worker.FaceDetectionWorker",
+                return_value=mock_face_worker,
+            ),
+            patch("src.api.people._get_config_from_db", return_value=mock_config),
+        ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
             with pytest.raises(HTTPException) as exc_info:
@@ -449,9 +460,13 @@ class TestCreatePerson:
 
         mock_config = {"face_search_enabled": True}
 
-        with patch(
-            "src.workers.face_worker.FaceDetectionWorker", return_value=mock_face_worker
-        ), patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with (
+            patch(
+                "src.workers.face_worker.FaceDetectionWorker",
+                return_value=mock_face_worker,
+            ),
+            patch("src.api.people._get_config_from_db", return_value=mock_config),
+        ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
             with pytest.raises(HTTPException) as exc_info:
@@ -828,9 +843,7 @@ class TestGetPersonPhotos:
         assert result["limit"] == 50
         assert result["offset"] == 0
 
-    async def test_get_person_photos_with_pagination(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_get_person_photos_with_pagination(self, mock_db_manager, db_manager):
         """Test getting photos with pagination."""
         # Insert test person
         db_manager.execute_update(
@@ -923,9 +936,11 @@ class TestGetPersonPhotos:
 
     async def test_get_person_photos_database_error(self, mock_db_manager, db_manager):
         """Test handling database error when getting photos."""
+
         # Mock execute_query to raise an exception
         def mock_execute_query(query, params=None):
-            raise Exception("Database error")
+            msg = "Database error"
+            raise Exception(msg)
 
         db_manager.execute_query = mock_execute_query
 

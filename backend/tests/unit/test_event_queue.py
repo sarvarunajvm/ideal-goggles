@@ -269,7 +269,7 @@ class TestEventHandler:
         handler = EventHandler(
             name="test_handler",
             event_types=[EventType.FILE_DISCOVERED],
-            handler_func=callback
+            handler_func=callback,
         )
 
         event = Event(
@@ -287,7 +287,7 @@ class TestEventHandler:
         """Test EventHandler can_handle method."""
         handler = EventHandler(
             name="test_handler",
-            event_types=[EventType.FILE_DISCOVERED, EventType.FILE_MODIFIED]
+            event_types=[EventType.FILE_DISCOVERED, EventType.FILE_MODIFIED],
         )
 
         file_event = Event(

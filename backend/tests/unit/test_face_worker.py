@@ -24,10 +24,12 @@ def mock_cv2():
     """Context manager to mock cv2 module."""
     mock_cv2_module = Mock()
     mock_cv2_module.imread = Mock(return_value=np.zeros((400, 400, 3), dtype=np.uint8))
-    mock_cv2_module.cvtColor = Mock(return_value=np.zeros((400, 400, 3), dtype=np.uint8))
+    mock_cv2_module.cvtColor = Mock(
+        return_value=np.zeros((400, 400, 3), dtype=np.uint8)
+    )
     mock_cv2_module.COLOR_BGR2RGB = 1
 
-    with patch.dict('sys.modules', {'cv2': mock_cv2_module}):
+    with patch.dict("sys.modules", {"cv2": mock_cv2_module}):
         yield mock_cv2_module
 
 
@@ -42,7 +44,9 @@ def mock_face_app():
     mock_face.bbox = np.array([100, 100, 200, 200], dtype=np.float32)
     mock_face.normed_embedding = np.random.rand(512).astype(np.float32)
     mock_face.det_score = 0.95
-    mock_face.kps = np.array([[120, 120], [180, 120], [150, 150], [130, 170], [170, 170]])
+    mock_face.kps = np.array(
+        [[120, 120], [180, 120], [150, 150], [130, 170], [170, 170]]
+    )
 
     mock_app.get = Mock(return_value=[mock_face])
     return mock_app
@@ -104,7 +108,7 @@ class TestFaceDetectionWorkerInitialization:
     def test_initialization_with_defaults(self):
         """Test worker initialization with default parameters."""
         # Mock the initialization method to avoid importing insightface
-        with patch.object(FaceDetectionWorker, '_initialize_face_models'):
+        with patch.object(FaceDetectionWorker, "_initialize_face_models"):
             worker = FaceDetectionWorker()
 
             assert worker.max_workers == 2
@@ -116,7 +120,7 @@ class TestFaceDetectionWorkerInitialization:
 
     def test_initialization_with_custom_params(self):
         """Test worker initialization with custom parameters."""
-        with patch.object(FaceDetectionWorker, '_initialize_face_models'):
+        with patch.object(FaceDetectionWorker, "_initialize_face_models"):
             worker = FaceDetectionWorker(
                 max_workers=4,
                 model_name="buffalo_s",
@@ -137,11 +141,13 @@ class TestFaceDetectionWorkerInitialization:
 
     def test_initialization_with_model_error(self):
         """Test worker initialization when model fails to load."""
+
         # Patch to raise exception during initialization
         def raise_error(self):
-            raise Exception("Model error")
+            error_msg = "Model error"
+            raise Exception(error_msg)
 
-        with patch.object(FaceDetectionWorker, '_initialize_face_models', raise_error):
+        with patch.object(FaceDetectionWorker, "_initialize_face_models", raise_error):
             # Should catch the exception and set face_app to None
             try:
                 worker = FaceDetectionWorker()
@@ -166,7 +172,7 @@ class TestFaceDetection:
         mock_cv2.imread.return_value = np.zeros((400, 400, 3), dtype=np.uint8)
         mock_cv2.cvtColor.return_value = np.zeros((400, 400, 3), dtype=np.uint8)
 
-        with patch.dict('sys.modules', {'cv2': mock_cv2}):
+        with patch.dict("sys.modules", {"cv2": mock_cv2}):
             faces = await worker.detect_faces(sample_photo)
 
             assert len(faces) == 1
@@ -196,10 +202,11 @@ class TestFaceDetection:
         mock_executor = Mock()
 
         async def raise_error(*args, **kwargs):
-            raise Exception("Read error")
+            error_msg = "Read error"
+            raise Exception(error_msg)
 
         # Mock the run_in_executor to raise exception
-        with patch('asyncio.get_event_loop') as mock_loop:
+        with patch("asyncio.get_event_loop") as mock_loop:
             mock_loop_instance = Mock()
             mock_loop_instance.run_in_executor = Mock(side_effect=raise_error)
             mock_loop.return_value = mock_loop_instance
@@ -219,7 +226,7 @@ class TestFaceDetection:
         mock_cv2_module = Mock()
         mock_cv2_module.imread.return_value = None
         mock_cv2_module.cvtColor = Mock()
-        with patch.dict('sys.modules', {'cv2': mock_cv2_module}):
+        with patch.dict("sys.modules", {"cv2": mock_cv2_module}):
             faces = await worker.detect_faces(sample_photo)
 
             assert faces == []
@@ -272,7 +279,9 @@ class TestFaceRecognition:
         # Make face vector similar to person vector
         sample_face.face_vector = sample_person.face_vector.copy()
 
-        results = await worker.recognize_faces([sample_face], [sample_person], similarity_threshold=0.5)
+        results = await worker.recognize_faces(
+            [sample_face], [sample_person], similarity_threshold=0.5
+        )
 
         assert len(results) == 1
         assert results[0]["face"] == sample_face
@@ -285,7 +294,9 @@ class TestFaceRecognition:
         """Test face recognition with no matching person."""
         worker = FaceDetectionWorker()
 
-        results = await worker.recognize_faces([sample_face], [sample_person], similarity_threshold=0.99)
+        results = await worker.recognize_faces(
+            [sample_face], [sample_person], similarity_threshold=0.99
+        )
 
         assert len(results) == 1
         assert results[0]["matched_person"] is None
@@ -307,7 +318,9 @@ class TestFaceRecognition:
         sample_person.active = False
         sample_face.face_vector = sample_person.face_vector.copy()
 
-        results = await worker.recognize_faces([sample_face], [sample_person], similarity_threshold=0.5)
+        results = await worker.recognize_faces(
+            [sample_face], [sample_person], similarity_threshold=0.5
+        )
 
         assert len(results) == 1
         assert results[0]["matched_person"] is None
@@ -318,7 +331,9 @@ class TestFaceRecognition:
         worker = FaceDetectionWorker()
         sample_face.face_vector = None
 
-        results = await worker.recognize_faces([sample_face], [sample_person], similarity_threshold=0.6)
+        results = await worker.recognize_faces(
+            [sample_face], [sample_person], similarity_threshold=0.6
+        )
 
         assert len(results) == 0
 
@@ -333,8 +348,17 @@ class TestBatchProcessing:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=i, path=f"/test/photo{i}.jpg", folder="/test", filename=f"photo{i}.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1=f"hash{i}")
+            Photo(
+                id=i,
+                path=f"/test/photo{i}.jpg",
+                folder="/test",
+                filename=f"photo{i}.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1=f"hash{i}",
+            )
             for i in range(3)
         ]
 
@@ -375,8 +399,17 @@ class TestPersonEnrollment:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=1, path="/test/photo1.jpg", folder="/test", filename="photo1.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1="hash1")
+            Photo(
+                id=1,
+                path="/test/photo1.jpg",
+                folder="/test",
+                filename="photo1.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1="hash1",
+            )
         ]
 
         with mock_cv2():
@@ -406,8 +439,17 @@ class TestPersonEnrollment:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=1, path="/test/photo1.jpg", folder="/test", filename="photo1.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1="hash1")
+            Photo(
+                id=1,
+                path="/test/photo1.jpg",
+                folder="/test",
+                filename="photo1.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1="hash1",
+            )
         ]
 
         with mock_cv2():
@@ -422,9 +464,11 @@ class TestPersonEnrollment:
         faces = []
         for i in range(2):
             mock_face = Mock()
-            mock_face.bbox = np.array([100 + i*50, 100, 200 + i*50, 200], dtype=np.float32)
+            mock_face.bbox = np.array(
+                [100 + i * 50, 100, 200 + i * 50, 200], dtype=np.float32
+            )
             mock_face.normed_embedding = np.random.rand(512).astype(np.float32)
-            mock_face.det_score = 0.9 - i*0.05
+            mock_face.det_score = 0.9 - i * 0.05
             mock_face.kps = np.array([[120, 120]])
             faces.append(mock_face)
 
@@ -435,8 +479,17 @@ class TestPersonEnrollment:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=1, path="/test/photo1.jpg", folder="/test", filename="photo1.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1="hash1")
+            Photo(
+                id=1,
+                path="/test/photo1.jpg",
+                folder="/test",
+                filename="photo1.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1="hash1",
+            )
         ]
 
         with mock_cv2():
@@ -468,15 +521,26 @@ class TestUpdatePersonEnrollment:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=1, path="/test/photo1.jpg", folder="/test", filename="photo1.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1="hash1")
+            Photo(
+                id=1,
+                path="/test/photo1.jpg",
+                folder="/test",
+                filename="photo1.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1="hash1",
+            )
         ]
 
         original_sample_count = sample_person.sample_count
 
         with mock_cv2():
 
-            updated_person = await worker.update_person_enrollment(sample_person, photos)
+            updated_person = await worker.update_person_enrollment(
+                sample_person, photos
+            )
 
             assert updated_person.sample_count > original_sample_count
 
@@ -490,15 +554,26 @@ class TestUpdatePersonEnrollment:
         worker.face_app = mock_face_app
 
         photos = [
-            Photo(id=1, path="/test/photo1.jpg", folder="/test", filename="photo1.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1="hash1")
+            Photo(
+                id=1,
+                path="/test/photo1.jpg",
+                folder="/test",
+                filename="photo1.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1="hash1",
+            )
         ]
 
         original_sample_count = sample_person.sample_count
 
         with mock_cv2():
 
-            updated_person = await worker.update_person_enrollment(sample_person, photos)
+            updated_person = await worker.update_person_enrollment(
+                sample_person, photos
+            )
 
             # Sample count should not change
             assert updated_person.sample_count == original_sample_count
@@ -565,23 +640,26 @@ class TestStatistics:
 class TestFaceSearchEngine:
     """Test FaceSearchEngine functionality."""
 
-    @pytest.mark.skip(reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays")
+    @pytest.mark.skip(
+        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
+    )
     @pytest.mark.asyncio
     async def test_search_by_person(self, sample_face):
         """Test searching photos by person."""
-        pass
 
-    @pytest.mark.skip(reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays")
+    @pytest.mark.skip(
+        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
+    )
     @pytest.mark.asyncio
     async def test_search_by_person_no_matches(self, sample_face):
         """Test searching by person with no matches."""
-        pass
 
-    @pytest.mark.skip(reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays")
+    @pytest.mark.skip(
+        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
+    )
     @pytest.mark.asyncio
     async def test_search_by_person_empty_inputs(self):
         """Test searching by person with empty faces."""
-        pass
 
     @pytest.mark.asyncio
     async def test_search_by_face_image(self, sample_face):
@@ -590,7 +668,9 @@ class TestFaceSearchEngine:
 
         query_vector = sample_face.face_vector.copy()
 
-        results = await engine.search_by_face_image(query_vector, [sample_face], top_k=10)
+        results = await engine.search_by_face_image(
+            query_vector, [sample_face], top_k=10
+        )
 
         assert len(results) == 1
         assert results[0]["similarity"] > 0.99  # Should be nearly identical
@@ -608,8 +688,13 @@ class TestFaceSearchEngine:
         for i in range(10):
             face_vector = query_vector + np.random.rand(512).astype(np.float32) * 0.1
             face_vector = face_vector / np.linalg.norm(face_vector)
-            face = Face(id=i, file_id=i, box_xyxy=[0, 0, 10, 10],
-                       face_vector=face_vector, confidence=0.9)
+            face = Face(
+                id=i,
+                file_id=i,
+                box_xyxy=[0, 0, 10, 10],
+                face_vector=face_vector,
+                confidence=0.9,
+            )
             faces.append(face)
 
         results = await engine.search_by_face_image(query_vector, faces, top_k=5)
@@ -625,14 +710,31 @@ class TestFaceSearchEngine:
         base_vector = np.random.rand(512).astype(np.float32)
         base_vector = base_vector / np.linalg.norm(base_vector)
 
-        face1 = Face(id=1, file_id=1, box_xyxy=[0, 0, 10, 10],
-                    face_vector=base_vector.copy(), confidence=0.9)
-        face2 = Face(id=2, file_id=2, box_xyxy=[0, 0, 10, 10],
-                    face_vector=base_vector.copy(), confidence=0.9)
-        face3 = Face(id=3, file_id=3, box_xyxy=[0, 0, 10, 10],
-                    face_vector=np.random.rand(512).astype(np.float32), confidence=0.9)
+        face1 = Face(
+            id=1,
+            file_id=1,
+            box_xyxy=[0, 0, 10, 10],
+            face_vector=base_vector.copy(),
+            confidence=0.9,
+        )
+        face2 = Face(
+            id=2,
+            file_id=2,
+            box_xyxy=[0, 0, 10, 10],
+            face_vector=base_vector.copy(),
+            confidence=0.9,
+        )
+        face3 = Face(
+            id=3,
+            file_id=3,
+            box_xyxy=[0, 0, 10, 10],
+            face_vector=np.random.rand(512).astype(np.float32),
+            confidence=0.9,
+        )
 
-        duplicate_groups = await engine.find_duplicate_faces([face1, face2, face3], duplicate_threshold=0.95)
+        duplicate_groups = await engine.find_duplicate_faces(
+            [face1, face2, face3], duplicate_threshold=0.95
+        )
 
         assert len(duplicate_groups) >= 1
         # First group should contain face1 and face2
@@ -651,12 +753,27 @@ class TestFaceSearchEngine:
         base_vector2 = base_vector2 / np.linalg.norm(base_vector2)
 
         faces = [
-            Face(id=1, file_id=1, box_xyxy=[0, 0, 10, 10],
-                face_vector=base_vector1 + np.random.rand(512).astype(np.float32) * 0.1, confidence=0.9),
-            Face(id=2, file_id=2, box_xyxy=[0, 0, 10, 10],
-                face_vector=base_vector1 + np.random.rand(512).astype(np.float32) * 0.1, confidence=0.9),
-            Face(id=3, file_id=3, box_xyxy=[0, 0, 10, 10],
-                face_vector=base_vector2 + np.random.rand(512).astype(np.float32) * 0.1, confidence=0.9),
+            Face(
+                id=1,
+                file_id=1,
+                box_xyxy=[0, 0, 10, 10],
+                face_vector=base_vector1 + np.random.rand(512).astype(np.float32) * 0.1,
+                confidence=0.9,
+            ),
+            Face(
+                id=2,
+                file_id=2,
+                box_xyxy=[0, 0, 10, 10],
+                face_vector=base_vector1 + np.random.rand(512).astype(np.float32) * 0.1,
+                confidence=0.9,
+            ),
+            Face(
+                id=3,
+                file_id=3,
+                box_xyxy=[0, 0, 10, 10],
+                face_vector=base_vector2 + np.random.rand(512).astype(np.float32) * 0.1,
+                confidence=0.9,
+            ),
         ]
 
         # Normalize vectors

@@ -3,7 +3,7 @@
 import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, call
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import pytest
 from PIL import Image
@@ -108,7 +108,7 @@ class TestThumbnailGeneratorInitialization:
     def test_validate_pil_not_available(self, temp_cache_dir):
         """Test PIL validation when PIL is not available."""
         # Mock PIL.Image module at the import level
-        with patch.dict('sys.modules', {'PIL': None, 'PIL.Image': None}):
+        with patch.dict("sys.modules", {"PIL": None, "PIL.Image": None}):
             with pytest.raises((RuntimeError, AttributeError, ImportError)):
                 ThumbnailGenerator(cache_root=temp_cache_dir)
 
@@ -137,8 +137,10 @@ class TestThumbnailGeneration:
         # Create a test image
         test_image = Image.new("RGB", (1000, 800), color="red")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = await generator.generate_thumbnail(sample_photo)
 
             assert thumbnail is not None
@@ -148,7 +150,9 @@ class TestThumbnailGeneration:
             assert generator.stats["generated"] == 1
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_with_existing_cache(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_with_existing_cache(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test thumbnail generation uses existing cache."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
@@ -163,7 +167,9 @@ class TestThumbnailGeneration:
         Path(thumb_path).parent.mkdir(parents=True, exist_ok=True)
         test_image.save(thumb_path, "WEBP")
 
-        with patch.object(generator, "_check_existing_thumbnail", return_value=existing_thumbnail):
+        with patch.object(
+            generator, "_check_existing_thumbnail", return_value=existing_thumbnail
+        ):
             thumbnail = await generator.generate_thumbnail(sample_photo)
 
             assert thumbnail is not None
@@ -171,7 +177,9 @@ class TestThumbnailGeneration:
             assert generator.stats["generated"] == 0
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_force_regenerate(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_force_regenerate(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test thumbnail generation with force regenerate."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
@@ -180,10 +188,16 @@ class TestThumbnailGeneration:
             sample_photo.id, 512, 410, 512, "webp"
         )
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image), \
-             patch.object(generator, "_check_existing_thumbnail", return_value=existing_thumbnail):
-            thumbnail = await generator.generate_thumbnail(sample_photo, force_regenerate=True)
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+            patch.object(
+                generator, "_check_existing_thumbnail", return_value=existing_thumbnail
+            ),
+        ):
+            thumbnail = await generator.generate_thumbnail(
+                sample_photo, force_regenerate=True
+            )
 
             assert thumbnail is not None
             assert generator.stats["generated"] == 1
@@ -206,8 +220,10 @@ class TestThumbnailGeneration:
 
         test_image = Image.new("RGB", (1000, 800), color="blue")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = generator._generate_thumbnail_sync(sample_photo)
 
             assert thumbnail is not None
@@ -220,8 +236,10 @@ class TestThumbnailGeneration:
 
         test_image = Image.new("RGBA", (1000, 800), color=(255, 0, 0, 128))
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose") as mock_transpose:
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose") as mock_transpose,
+        ):
             # Need to handle the converted RGB image
             rgb_image = Image.new("RGB", (1000, 800), color="white")
             mock_transpose.return_value = rgb_image
@@ -230,14 +248,18 @@ class TestThumbnailGeneration:
 
             assert thumbnail is not None
 
-    def test_generate_thumbnail_sync_grayscale_image(self, temp_cache_dir, sample_photo):
+    def test_generate_thumbnail_sync_grayscale_image(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test synchronous thumbnail generation with grayscale image."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
         test_image = Image.new("L", (1000, 800), color=128)
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = generator._generate_thumbnail_sync(sample_photo)
 
             assert thumbnail is not None
@@ -318,7 +340,9 @@ class TestSaveParameters:
 
     def test_get_save_kwargs_webp(self, temp_cache_dir):
         """Test save parameters for WebP format."""
-        generator = ThumbnailGenerator(cache_root=temp_cache_dir, img_format="webp", quality=85)
+        generator = ThumbnailGenerator(
+            cache_root=temp_cache_dir, img_format="webp", quality=85
+        )
 
         kwargs = generator._get_save_kwargs()
 
@@ -328,7 +352,9 @@ class TestSaveParameters:
 
     def test_get_save_kwargs_jpeg(self, temp_cache_dir):
         """Test save parameters for JPEG format."""
-        generator = ThumbnailGenerator(cache_root=temp_cache_dir, img_format="jpeg", quality=90)
+        generator = ThumbnailGenerator(
+            cache_root=temp_cache_dir, img_format="jpeg", quality=90
+        )
 
         kwargs = generator._get_save_kwargs()
 
@@ -362,15 +388,26 @@ class TestBatchProcessing:
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
         photos = [
-            Photo(id=i, path=f"/test/photo{i}.jpg", folder="/test", filename=f"photo{i}.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1=f"hash{i}")
+            Photo(
+                id=i,
+                path=f"/test/photo{i}.jpg",
+                folder="/test",
+                filename=f"photo{i}.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1=f"hash{i}",
+            )
             for i in range(5)
         ]
 
         test_image = Image.new("RGB", (1000, 800), color="green")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             results = await generator.generate_batch(photos)
 
             assert len(results) == 5
@@ -393,8 +430,17 @@ class TestBatchProcessing:
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
         photos = [
-            Photo(id=i, path=f"/test/photo{i}.jpg", folder="/test", filename=f"photo{i}.jpg",
-                  ext=".jpg", size=1024, created_ts=1.0, modified_ts=1.0, sha1=f"hash{i}")
+            Photo(
+                id=i,
+                path=f"/test/photo{i}.jpg",
+                folder="/test",
+                filename=f"photo{i}.jpg",
+                ext=".jpg",
+                size=1024,
+                created_ts=1.0,
+                modified_ts=1.0,
+                sha1=f"hash{i}",
+            )
             for i in range(3)
         ]
 
@@ -405,11 +451,14 @@ class TestBatchProcessing:
         def mock_open(path):
             call_count[0] += 1
             if call_count[0] == 2:
-                raise Exception("Error opening image")
+                error_msg = "Error opening image"
+                raise Exception(error_msg)
             return test_image
 
-        with patch("PIL.Image.open", side_effect=mock_open), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", side_effect=mock_open),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             results = await generator.generate_batch(photos)
 
             assert len(results) == 3
@@ -423,7 +472,9 @@ class TestStatistics:
 
     def test_get_statistics(self, temp_cache_dir):
         """Test getting generator statistics."""
-        generator = ThumbnailGenerator(cache_root=temp_cache_dir, max_size=256, quality=80)
+        generator = ThumbnailGenerator(
+            cache_root=temp_cache_dir, max_size=256, quality=80
+        )
 
         generator.stats["generated"] = 100
         generator.stats["failed"] = 5
@@ -490,7 +541,9 @@ class TestCheckExistingThumbnail:
         assert existing is not None
 
     @pytest.mark.asyncio
-    async def test_check_existing_thumbnail_not_exists(self, temp_cache_dir, sample_photo):
+    async def test_check_existing_thumbnail_not_exists(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test checking for existing thumbnail that doesn't exist."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
@@ -530,8 +583,10 @@ class TestSmartThumbnailGenerator:
 
         test_image = Image.new("RGB", (1000, 800), color="magenta")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnails = await generator.generate_multi_size_thumbnails(sample_photo)
 
             assert len(thumbnails) == 2
@@ -594,8 +649,15 @@ class TestSmartThumbnailGenerator:
 
         # Small file
         small_photo = Photo(
-            id=1, path="/test/small.jpg", folder="/test", filename="small.jpg",
-            ext=".jpg", size=500000, created_ts=1.0, modified_ts=1.0, sha1="hash1"
+            id=1,
+            path="/test/small.jpg",
+            folder="/test",
+            filename="small.jpg",
+            ext=".jpg",
+            size=500000,
+            created_ts=1.0,
+            modified_ts=1.0,
+            sha1="hash1",
         )
 
         medium_image = Image.new("RGB", (1000, 800), color="gray")
@@ -760,14 +822,18 @@ class TestEdgeCases:
     """Test edge cases and error handling."""
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_concurrent_requests(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_concurrent_requests(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test handling concurrent thumbnail generation requests."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir)
 
         test_image = Image.new("RGB", (1000, 800), color="white")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             # Generate same thumbnail concurrently
             tasks = [generator.generate_thumbnail(sample_photo) for _ in range(5)]
             results = await asyncio.gather(*tasks)
@@ -776,15 +842,19 @@ class TestEdgeCases:
             assert all(r is not None for r in results)
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_very_small_image(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_very_small_image(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test thumbnail generation for very small images."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir, max_size=512)
 
         # Very small image
         test_image = Image.new("RGB", (50, 50), color="red")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = await generator.generate_thumbnail(sample_photo)
 
             assert thumbnail is not None
@@ -793,15 +863,19 @@ class TestEdgeCases:
             assert thumbnail.height == 50
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_very_wide_image(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_very_wide_image(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test thumbnail generation for very wide panoramic images."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir, max_size=512)
 
         # Very wide panoramic image
         test_image = Image.new("RGB", (5000, 500), color="blue")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = await generator.generate_thumbnail(sample_photo)
 
             assert thumbnail is not None
@@ -810,15 +884,19 @@ class TestEdgeCases:
             assert thumbnail.width / thumbnail.height == pytest.approx(10.0, rel=0.1)
 
     @pytest.mark.asyncio
-    async def test_generate_thumbnail_very_tall_image(self, temp_cache_dir, sample_photo):
+    async def test_generate_thumbnail_very_tall_image(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test thumbnail generation for very tall images."""
         generator = ThumbnailGenerator(cache_root=temp_cache_dir, max_size=512)
 
         # Very tall image
         test_image = Image.new("RGB", (500, 5000), color="green")
 
-        with patch("PIL.Image.open", return_value=test_image), \
-             patch("PIL.ImageOps.exif_transpose", return_value=test_image):
+        with (
+            patch("PIL.Image.open", return_value=test_image),
+            patch("PIL.ImageOps.exif_transpose", return_value=test_image),
+        ):
             thumbnail = await generator.generate_thumbnail(sample_photo)
 
             assert thumbnail is not None

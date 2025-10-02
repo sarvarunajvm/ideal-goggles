@@ -33,7 +33,9 @@ class TestFAISSIndexManagerInitialization:
                     manager = FAISSIndexManager()
 
                     assert manager.base_path == Path(temp_dir) / "faiss"
-                    assert manager.index_path == Path(temp_dir) / "faiss" / "index.faiss"
+                    assert (
+                        manager.index_path == Path(temp_dir) / "faiss" / "index.faiss"
+                    )
                     assert (
                         manager.metadata_path
                         == Path(temp_dir) / "faiss" / "metadata.json"
@@ -414,7 +416,9 @@ class TestIndexOptimization:
                 with patch.object(manager, "create_backup") as mock_backup:
                     mock_backup.return_value = True
                     with patch.object(
-                        manager, "_optimize_flat_index", return_value=mock_optimized_index
+                        manager,
+                        "_optimize_flat_index",
+                        return_value=mock_optimized_index,
                     ):
                         result = await manager._perform_optimization()
 
@@ -576,9 +580,7 @@ class TestIndexOptimizationMethods:
     @patch("src.services.faiss_manager.get_settings")
     @patch("src.services.faiss_manager.faiss")
     @patch("src.services.faiss_manager.np")
-    def test_create_ivf_index_without_pq(
-        self, mock_np, mock_faiss, mock_get_settings
-    ):
+    def test_create_ivf_index_without_pq(self, mock_np, mock_faiss, mock_get_settings):
         """Test IVF index creation without product quantization."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -953,13 +955,13 @@ class TestEdgeCases:
                 manager = FAISSIndexManager(vector_search_service=mock_vector_service)
 
                 async def run_test():
+                    from contextlib import suppress
+
                     with patch.object(
                         manager, "_perform_optimization", side_effect=Exception("Error")
                     ):
-                        try:
+                        with suppress(BaseException):
                             await manager.optimize_index(force=True)
-                        except:
-                            pass
 
                     # Flag should be cleared even after error
                     assert manager._optimization_in_progress is False
