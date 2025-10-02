@@ -365,6 +365,7 @@ jobs:
         path: |
           func_tests/blob-report/
           func_tests/playwright-report/
+          func_tests/test-results.json
           backend/logs/
         retention-days: 3
 
@@ -543,76 +544,67 @@ jobs:
           fi
         fi
 
-        # Extract E2E test results
-        if [ -d "coverage-artifacts/e2e-test-report/playwright-report" ]; then
-          # Try to find test results summary in the HTML report
-          if [ -f "coverage-artifacts/e2e-test-report/playwright-report/index.html" ]; then
-            # Extract pass/fail counts from Playwright report using multiple patterns
-            # Try modern Playwright report structure first
-            E2E_TOTAL=$(grep -oE '"total":\s*[0-9]+' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
-            E2E_PASSED=$(grep -oE '"passed":\s*[0-9]+' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
+        # Extract E2E test results from JSON report
+        E2E_JSON_FILE=""
+        # Look for JSON test results in all E2E test artifacts
+        for artifact_dir in coverage-artifacts/e2e-test-reports-*; do
+          if [ -f "$artifact_dir/test-results.json" ]; then
+            E2E_JSON_FILE="$artifact_dir/test-results.json"
+            break
+          fi
+        done
 
-            # Fallback to older patterns if modern ones don't work
-            if [ -z "$E2E_TOTAL" ]; then
-              E2E_TOTAL=$(grep -oE 'data-testid="total[^>]*>[0-9]+' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
-            fi
-            if [ -z "$E2E_PASSED" ]; then
-              E2E_PASSED=$(grep -oE 'data-testid="passed[^>]*>[0-9]+' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
-            fi
+        if [ -n "$E2E_JSON_FILE" ] && [ -f "$E2E_JSON_FILE" ]; then
+          echo "Found E2E JSON results at: $E2E_JSON_FILE"
 
-            # Try HTML text patterns as final fallback
-            if [ -z "$E2E_TOTAL" ]; then
-              E2E_TOTAL=$(grep -oE '[0-9]+\s*tests?\s*ran' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
-            fi
-            if [ -z "$E2E_PASSED" ]; then
-              E2E_PASSED=$(grep -oE '[0-9]+\s*passed' coverage-artifacts/e2e-test-report/playwright-report/index.html | grep -oE '[0-9]+' | head -1)
-            fi
-
-            # Calculate results if we have valid data
-            if [ -n "$E2E_TOTAL" ] && [ "$E2E_TOTAL" != "0" ]; then
-              E2E_TESTS="$E2E_TOTAL"
-              if [ -n "$E2E_PASSED" ]; then
-                E2E_PASS_RATE=$(echo "scale=1; $E2E_PASSED * 100 / $E2E_TOTAL" | bc)"%"
-                if [ "$E2E_PASSED" = "$E2E_TOTAL" ]; then
-                  E2E_STATUS="✅"
-                else
-                  E2E_STATUS="⚠️"
-                fi
-              else
-                # If we can't find passed count, assume all passed if report exists
-                E2E_PASS_RATE="100.0%"
-                E2E_STATUS="✅"
-              fi
-            else
-              # Fallback: try to extract from workflow logs or set defaults
-              echo "DEBUG: E2E extraction failed. Report structure:"
-              head -20 coverage-artifacts/e2e-test-report/playwright-report/index.html || echo "No report found"
-
-              # Try to extract from any log files if available
-              if [ -d "coverage-artifacts/e2e-test-reports-chromium" ]; then
-                LOG_FILES=$(find coverage-artifacts/e2e-test-reports-chromium -name "*.log" 2>/dev/null || true)
-                if [ -n "$LOG_FILES" ]; then
-                  # Look for test summary patterns in logs
-                  TOTAL_FROM_LOG=$(grep -h "tests passed\|failed\|running" $LOG_FILES | grep -oE '[0-9]+' | head -1 2>/dev/null || echo "")
-                  if [ -n "$TOTAL_FROM_LOG" ]; then
-                    E2E_TESTS="$TOTAL_FROM_LOG"
-                    E2E_PASS_RATE="Check Report"
-                    E2E_STATUS="📋"
-                  fi
-                fi
-              fi
-
-              # Final fallback - set informative defaults
-              if [ "$E2E_TESTS" = "--" ]; then
-                E2E_TESTS="Available"
-                E2E_PASS_RATE="See Report"
-                E2E_STATUS="📊"
-              fi
-            fi
+          # Extract stats from JSON using jq if available, otherwise use grep
+          if command -v jq >/dev/null 2>&1; then
+            # Use jq for precise JSON parsing
+            E2E_TOTAL=$(jq -r '.stats.total // 0' "$E2E_JSON_FILE")
+            E2E_PASSED=$(jq -r '.stats.passed // 0' "$E2E_JSON_FILE")
+            E2E_FAILED=$(jq -r '.stats.failed // 0' "$E2E_JSON_FILE")
+          else
+            # Fallback to grep if jq is not available
+            E2E_TOTAL=$(grep -oE '"total":\s*[0-9]+' "$E2E_JSON_FILE" | grep -oE '[0-9]+' | head -1 || echo "0")
+            E2E_PASSED=$(grep -oE '"passed":\s*[0-9]+' "$E2E_JSON_FILE" | grep -oE '[0-9]+' | head -1 || echo "0")
+            E2E_FAILED=$(grep -oE '"failed":\s*[0-9]+' "$E2E_JSON_FILE" | grep -oE '[0-9]+' | head -1 || echo "0")
           fi
 
-          # Copy E2E test results
+          # Calculate results if we have valid data
+          if [ -n "$E2E_TOTAL" ] && [ "$E2E_TOTAL" != "0" ]; then
+            E2E_TESTS="$E2E_TOTAL"
+            if [ -n "$E2E_PASSED" ]; then
+              E2E_PASS_RATE=$(echo "scale=1; $E2E_PASSED * 100 / $E2E_TOTAL" | bc)"%"
+              if [ "$E2E_PASSED" = "$E2E_TOTAL" ]; then
+                E2E_STATUS="✅"
+              else
+                E2E_STATUS="⚠️"
+              fi
+            else
+              E2E_PASS_RATE="0.0%"
+              E2E_STATUS="❌"
+            fi
+          else
+            echo "No valid E2E test data found in JSON"
+            E2E_TESTS="Unknown"
+            E2E_PASS_RATE="See Report"
+            E2E_STATUS="📊"
+          fi
+        else
+          echo "No E2E JSON results found, checking for HTML report..."
+          # Fallback to HTML report if JSON is not available
+          if [ -d "coverage-artifacts/e2e-test-report/playwright-report" ]; then
+            E2E_TESTS="Available"
+            E2E_PASS_RATE="See Report"
+            E2E_STATUS="📊"
+          fi
+        fi
+
+        # Copy E2E test results (HTML report for viewing)
+        if [ -d "coverage-artifacts/e2e-test-report/playwright-report" ]; then
           cp -r coverage-artifacts/e2e-test-report/playwright-report coverage-report/e2e
+        elif [ -d "coverage-artifacts/e2e-test-reports-chromium/playwright-report" ]; then
+          cp -r coverage-artifacts/e2e-test-reports-chromium/playwright-report coverage-report/e2e
         fi
 
         # Helper function to get percentage width (strips % and handles --)
