@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ideal-goggles-backend"
-version = "1.0.19"
+version = "1.0.20"
 description = "Backend API for Ideal Goggles"
 authors = [{name = "Ideal Goggles Team"}]
 license = {text = "MIT"}
