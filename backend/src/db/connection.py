@@ -422,3 +422,20 @@ def init_database(db_path: str | None = None) -> DatabaseManager:
     global _db_manager
     _db_manager = DatabaseManager(db_path)
     return _db_manager
+
+
+@contextmanager
+def get_database():
+    """
+    Get database connection as a context manager.
+
+    Usage:
+        with get_database() as db:
+            db.execute(...)
+    """
+    db_manager = get_database_manager()
+    conn = db_manager.get_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()
