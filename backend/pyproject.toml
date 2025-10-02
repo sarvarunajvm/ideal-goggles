@@ -9,7 +9,7 @@ description = "Backend API for Ideal Goggles"
 authors = [{name = "Ideal Goggles Team"}]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.104.1",
     "uvicorn[standard]>=0.24.0",
@@ -104,7 +104,7 @@ target-version = ["py311"]
 line-length = 88
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = false
 warn_return_any = false
 warn_unused_configs = false
