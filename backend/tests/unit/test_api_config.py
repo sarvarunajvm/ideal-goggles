@@ -317,6 +317,7 @@ class TestGetConfigFromDb:
         """Test getting config from database with data."""
         # Insert test settings
         import time
+
         current_time = int(time.time())
         db_manager.execute_update(
             "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
@@ -328,7 +329,7 @@ class TestGetConfigFromDb:
         )
         db_manager.execute_update(
             "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
-            ("batch_size", "100", current_time)
+            ("batch_size", "100", current_time),
         )
 
         config = _get_config_from_db(db_manager)
@@ -340,10 +341,11 @@ class TestGetConfigFromDb:
         """Test that missing settings get default values."""
         # Insert only one setting
         import time
+
         current_time = int(time.time())
         db_manager.execute_update(
             "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
-            ("batch_size", "75", current_time)
+            ("batch_size", "75", current_time),
         )
 
         config = _get_config_from_db(db_manager)
