@@ -19,6 +19,7 @@
     "lint:fix": "eslint -c frontend/eslint.config.mjs --fix frontend",
     "type-check": "tsc --noEmit -p frontend/tsconfig.json",
     "test": "jest -c frontend/jest.config.js --rootDir frontend",
+    "test:coverage": "jest -c frontend/jest.config.js --rootDir frontend --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text --reporters=default --reporters=jest-junit",
     "test:unit": "jest -c frontend/jest.config.js --rootDir frontend frontend/tests/basic.test.js",
     "test:components": "jest -c frontend/jest.config.js --rootDir frontend --testPathPattern=tests/components/.*",
     "test:p0:quick": "jest -c frontend/jest.config.p0.js --rootDir frontend --silent",
