@@ -1,12 +1,12 @@
-# Comprehensive Test Suite
-# Purpose: Full test coverage and reporting
+# Comprehensive Test & Coverage Workflow
+# Purpose: Complete test execution, coverage collection, and reporting
 # Scope:
-#   - All unit tests (frontend & backend)
-#   - All integration tests
-#   - All contract tests
-#   - Full E2E test suite
-#   - Coverage reporting and deployment to GitHub Pages
-# Time: ~30 minutes
+#   - All test suites: unit, integration, contract, performance
+#   - Full E2E test suite with Playwright
+#   - Coverage collection and analysis
+#   - Professional reporting dashboard
+#   - GitHub Pages deployment
+# Time: ~25 minutes (testing only, no quality checks)
 
 name: Tests, Coverage & E2E
 
@@ -165,34 +165,12 @@ jobs:
 
     - name: Install backend dependencies
       run: |
-        cd backend
-        python -m pip install --upgrade pip
-        # Use regular install in CI (not editable) to avoid path issues
-        pip install ".[dev]"
-
-    - name: Lint with ruff
-      run: |
-        cd backend
-        ruff check src tests
-
-    - name: Format check with black
-      run: |
-        cd backend
-        black --check src tests
-
-    - name: Type check with mypy
-      run: |
-        cd backend
-        mypy src --ignore-missing-imports
+        pnpm run backend:install
 
     - name: Run all backend tests with coverage
       run: |
-        cd backend
-        # Run all tests (unit, integration, contract)
-        pytest tests/ --cov=src --cov-report=xml --cov-report=html --cov-report=term \
-               --junitxml=test-results-${{ matrix.python-version }}.xml \
-               -v --tb=short \
-               --ignore=tests/performance || true
+        # Use standardized package.json script for backend coverage
+        pnpm run backend:coverage || true
       continue-on-error: true
 
     - name: Upload coverage to Codecov
@@ -241,14 +219,6 @@ jobs:
     - name: Install dependencies
       run: |
         pnpm install --no-frozen-lockfile
-
-    - name: Lint frontend
-      run: |
-        pnpm run lint:frontend
-
-    - name: Type check
-      run: |
-        pnpm run typecheck:frontend
 
     - name: Run all frontend tests with coverage
       run: |
@@ -323,22 +293,15 @@ jobs:
 
     - name: Install all dependencies
       run: |
-        # Frontend
-        pnpm install --no-frozen-lockfile
-
-        # Backend
-        cd backend
-        python -m pip install --upgrade pip
-        # Use regular install in CI (not editable) to avoid path issues
-        pip install ".[dev]"
+        # Install all dependencies
+        pnpm run install:all
         # Verify the installation
         python -c "from src.main import app; print('Backend imports OK')"
-        cd ..
 
         # E2E tests
         cd func_tests
         pnpm install --no-frozen-lockfile
-        npx playwright install --with-deps ${{ matrix.browser }}
+        pnpm exec playwright install --with-deps ${{ matrix.browser }}
 
     - name: Build application
       run: |
@@ -371,7 +334,7 @@ jobs:
         nohup pnpm run preview > backend/logs/frontend.log 2>&1 &
         echo $! > backend/frontend.pid
         sleep 3
-        echo "Frontend started with PID $(cat ../backend/frontend.pid)"
+        echo "Frontend started with PID $(cat backend/frontend.pid)"
 
     - name: Check services are running
       run: |
@@ -385,9 +348,8 @@ jobs:
 
     - name: Run all E2E tests
       run: |
-        cd func_tests
-        # Run full E2E test suite
-        npx playwright test --project=${{ matrix.browser }} --reporter=blob || true
+        # Run full E2E test suite with multiple reporters using standardized script
+        PROJECT=${{ matrix.browser }} pnpm run e2e:all:browser || true
       continue-on-error: true
       env:
         CI: true
@@ -439,11 +401,61 @@ jobs:
     - name: Merge reports
       run: |
         cd func_tests
-        # Find and merge blob reports
-        if find ../all-test-reports -name "blob-report" -type d | head -1 > /dev/null; then
-          npx playwright merge-reports --reporter=html,github ../all-test-reports/*/blob-report || echo "No blob reports to merge"
+
+        # List all downloaded artifacts for debugging
+        echo "Downloaded artifacts:"
+        find ../all-test-reports -type f -name "*.html" -o -name "*.json" | head -10
+
+        # Create a combined report directory
+        mkdir -p playwright-report
+
+        # First, try to merge blob reports if they exist
+        BLOB_DIRS=$(find ../all-test-reports -name "blob-report" -type d 2>/dev/null | head -5)
+        if [ -n "$BLOB_DIRS" ]; then
+          echo "Found blob reports, merging..."
+          pnpm exec playwright merge-reports --reporter=html ../all-test-reports/*/blob-report || {
+            echo "Blob merge failed, trying alternative approach"
+            # Copy individual HTML reports if blob merge fails
+            for report_dir in ../all-test-reports/*/playwright-report; do
+              if [ -d "$report_dir" ]; then
+                echo "Copying report from $report_dir"
+                cp -r "$report_dir"/* playwright-report/ 2>/dev/null || true
+              fi
+            done
+          }
         else
-          echo "No blob reports found, skipping merge"
+          echo "No blob reports found, looking for HTML reports..."
+          # Look for existing HTML reports to copy
+          FOUND_REPORTS=false
+          for report_dir in ../all-test-reports/*/playwright-report; do
+            if [ -d "$report_dir" ]; then
+              echo "Found HTML report in $report_dir"
+              cp -r "$report_dir"/* playwright-report/ 2>/dev/null || true
+              FOUND_REPORTS=true
+            fi
+          done
+
+          if [ "$FOUND_REPORTS" = "false" ]; then
+            echo "No reports found, creating placeholder report"
+            # Create a minimal HTML report indicating tests didn't complete
+            cat > playwright-report/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head><title>E2E Test Results</title></head>
+        <body>
+          <h1>E2E Test Results</h1>
+          <p>Tests were run but reports are not available. Check the workflow logs for details.</p>
+          <p>This may indicate that tests failed to complete or report generation encountered issues.</p>
+        </body>
+        </html>
+        EOF
+          fi
+        fi
+
+        # Ensure we have at least an index.html
+        if [ ! -f "playwright-report/index.html" ]; then
+          echo "Creating fallback index.html"
+          echo "<html><body><h1>E2E Test Results</h1><p>Report generation completed but no detailed results available.</p></body></html>" > playwright-report/index.html
         fi
 
     - name: Upload merged report
@@ -456,7 +468,7 @@ jobs:
   generate-coverage-report:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, merge-e2e-reports]
+    needs: [determine-tests, backend-tests, frontend-tests, merge-e2e-reports]
     if: |
       always() &&
       needs.determine-tests.outputs.run_coverage == 'true' &&
@@ -572,13 +584,30 @@ jobs:
                 E2E_STATUS="✅"
               fi
             else
-              # Debug: output what we found for troubleshooting
+              # Fallback: try to extract from workflow logs or set defaults
               echo "DEBUG: E2E extraction failed. Report structure:"
               head -20 coverage-artifacts/e2e-test-report/playwright-report/index.html || echo "No report found"
-              # Set reasonable defaults
-              E2E_TESTS="Available"
-              E2E_PASS_RATE="See Report"
-              E2E_STATUS="📊"
+
+              # Try to extract from any log files if available
+              if [ -d "coverage-artifacts/e2e-test-reports-chromium" ]; then
+                LOG_FILES=$(find coverage-artifacts/e2e-test-reports-chromium -name "*.log" 2>/dev/null || true)
+                if [ -n "$LOG_FILES" ]; then
+                  # Look for test summary patterns in logs
+                  TOTAL_FROM_LOG=$(grep -h "tests passed\|failed\|running" $LOG_FILES | grep -oE '[0-9]+' | head -1 2>/dev/null || echo "")
+                  if [ -n "$TOTAL_FROM_LOG" ]; then
+                    E2E_TESTS="$TOTAL_FROM_LOG"
+                    E2E_PASS_RATE="Check Report"
+                    E2E_STATUS="📋"
+                  fi
+                fi
+              fi
+
+              # Final fallback - set informative defaults
+              if [ "$E2E_TESTS" = "--" ]; then
+                E2E_TESTS="Available"
+                E2E_PASS_RATE="See Report"
+                E2E_STATUS="📊"
+              fi
             fi
           fi
 

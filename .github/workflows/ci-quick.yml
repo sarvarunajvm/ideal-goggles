@@ -1,9 +1,9 @@
 # Quick CI Workflow
 # Purpose: Run on every PR for fast feedback
 # Scope:
-#   - All linting and formatting checks
+#   - Code quality: linting, type checking, and formatting
 #   - All unit tests (frontend & backend)
-#   - Only P0 critical E2E tests (smoke tests)
+#   - P0 critical E2E tests (essential application health checks)
 # Time: ~10 minutes
 
 name: Quick CI
@@ -51,27 +51,15 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # Frontend
-        pnpm install --no-frozen-lockfile
+        # Install all dependencies using the unified script
+        pnpm run install:all
 
-        # Backend (full dependencies for unit tests)
-        cd backend
-        python -m pip install --upgrade pip
-        # Use regular install in CI (not editable) to avoid path issues
-        pip install ".[dev]"
-        cd ..
-
-    - name: Frontend Lint & Type Check
+    - name: Code Quality Checks
       run: |
-        pnpm run lint:frontend
-        pnpm run typecheck:frontend
-
-    - name: Backend Lint & Format Check
-      run: |
-        cd backend
-        ruff check src tests
-        black --check src tests
-        mypy src --ignore-missing-imports
+        # Use standardized package.json scripts
+        pnpm run lint:all
+        pnpm run typecheck:all
+        pnpm run format:all
 
     - name: Check file sizes
       run: |
@@ -85,9 +73,9 @@ jobs:
         echo "### 🧪 Running Unit Tests" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        # Frontend unit tests
-        echo "Running frontend unit tests..."
-        pnpm test 2>&1 | tee frontend-test.log || true
+        # Use standardized package.json scripts for testing
+        echo "Running unit tests using package.json scripts..."
+        pnpm run test:unit 2>&1 | tee frontend-test.log || true
         FRONTEND_EXIT_CODE=${PIPESTATUS[0]}
 
         # Extract test results from log
@@ -95,12 +83,10 @@ jobs:
         FRONTEND_FAILED=$(grep -oP '\d+(?= failed)' frontend-test.log | tail -1 || echo "0")
         FRONTEND_TOTAL=$((FRONTEND_PASSED + FRONTEND_FAILED))
 
-        # Backend unit tests
+        # Backend unit tests using package.json script
         echo "Running backend unit tests..."
-        cd backend
-        pytest tests/unit/ -q --tb=no 2>&1 | tee ../backend-test.log || true
+        pnpm run backend:test:unit 2>&1 | tee backend-test.log || true
         BACKEND_EXIT_CODE=$?
-        cd ..
 
         # Extract backend test results
         BACKEND_PASSED=$(grep -oP '\d+(?= passed)' backend-test.log | tail -1 || echo "0")
@@ -127,14 +113,15 @@ jobs:
     - name: Run P0 Critical E2E Tests
       run: |
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🎭 Running P0 E2E Tests" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎭 Running P0 Critical Tests" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        # Run only P0 e2e tests (quick smoke tests)
-        if [ -f "pnpm run test:p0:quick" ]; then
-          pnpm run test:p0:quick || echo "P0 tests completed with warnings"
+        # Run only P0 critical tests (fastest essential checks)
+        if [ -f "func_tests/e2e/00-p0-critical.test.ts" ]; then
+          echo "Running P0 critical tests..." >> $GITHUB_STEP_SUMMARY
+          pnpm run e2e:p0 || echo "P0 tests completed with warnings"
         else
-          echo "P0 test suite not configured, skipping..." >> $GITHUB_STEP_SUMMARY
+          echo "P0 critical test suite not found, skipping..." >> $GITHUB_STEP_SUMMARY
         fi
 
     - name: Quick smoke test

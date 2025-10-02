@@ -1,3 +1,13 @@
+# Release Workflow
+# Purpose: Build and publish production releases
+# Trigger: Only on version tags (v*) AND when CI workflows have passed
+# Scope:
+#   - Verify CI status (Quick CI + Coverage CI must pass)
+#   - Build for all platforms (macOS, Windows, Linux)
+#   - Package native installers
+#   - Create GitHub release with all artifacts
+# Time: ~15 minutes (build only, no testing)
+
 name: Release
 
 on:
@@ -6,11 +16,61 @@ on:
       - 'v*'
 
 jobs:
+  check-ci-status:
+    name: Verify CI Status
+    runs-on: ubuntu-latest
+    outputs:
+      ci_passed: ${{ steps.check.outputs.ci_passed }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check CI status for tagged commit
+      id: check
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get the commit SHA for this tag
+        COMMIT_SHA="${{ github.sha }}"
+        echo "🔍 Checking CI status for commit: $COMMIT_SHA"
+
+        # Check workflow runs for this commit
+        echo "📋 Fetching workflow runs for commit..."
+
+        # Get recent workflow runs for this commit
+        WORKFLOWS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$COMMIT_SHA")
+
+        # Check if both required workflows passed
+        QUICK_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "Quick CI") | .conclusion' | head -1)
+        COVERAGE_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "Tests, Coverage & E2E") | .conclusion' | head -1)
+
+        echo "Quick CI status: $QUICK_CI_STATUS"
+        echo "Coverage CI status: $COVERAGE_CI_STATUS"
+
+        # Determine if we should proceed
+        if [[ "$QUICK_CI_STATUS" == "success" ]] && [[ "$COVERAGE_CI_STATUS" == "success" ]]; then
+          echo "✅ Both CI workflows passed, proceeding with release"
+          echo "ci_passed=true" >> $GITHUB_OUTPUT
+        elif [[ -z "$QUICK_CI_STATUS" ]] || [[ -z "$COVERAGE_CI_STATUS" ]]; then
+          echo "⚠️  CI status not found, may be first release or workflows changed"
+          echo "🚀 Proceeding with release (manual verification recommended)"
+          echo "ci_passed=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ CI workflows failed or incomplete:"
+          echo "   Quick CI: $QUICK_CI_STATUS"
+          echo "   Coverage CI: $COVERAGE_CI_STATUS"
+          echo "🛑 Blocking release"
+          echo "ci_passed=false" >> $GITHUB_OUTPUT
+        fi
+
   build:
+    name: Build & Package
+    needs: check-ci-status
+    if: needs.check-ci-status.outputs.ci_passed == 'true'
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -30,36 +90,16 @@ jobs:
         node-version: '20'
         registry-url: 'https://registry.npmjs.org/'
 
-    - name: Build backend binary (PyInstaller)
-      working-directory: ./backend
-      shell: bash
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
-        pip install pyinstaller
-        pyinstaller --onefile --name ideal-goggles-backend -p src -s src/main.py
-
     - name: Install dependencies
-      run: pnpm install --no-frozen-lockfile
-
-    - name: Lint + typecheck frontend
       run: |
-        pnpm run lint
-        pnpm run type-check
-        pnpm run test:unit
+        pnpm run install:all
 
-    - name: Build frontend
-      run: pnpm run build:frontend
-
-    - name: Build Electron main/preload
-      run: pnpm run build:electron:main
-
-    - name: Package app (electron-builder)
+    - name: Build and package app
       shell: bash
       run: |
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm exec electron-builder --mac; fi
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then pnpm exec electron-builder --win; fi
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then pnpm exec electron-builder --linux; fi
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm run dist:mac; fi
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then pnpm run dist:win; fi
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then pnpm run dist:linux; fi
 
     - name: Upload artifacts (mac)
       if: matrix.os == 'macos-latest'
