@@ -8,7 +8,7 @@
 **Alternatives considered**: Tauri (smaller bundle but less mature), Qt (native but steeper learning curve)
 
 ### Backend Framework Decision
-**Decision**: Python 3.11 + FastAPI
+**Decision**: Python 3.12 + FastAPI
 **Rationale**: Excellent ML/AI library ecosystem (ONNX, FAISS, Tesseract). FastAPI provides automatic OpenAPI generation and high performance. Python excels at image processing pipelines.
 **Alternatives considered**: Node.js (unified language but weaker ML tools), Rust (performance but limited ML ecosystem)
 

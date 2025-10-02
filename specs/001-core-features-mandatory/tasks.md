@@ -38,7 +38,7 @@
 
 ## Phase 3.1: Setup & Infrastructure
 - [x] T001 Create project structure per implementation plan
-- [x] T002 [P] Initialize Python 3.11 backend with FastAPI dependencies in backend/
+- [x] T002 [P] Initialize Python 3.12 backend with FastAPI dependencies in backend/
 - [x] T003 [P] Initialize Electron + React + TypeScript frontend in frontend/
 - [x] T004 [P] Setup shared types package in packages/shared/
 - [x] T005 [P] Configure linting tools (Ruff/Black for Python, ESLint/Prettier for TypeScript)

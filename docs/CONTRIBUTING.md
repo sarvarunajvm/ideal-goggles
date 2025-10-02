@@ -13,7 +13,7 @@ Thanks for your interest in contributing! This guide helps you set up, develop, 
 
 ## Setup
 
-1. Install Node.js 18+ and Python 3.11+
+1. Install Node.js 18+ and Python 3.12+
 2. Install dependencies:
    - `make install` (backend + frontend + root)
    - `make backend-install` for backend venv

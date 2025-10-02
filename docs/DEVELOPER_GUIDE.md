@@ -50,7 +50,7 @@ Comprehensive guide for developers working on the Ideal Goggles application.
 # Required software
 node --version  # 18+
 pnpm --version  # 10+
-python3 --version  # 3.11+
+python3 --version  # 3.12+
 make --version  # GNU Make
 ```
 

@@ -50,8 +50,8 @@ cd frontend
 pnpm test -- --coverage
 
 # E2E
-cd tests
-npx playwright test --reporter=html
+cd func_tests
+pnpm exec playwright test --reporter=html
 ```
 
 ## 🤖 CI/CD Workflows
@@ -65,7 +65,7 @@ npx playwright test --reporter=html
 - 🔀 **Pull requests**: To `main` branch
 
 **Features:**
-- Matrix testing (Python 3.11/3.12, Node 18/20)
+- Matrix testing (Python 3.12/3.12, Node 18/20)
 - Parallel E2E tests across 3 browsers with sharding
 - Smart test selection based on changed files
 - Coverage report generation and merging

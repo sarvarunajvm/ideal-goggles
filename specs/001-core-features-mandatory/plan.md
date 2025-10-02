@@ -34,7 +34,7 @@
 Desktop photo search application for studios with offline-first design. Multi-modal search (text, image, face) with <2s response times. Electron + React frontend with Python FastAPI backend. SQLite + FAISS storage supporting 1M+ photos on standard hardware.
 
 ## Technical Context
-**Language/Version**: Python 3.11 (backend), TypeScript/React (frontend)
+**Language/Version**: Python 3.12 (backend), TypeScript/React (frontend)
 **Primary Dependencies**: FastAPI, Electron, SQLite, FAISS, ONNX Runtime, Tesseract OCR
 **Storage**: SQLite (metadata/FTS5), FAISS (vectors), File cache (thumbnails)
 **Testing**: pytest (Python), Jest (TypeScript), Playwright (integration)

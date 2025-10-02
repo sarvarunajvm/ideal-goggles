@@ -25,7 +25,7 @@ A privacy-focused desktop application for intelligent photo search and organizat
 
 - **Node.js** 18+
 - **PNPM** 10+ (install with `npm install -g pnpm`)
-- **Python** 3.11+
+- **Python** 3.12+
 - **Git**
 
 ### Installation
@@ -116,7 +116,7 @@ pnpm run test            # Run frontend tests
 make backend-test        # Run backend tests
 
 # Linting & Formatting
-pnpm run lint           # Lint frontend
+pnpm run lint:frontend  # Lint frontend
 make backend-lint       # Lint backend (ruff)
 make backend-format     # Format backend (black)
 
@@ -228,7 +228,7 @@ See docs/DEVELOPER_GUIDE.md for detailed development guidelines.
 
 **Backend won't start:**
 ```bash
-# Check Python version (needs 3.11+)
+# Check Python version (needs 3.12+)
 python3 --version
 
 # Reinstall backend dependencies

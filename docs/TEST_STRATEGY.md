@@ -34,7 +34,7 @@
 - **Duration**: < 2 minutes
 - **Browser**: Chromium only
 - **Config**: `playwright.config.ci.ts`
-- **Command**: `npx playwright test --config=playwright.config.ci.ts --grep @P0`
+- **Command**: `pnpm exec playwright test --config=playwright.config.ci.ts --grep @P0`
 
 ### 2. Nightly Tests
 - **What**: Full test suite
@@ -42,12 +42,12 @@
 - **Duration**: ~30 minutes
 - **Browser**: All browsers
 - **Config**: `playwright.config.ts`
-- **Command**: `npx playwright test`
+- **Command**: `pnpm exec playwright test`
 
 ### 3. Local Development
-- **Quick**: `npx playwright test e2e/00-p0-critical.test.ts`
-- **Feature**: `npx playwright test e2e/02-search.test.ts`
-- **Full**: `npx playwright test`
+- **Quick**: `pnpm exec playwright test e2e/00-p0-critical.test.ts`
+- **Feature**: `pnpm exec playwright test e2e/02-search.test.ts`
+- **Full**: `pnpm exec playwright test`
 
 ## Test Organization
 
@@ -98,34 +98,34 @@ test('@P2 @requires-models semantic search with embeddings', async () => {
 ### Quick P0 Tests (CI)
 ```bash
 # Run only critical tests
-npx playwright test --grep @P0
+pnpm exec playwright test --grep @P0
 
 # CI configuration
-npx playwright test --config=playwright.config.ci.ts
+pnpm exec playwright test --config=playwright.config.ci.ts
 ```
 
 ### Feature Development
 ```bash
 # Run specific test file
-npx playwright test e2e/02-search.test.ts
+pnpm exec playwright test e2e/02-search.test.ts
 
 # Run with UI mode for debugging
-npx playwright test --ui
+pnpm exec playwright test --ui
 
 # Run specific test
-npx playwright test -g "performs basic text search"
+pnpm exec playwright test -g "performs basic text search"
 ```
 
 ### Full Test Suite
 ```bash
 # All tests, all browsers
-npx playwright test
+pnpm exec playwright test
 
 # With specific browser
-npx playwright test --project=chromium
+pnpm exec playwright test --project=chromium
 
 # In headed mode
-npx playwright test --headed
+pnpm exec playwright test --headed
 ```
 
 ## Adding New Tests
@@ -151,7 +151,7 @@ npx playwright test --headed
 
 - **CI Dashboard**: Check GitHub Actions for P0 test results
 - **Nightly Reports**: Available as artifacts in GitHub Actions
-- **Local Reports**: `npx playwright show-report`
+- **Local Reports**: `pnpm exec playwright show-report`
 
 ## Best Practices
 
