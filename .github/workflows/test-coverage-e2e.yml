@@ -365,7 +365,7 @@ jobs:
         path: |
           func_tests/blob-report/
           func_tests/playwright-report/
-          func_tests/test-results.json
+          func_tests/test-results/
           backend/logs/
         retention-days: 3
 
@@ -548,14 +548,19 @@ jobs:
         E2E_JSON_FILE=""
         # Look for JSON test results in all E2E test artifacts
         for artifact_dir in coverage-artifacts/e2e-test-reports-*; do
-          if [ -f "$artifact_dir/test-results.json" ]; then
-            E2E_JSON_FILE="$artifact_dir/test-results.json"
-            break
-          fi
+          # Check common JSON output files from Playwright
+          for json_file in "test-results/results.json" "test-results.json" "results.json"; do
+            if [ -f "$artifact_dir/$json_file" ]; then
+              E2E_JSON_FILE="$artifact_dir/$json_file"
+              break 2
+            fi
+          done
         done
 
         if [ -n "$E2E_JSON_FILE" ] && [ -f "$E2E_JSON_FILE" ]; then
           echo "Found E2E JSON results at: $E2E_JSON_FILE"
+          echo "JSON file structure preview:"
+          head -20 "$E2E_JSON_FILE" || echo "Unable to read JSON file"
 
           # Extract stats from JSON using jq if available, otherwise use grep
           if command -v jq >/dev/null 2>&1; then
