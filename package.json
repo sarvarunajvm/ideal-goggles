@@ -14,7 +14,7 @@
     "dev:electron": "cross-env NODE_ENV=development wait-on http://localhost:3333 tcp:127.0.0.1:5555 && pnpm run build:electron:main && cross-env NODE_ENV=development electron .",
     "preview": "vite preview --config frontend/vite.config.ts",
     "// === SETUP & INSTALLATION ===": "",
-    "install:all": "pnpm install --frozen-lockfile && pnpm run backend:install",
+    "install:all": "pnpm install && pnpm run backend:install",
     "postinstall": "bash scripts/setup-hooks.sh || true",
     "hooks:setup": "bash scripts/setup-hooks.sh",
     "// === BUILD & DISTRIBUTION ===": "",
