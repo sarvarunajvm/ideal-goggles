@@ -30,6 +30,7 @@ export default defineConfig({
     ['html', { outputFolder: 'playwright-report' }],
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
+    ['blob', { outputDir: 'blob-report' }],
     ['list']
   ],
 

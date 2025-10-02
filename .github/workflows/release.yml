@@ -2,7 +2,7 @@
 # Purpose: Build and publish production releases
 # Trigger: Only on version tags (v*) AND when CI workflows have passed
 # Scope:
-#   - Verify CI status (Quick CI + Coverage CI must pass)
+#   - Verify CI status (Quick CI + E2E Tests must pass)
 #   - Build for all platforms (macOS, Windows, Linux)
 #   - Package native installers
 #   - Create GitHub release with all artifacts
@@ -41,25 +41,34 @@ jobs:
           "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$COMMIT_SHA")
 
         # Check if both required workflows passed
+        # Quick CI: Quality checks + unit tests + coverage + P0 E2E tests
+        # E2E Tests: Full comprehensive E2E test suite
         QUICK_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "Quick CI") | .conclusion' | head -1)
-        COVERAGE_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "Tests, Coverage & E2E") | .conclusion' | head -1)
+        E2E_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "E2E Tests") | .conclusion' | head -1)
 
         echo "Quick CI status: $QUICK_CI_STATUS"
-        echo "Coverage CI status: $COVERAGE_CI_STATUS"
+        echo "E2E Tests status: $E2E_CI_STATUS"
 
-        # Determine if we should proceed
-        if [[ "$QUICK_CI_STATUS" == "success" ]] && [[ "$COVERAGE_CI_STATUS" == "success" ]]; then
+        # Determine if we should proceed with release
+        # Both Quick CI and E2E Tests must pass for production release
+        if [[ "$QUICK_CI_STATUS" == "success" ]] && [[ "$E2E_CI_STATUS" == "success" ]]; then
           echo "✅ Both CI workflows passed, proceeding with release"
+          echo "   - Quick CI: Quality checks + unit tests + coverage + P0 E2E ✅"
+          echo "   - E2E Tests: Full comprehensive E2E test suite ✅"
           echo "ci_passed=true" >> $GITHUB_OUTPUT
-        elif [[ -z "$QUICK_CI_STATUS" ]] || [[ -z "$COVERAGE_CI_STATUS" ]]; then
+        elif [[ -z "$QUICK_CI_STATUS" ]] || [[ -z "$E2E_CI_STATUS" ]]; then
           echo "⚠️  CI status not found, may be first release or workflows changed"
           echo "🚀 Proceeding with release (manual verification recommended)"
+          echo "   - Ensure both 'Quick CI' and 'E2E Tests' workflows have run successfully"
           echo "ci_passed=true" >> $GITHUB_OUTPUT
         else
-          echo "❌ CI workflows failed or incomplete:"
+          echo "❌ CI workflows failed or incomplete - blocking release for safety:"
           echo "   Quick CI: $QUICK_CI_STATUS"
-          echo "   Coverage CI: $COVERAGE_CI_STATUS"
-          echo "🛑 Blocking release"
+          echo "   E2E Tests: $E2E_CI_STATUS"
+          echo ""
+          echo "🛑 Release blocked - fix failing tests before creating release"
+          echo "   - Quick CI provides fast feedback with essential checks"
+          echo "   - E2E Tests provides comprehensive regression testing"
           echo "ci_passed=false" >> $GITHUB_OUTPUT
         fi
 

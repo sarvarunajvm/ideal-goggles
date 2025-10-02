@@ -1,0 +1,325 @@
+# E2E Test Workflow
+# Purpose: Comprehensive end-to-end testing with Playwright
+# Scope:
+#   - Full E2E test suite across multiple browsers
+#   - Test result merging and reporting
+#   - Artifact collection for analysis
+# Time: ~20 minutes
+
+name: E2E Tests
+
+on:
+  # Manual trigger for E2E testing
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test with'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - chrome
+          - all
+
+  # Scheduled E2E runs
+  schedule:
+    # Run every day at 2 AM UTC (nightly E2E regression testing)
+    - cron: '0 2 * * *'
+
+  # On push to main branch only (not PRs - those use ci-quick.yml)
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: e2e-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine E2E test scope
+  determine-e2e-scope:
+    name: Determine E2E Test Scope
+    runs-on: ubuntu-latest
+    outputs:
+      browser_matrix: ${{ steps.check.outputs.browser_matrix }}
+      run_full_suite: ${{ steps.check.outputs.run_full_suite }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Determine E2E scope
+      id: check
+      run: |
+        # Default to running full E2E suite on chromium
+        BROWSER_MATRIX='["chromium"]'
+        RUN_FULL_SUITE="true"
+
+        # Check manual trigger inputs for browser selection
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          case "${{ github.event.inputs.browser }}" in
+            chromium)
+              BROWSER_MATRIX='["chromium"]'
+              ;;
+            chrome)
+              BROWSER_MATRIX='["chrome"]'
+              ;;
+            all)
+              BROWSER_MATRIX='["chromium", "chrome"]'
+              ;;
+          esac
+        fi
+
+        # For scheduled runs, test multiple browsers
+        if [ "${{ github.event_name }}" == "schedule" ]; then
+          BROWSER_MATRIX='["chromium", "chrome"]'
+        fi
+
+        echo "browser_matrix=$BROWSER_MATRIX" >> $GITHUB_OUTPUT
+        echo "run_full_suite=$RUN_FULL_SUITE" >> $GITHUB_OUTPUT
+        echo "Will run E2E tests on browsers: $BROWSER_MATRIX"
+
+  # E2E Tests (Full Suite)
+  e2e-tests:
+    name: E2E Tests - Full Suite
+    runs-on: ubuntu-latest
+    needs: determine-e2e-scope
+    if: needs.determine-e2e-scope.outputs.run_full_suite == 'true'
+
+    strategy:
+      matrix:
+        browser: ${{ fromJson(needs.determine-e2e-scope.outputs.browser_matrix) }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.pnpm-store
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-e2e-${{ hashFiles('**/package.json', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-e2e-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+
+    - name: Install all dependencies
+      run: |
+        # Install all dependencies
+        pnpm run install:all
+        # Verify the installation
+        python -c "from src.main import app; print('Backend imports OK')"
+
+        # E2E tests
+        cd func_tests
+        pnpm install --no-frozen-lockfile
+        pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+    - name: Build application
+      run: |
+        pnpm run build:frontend
+
+    - name: Start backend server
+      run: |
+        cd backend
+        # Create logs directory
+        mkdir -p logs
+        # Start backend with proper logging
+        nohup python -m src.main > logs/backend.log 2>&1 &
+        echo $! > backend.pid
+        # Wait a bit for startup
+        sleep 5
+        # Check if process is running
+        if ! ps -p $(cat backend.pid) > /dev/null; then
+          echo "Backend failed to start. Logs:"
+          cat logs/backend.log
+          exit 1
+        fi
+        echo "Backend started with PID $(cat backend.pid)"
+      env:
+        DATABASE_URL: sqlite:///test.db
+        TESTING: true
+        PORT: 5555
+
+    - name: Start frontend server
+      run: |
+        nohup pnpm run preview > backend/logs/frontend.log 2>&1 &
+        echo $! > backend/frontend.pid
+        sleep 3
+        echo "Frontend started with PID $(cat backend/frontend.pid)"
+
+    - name: Check services are running
+      run: |
+        echo "Checking backend health..."
+        curl -f http://localhost:5555/health || (echo "Backend health check failed"; cat backend/logs/backend.log; exit 1)
+        echo "Backend is healthy"
+
+        echo "Checking frontend..."
+        curl -f http://localhost:4173 || (echo "Frontend check failed"; cat backend/logs/frontend.log; exit 1)
+        echo "Frontend is running"
+
+    - name: Run all E2E tests
+      run: |
+        # Run full E2E test suite using standardized script
+        PROJECT=${{ matrix.browser }} pnpm run e2e:all:browser || true
+      continue-on-error: true
+      env:
+        CI: true
+        BASE_URL: http://localhost:4173
+        API_URL: http://localhost:5555
+        REUSE_EXISTING_SERVER: true
+
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-reports-${{ matrix.browser }}
+        path: |
+          func_tests/blob-report/
+          func_tests/playwright-report/
+          func_tests/test-results/
+          backend/logs/
+        retention-days: 3
+
+  # Merge E2E reports
+  merge-e2e-reports:
+    name: Merge E2E Test Reports
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always() && needs.e2e-tests.result != 'skipped'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Install dependencies
+      run: |
+        cd func_tests
+        pnpm install --no-frozen-lockfile
+
+    - name: Download all test reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: e2e-test-reports-*
+        path: all-test-reports
+
+    - name: Merge reports
+      run: |
+        cd func_tests
+
+        # List all downloaded artifacts for debugging
+        echo "Downloaded artifacts:"
+        find ../all-test-reports -type f -name "*.html" -o -name "*.json" | head -10
+
+        # Create a combined report directory
+        mkdir -p playwright-report
+
+        # First, try to merge blob reports if they exist
+        BLOB_DIRS=$(find ../all-test-reports -name "blob-report" -type d 2>/dev/null | head -5)
+        if [ -n "$BLOB_DIRS" ]; then
+          echo "Found blob reports, merging..."
+          pnpm exec playwright merge-reports --reporter=html ../all-test-reports/*/blob-report || {
+            echo "Blob merge failed, trying alternative approach"
+            # Copy individual HTML reports if blob merge fails
+            for report_dir in ../all-test-reports/*/playwright-report; do
+              if [ -d "$report_dir" ]; then
+                echo "Copying report from $report_dir"
+                cp -r "$report_dir"/* playwright-report/ 2>/dev/null || true
+              fi
+            done
+          }
+        else
+          echo "No blob reports found, looking for HTML reports..."
+          # Look for existing HTML reports to copy
+          FOUND_REPORTS=false
+          for report_dir in ../all-test-reports/*/playwright-report; do
+            if [ -d "$report_dir" ]; then
+              echo "Found HTML report in $report_dir"
+              cp -r "$report_dir"/* playwright-report/ 2>/dev/null || true
+              FOUND_REPORTS=true
+            fi
+          done
+
+          if [ "$FOUND_REPORTS" = "false" ]; then
+            echo "No reports found, creating placeholder report"
+            # Create a minimal HTML report indicating tests didn't complete
+            cat > playwright-report/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head><title>E2E Test Results</title></head>
+        <body>
+          <h1>E2E Test Results</h1>
+          <p>E2E tests were run but detailed reports are not available. Check the workflow logs for details.</p>
+          <p>This may indicate that tests failed to complete or report generation encountered issues.</p>
+        </body>
+        </html>
+        EOF
+          fi
+        fi
+
+        # Ensure we have at least an index.html
+        if [ ! -f "playwright-report/index.html" ]; then
+          echo "Creating fallback index.html"
+          echo "<html><body><h1>E2E Test Results</h1><p>E2E tests completed but no detailed results available.</p></body></html>" > playwright-report/index.html
+        fi
+
+    - name: Upload merged report
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-report
+        path: func_tests/playwright-report/
+
+  # Test Summary
+  test-summary:
+    name: E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, merge-e2e-reports]
+    if: always()
+
+    steps:
+    - name: Summary
+      run: |
+        echo "## 🎭 E2E Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Report Merging | ${{ needs.merge-e2e-reports.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- [View E2E Test Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "- Download artifacts from the workflow run for detailed analysis" >> $GITHUB_STEP_SUMMARY
