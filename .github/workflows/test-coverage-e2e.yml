@@ -239,7 +239,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        pnpm run test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text --reporters=default --reporters=jest-junit
+        pnpm run test:coverage
       continue-on-error: true
       env:
         JEST_JUNIT_OUTPUT_DIR: ./test-results
@@ -377,6 +377,7 @@ jobs:
         CI: true
         BASE_URL: http://localhost:4173
         API_URL: http://localhost:5555
+        REUSE_EXISTING_SERVER: true
 
     - name: Upload test reports
       uses: actions/upload-artifact@v4

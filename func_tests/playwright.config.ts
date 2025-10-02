@@ -77,14 +77,14 @@ export default defineConfig({
           command: 'cd .. && pnpm run dev:frontend',
           port: 3333,
           timeout: 120 * 1000,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
         },
         {
           command:
             'cd ../backend && python3 init_test_db.py && DATABASE_URL=sqlite+aiosqlite:///test_data/photos.db python3 -m src.main',
           port: 5555,
           timeout: 120 * 1000,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
           env: {
             DATABASE_URL: 'sqlite+aiosqlite:///test_data/photos.db',
           },
