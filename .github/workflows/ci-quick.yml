@@ -1,5 +1,5 @@
 # Quick CI Workflow
-# Purpose: Run on every PR for fast feedback
+# Purpose: Run on every PR for fast feedback + push to main for release CI checks
 # Scope:
 #   - Code quality: linting, type checking, and formatting
 #   - All unit tests (frontend & backend)
@@ -9,6 +9,15 @@
 name: Quick CI
 
 on:
+  # On push to main branches (needed for release workflow CI checks)
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/test-coverage-e2e.yml'
+
+  # On pull requests
   pull_request:
     types: [opened, synchronize]
     paths-ignore:
