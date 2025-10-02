@@ -1,6 +1,6 @@
 {
   "name": "ideal-goggles",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "Ideal Goggles desktop application",
   "author": "Ideal Goggles Team",
   "main": "frontend/electron/dist/main.js",
@@ -13,12 +13,10 @@
     "dev:backend": "make -C backend dev",
     "dev:electron": "cross-env NODE_ENV=development wait-on http://localhost:3333 tcp:127.0.0.1:5555 && pnpm run build:electron:main && cross-env NODE_ENV=development electron .",
     "preview": "vite preview --config frontend/vite.config.ts",
-
     "// === SETUP & INSTALLATION ===": "",
     "install:all": "pnpm install --frozen-lockfile && pnpm run backend:install",
     "postinstall": "bash scripts/setup-hooks.sh || true",
     "hooks:setup": "bash scripts/setup-hooks.sh",
-
     "// === BUILD & DISTRIBUTION ===": "",
     "build": "pnpm run build:frontend && pnpm run build:electron:main",
     "build:all": "pnpm run backend:package && pnpm run build:frontend && pnpm run build:electron:main",
@@ -29,7 +27,6 @@
     "dist:mac": "pnpm run backend:package && pnpm run build:frontend && pnpm run build:electron:main && electron-builder --mac",
     "dist:win": "pnpm run backend:package && pnpm run build:frontend && pnpm run build:electron:main && electron-builder --win",
     "dist:linux": "pnpm run backend:package && pnpm run build:frontend && pnpm run build:electron:main && electron-builder --linux",
-
     "// === TESTING ===": "",
     "test:unit": "jest -c frontend/jest.config.js --rootDir frontend",
     "test:unit:all": "pnpm run test:unit && pnpm run backend:test:unit",
@@ -37,7 +34,6 @@
     "coverage:all": "pnpm run test:coverage && pnpm run backend:coverage",
     "coverage:unit:all": "pnpm run test:coverage && pnpm run backend:coverage:unit",
     "coverage:integration:all": "pnpm run backend:coverage:integration",
-
     "// === E2E TESTING ===": "",
     "e2e:install": "cd func_tests && pnpm install",
     "e2e:browsers": "pnpm exec playwright install --config=func_tests/playwright.config.ts",
@@ -50,7 +46,6 @@
     "e2e:debug": "pnpm exec playwright test --config=func_tests/playwright.config.ts --debug",
     "e2e:chrome": "pnpm exec playwright test --config=func_tests/playwright.config.ts --project=chromium",
     "e2e:report": "pnpm exec playwright show-report func_tests/playwright-report",
-
     "// === CODE QUALITY ===": "",
     "lint:all": "pnpm run lint:frontend && pnpm run backend:lint",
     "lint:frontend": "eslint -c frontend/eslint.config.mjs frontend",
@@ -58,7 +53,6 @@
     "format:frontend": "eslint -c frontend/eslint.config.mjs --fix frontend",
     "typecheck:all": "pnpm run typecheck:frontend && pnpm run backend:typecheck",
     "typecheck:frontend": "tsc --noEmit -p frontend/tsconfig.json",
-
     "// === BACKEND OPERATIONS ===": "",
     "backend:install": "make -C backend install",
     "backend:package": "make -C backend package",
@@ -70,7 +64,6 @@
     "backend:typecheck": "make -C backend typecheck",
     "backend:format": "make -C backend format",
     "backend:check-ml": "make -C backend check-ml",
-
     "// === RELEASE & VERSION MANAGEMENT ===": "",
     "release": "node scripts/create-tag.js",
     "release:push": "git push origin main && git push origin --tags",
@@ -80,7 +73,6 @@
     "tag:major": "node scripts/create-tag.js major",
     "version:update": "node scripts/update-version.js",
     "version:sync": "node scripts/update-version.js && git add -A && git commit -m 'chore: sync versions' || true",
-
     "// === UTILITIES ===": "",
     "ports:kill": "bash scripts/kill-ports.sh",
     "ports:kill:sudo": "sudo bash scripts/kill-ports.sh"
