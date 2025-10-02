@@ -1,165 +1,377 @@
 /**
- * Unit tests for OS Integration Service
- * Priority: P1 (Important OS interactions)
+ * Enhanced unit tests for OSIntegration Service
+ * Priority: P1 (Critical OS integration functionality)
  */
 
-describe('OS Integration Service', () => {
-  let mockElectronAPI: any
+import osIntegration from '../../src/services/osIntegration'
+
+// Mock window globals
+const mockElectronAPI = {
+  getPlatform: jest.fn(),
+  revealInFolder: jest.fn(),
+  openExternal: jest.fn(),
+  getVersion: jest.fn(),
+}
+
+// Mock navigator
+const mockNavigator = {
+  platform: 'Web',
+  clipboard: {
+    writeText: jest.fn(),
+  },
+}
+
+const mockNotification = {
+  permission: 'default',
+  requestPermission: jest.fn(),
+}
+
+describe('OSIntegration Service', () => {
+  let documentBodyAppendChild: jest.SpyInstance
+  let documentBodyRemoveChild: jest.SpyInstance
+  let documentCreateElement: jest.SpyInstance
+  let documentExecCommand: jest.SpyInstance
 
   beforeEach(() => {
-    // Mock electron API
-    mockElectronAPI = {
-      openFile: jest.fn(),
-      revealInFolder: jest.fn(),
-      getBackendLogPath: jest.fn(),
-      getBackendPort: jest.fn(),
-      onBackendReady: jest.fn(),
-      onBackendError: jest.fn(),
-      checkBackendHealth: jest.fn()
-    }
+    // Reset mocks
+    jest.clearAllMocks()
 
-    ;(window as any).electronAPI = mockElectronAPI
+    // Mock DOM methods
+    documentBodyAppendChild = jest.spyOn(document.body, 'appendChild').mockImplementation()
+    documentBodyRemoveChild = jest.spyOn(document.body, 'removeChild').mockImplementation()
+    documentCreateElement = jest.spyOn(document, 'createElement')
+
+    // Mock execCommand properly
+    documentExecCommand = jest.fn().mockReturnValue(true)
+    Object.defineProperty(document, 'execCommand', {
+      value: documentExecCommand,
+      writable: true,
+    })
+
+    // Mock timers
+    jest.useFakeTimers()
+
+    // Setup default window and navigator mocks
+    Object.defineProperty(window, 'electronAPI', {
+      value: undefined,
+      writable: true,
+    })
+
+    Object.defineProperty(window, 'navigator', {
+      value: mockNavigator,
+      writable: true,
+    })
+
+    Object.defineProperty(window, 'Notification', {
+      value: Object.assign(jest.fn(), mockNotification),
+      writable: true,
+    })
   })
 
   afterEach(() => {
-    delete (window as any).electronAPI
-    jest.clearAllMocks()
+    jest.restoreAllMocks()
+    jest.useRealTimers()
+  })
+
+  describe('Platform Detection', () => {
+    test('detects Electron environment', () => {
+      window.electronAPI = mockElectronAPI
+      expect(osIntegration.isElectron).toBe(true)
+    })
+
+    test('detects web environment', () => {
+      window.electronAPI = undefined
+      expect(osIntegration.isElectron).toBe(false)
+    })
+
+    test('gets platform from Electron API', async () => {
+      window.electronAPI = mockElectronAPI
+      mockElectronAPI.getPlatform.mockResolvedValue('darwin')
+
+      const platform = await osIntegration.getPlatform()
+      expect(platform).toBe('darwin')
+      expect(mockElectronAPI.getPlatform).toHaveBeenCalled()
+    })
+
+    test('falls back to navigator.platform in web environment', async () => {
+      window.electronAPI = undefined
+
+      const platform = await osIntegration.getPlatform()
+      expect(platform).toBe('Web')
+    })
   })
 
   describe('File Operations', () => {
-    test('opens file in OS viewer', async () => {
-      const { openFile } = await import('../../src/services/osIntegration')
-      mockElectronAPI.openFile.mockResolvedValue(true)
+    describe('Reveal in Folder', () => {
+      test('uses Electron API when available', async () => {
+        window.electronAPI = mockElectronAPI
+        mockElectronAPI.revealInFolder.mockResolvedValue(undefined)
 
-      const result = await openFile('/path/to/photo.jpg')
+        await osIntegration.revealInFolder('/path/to/file.jpg')
 
-      expect(mockElectronAPI.openFile).toHaveBeenCalledWith('/path/to/photo.jpg')
-      expect(result).toBe(true)
+        expect(mockElectronAPI.revealInFolder).toHaveBeenCalledWith('/path/to/file.jpg')
+      })
+
+      test('falls back to web implementation', async () => {
+        window.electronAPI = undefined
+        mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+        await osIntegration.revealInFolder('/path/to/file.jpg')
+
+        expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('/path/to')
+        expect(documentBodyAppendChild).toHaveBeenCalled()
+      })
     })
 
-    test('reveals file in folder', async () => {
-      const { revealInFolder } = await import('../../src/services/osIntegration')
-      mockElectronAPI.revealInFolder.mockResolvedValue(true)
+    describe('Open External', () => {
+      test('uses Electron API when available', async () => {
+        window.electronAPI = mockElectronAPI
+        mockElectronAPI.openExternal.mockResolvedValue(undefined)
 
-      const result = await revealInFolder('/path/to/photo.jpg')
+        await osIntegration.openExternal('/path/to/file.jpg')
 
-      expect(mockElectronAPI.revealInFolder).toHaveBeenCalledWith('/path/to/photo.jpg')
-      expect(result).toBe(true)
-    })
+        expect(mockElectronAPI.openExternal).toHaveBeenCalledWith('/path/to/file.jpg')
+      })
 
-    test('handles file operation errors', async () => {
-      const { openFile } = await import('../../src/services/osIntegration')
-      mockElectronAPI.openFile.mockRejectedValue(new Error('File not found'))
+      test('falls back to web implementation', async () => {
+        window.electronAPI = undefined
+        mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
 
-      await expect(openFile('/invalid/path')).rejects.toThrow('File not found')
-    })
-  })
+        await osIntegration.openExternal('/path/to/file.jpg')
 
-  describe('Backend Management', () => {
-    test('gets backend log path', async () => {
-      const { getBackendLogPath } = await import('../../src/services/osIntegration')
-      mockElectronAPI.getBackendLogPath.mockResolvedValue('/logs/backend.log')
-
-      const result = await getBackendLogPath()
-
-      expect(result).toBe('/logs/backend.log')
-    })
-
-    test('gets backend port', async () => {
-      const { getBackendPort } = await import('../../src/services/osIntegration')
-      mockElectronAPI.getBackendPort.mockResolvedValue(5555)
-
-      const result = await getBackendPort()
-
-      expect(result).toBe(5555)
-    })
-
-    test('checks backend health', async () => {
-      const { checkBackendHealth } = await import('../../src/services/osIntegration')
-      mockElectronAPI.checkBackendHealth.mockResolvedValue({ healthy: true })
-
-      const result = await checkBackendHealth()
-
-      expect(result).toEqual({ healthy: true })
-    })
-
-    test('handles backend ready event', async () => {
-      const { onBackendReady } = await import('../../src/services/osIntegration')
-      const callback = jest.fn()
-
-      onBackendReady(callback)
-
-      expect(mockElectronAPI.onBackendReady).toHaveBeenCalledWith(callback)
-    })
-
-    test('handles backend error event', async () => {
-      const { onBackendError } = await import('../../src/services/osIntegration')
-      const callback = jest.fn()
-
-      onBackendError(callback)
-
-      expect(mockElectronAPI.onBackendError).toHaveBeenCalledWith(callback)
+        expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('/path/to/file.jpg')
+        expect(documentBodyAppendChild).toHaveBeenCalled()
+      })
     })
   })
 
-  describe('Non-Electron Environment', () => {
-    beforeEach(() => {
-      delete (window as any).electronAPI
+  describe('Clipboard Operations', () => {
+    test('copies text using modern clipboard API', async () => {
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      await osIntegration.copyToClipboard('test text')
+
+      expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('test text')
     })
 
-    test('returns false for file operations in browser', async () => {
-      const { openFile, revealInFolder } = await import('../../src/services/osIntegration')
+    test('falls back to legacy clipboard method', async () => {
+      mockNavigator.clipboard.writeText.mockRejectedValue(new Error('Not supported'))
+      const mockTextArea = {
+        value: '',
+        focus: jest.fn(),
+        select: jest.fn(),
+      }
+      documentCreateElement.mockReturnValue(mockTextArea as any)
 
-      const openResult = await openFile('/path/to/file')
-      const revealResult = await revealInFolder('/path/to/file')
+      await osIntegration.copyToClipboard('test text')
 
-      expect(openResult).toBe(false)
-      expect(revealResult).toBe(false)
+      expect(mockTextArea.value).toBe('test text')
+      expect(mockTextArea.focus).toHaveBeenCalled()
+      expect(mockTextArea.select).toHaveBeenCalled()
+      expect(documentExecCommand).toHaveBeenCalledWith('copy')
+      expect(documentBodyAppendChild).toHaveBeenCalledWith(mockTextArea)
+      expect(documentBodyRemoveChild).toHaveBeenCalledWith(mockTextArea)
     })
 
-    test('returns null for backend info in browser', async () => {
-      const { getBackendLogPath, getBackendPort } = await import('../../src/services/osIntegration')
+    test('handles clipboard fallback errors gracefully', async () => {
+      mockNavigator.clipboard.writeText.mockRejectedValue(new Error('Not supported'))
+      documentExecCommand.mockImplementation(() => {
+        throw new Error('Copy failed')
+      })
 
-      const logPath = await getBackendLogPath()
-      const port = await getBackendPort()
-
-      expect(logPath).toBeNull()
-      expect(port).toBeNull()
-    })
-
-    test('returns null for backend health in browser', async () => {
-      const { checkBackendHealth } = await import('../../src/services/osIntegration')
-
-      const health = await checkBackendHealth()
-
-      expect(health).toBeNull()
-    })
-
-    test('does nothing for event handlers in browser', () => {
-      const { onBackendReady, onBackendError } = require('../../src/services/osIntegration')
-      const callback = jest.fn()
-
-      // Should not throw
-      expect(() => {
-        onBackendReady(callback)
-        onBackendError(callback)
-      }).not.toThrow()
-
-      expect(callback).not.toHaveBeenCalled()
+      await expect(osIntegration.copyToClipboard('test text')).resolves.not.toThrow()
     })
   })
 
-  describe('isElectron Detection', () => {
-    test('correctly detects Electron environment', () => {
-      const { isElectron } = require('../../src/services/osIntegration')
+  describe('Version Management', () => {
+    test('gets version from Electron API', async () => {
+      window.electronAPI = mockElectronAPI
+      mockElectronAPI.getVersion.mockResolvedValue('1.2.3')
 
-      // With electronAPI
-      ;(window as any).electronAPI = {}
-      expect(isElectron()).toBe(true)
+      const version = await osIntegration.getVersion()
+      expect(version).toBe('1.2.3')
+      expect(mockElectronAPI.getVersion).toHaveBeenCalled()
+    })
 
-      // Without electronAPI
-      delete (window as any).electronAPI
-      expect(isElectron()).toBe(false)
+    test('returns web version fallback', async () => {
+      window.electronAPI = undefined
+
+      const version = await osIntegration.getVersion()
+      expect(version).toBe('1.0.0-web')
+    })
+  })
+
+  describe('Feature Availability', () => {
+    test('checks revealInFolder feature availability', () => {
+      window.electronAPI = mockElectronAPI
+      expect(osIntegration.isFeatureAvailable('revealInFolder')).toBe(true)
+
+      window.electronAPI = undefined
+      expect(osIntegration.isFeatureAvailable('revealInFolder')).toBe(false)
+    })
+
+    test('checks openExternal feature availability', () => {
+      window.electronAPI = mockElectronAPI
+      expect(osIntegration.isFeatureAvailable('openExternal')).toBe(true)
+
+      window.electronAPI = undefined
+      expect(osIntegration.isFeatureAvailable('openExternal')).toBe(false)
+    })
+
+    test('checks clipboard feature availability', () => {
+      expect(osIntegration.isFeatureAvailable('clipboard')).toBe(true)
+
+      Object.defineProperty(navigator, 'clipboard', { value: undefined })
+      expect(osIntegration.isFeatureAvailable('clipboard')).toBe(false)
+    })
+
+    test('returns false for unknown features', () => {
+      expect(osIntegration.isFeatureAvailable('unknown' as any)).toBe(false)
+    })
+  })
+
+  describe('Desktop Notifications', () => {
+    test('shows notification when permission granted', async () => {
+      mockNotification.permission = 'granted'
+      const NotificationSpy = jest.fn()
+      window.Notification = Object.assign(NotificationSpy, mockNotification)
+
+      await osIntegration.showNotification('Title', 'Body', 'icon.png')
+
+      expect(NotificationSpy).toHaveBeenCalledWith('Title', {
+        body: 'Body',
+        icon: 'icon.png',
+      })
+    })
+
+    test('requests permission when default', async () => {
+      mockNotification.permission = 'default'
+      mockNotification.requestPermission.mockResolvedValue('granted')
+      const NotificationSpy = jest.fn()
+      window.Notification = Object.assign(NotificationSpy, mockNotification)
+
+      await osIntegration.showNotification('Title', 'Body')
+
+      expect(mockNotification.requestPermission).toHaveBeenCalled()
+      expect(NotificationSpy).toHaveBeenCalledWith('Title', {
+        body: 'Body',
+        icon: undefined,
+      })
+    })
+
+    test('does not show notification when permission denied', async () => {
+      mockNotification.permission = 'denied'
+      const NotificationSpy = jest.fn()
+      window.Notification = Object.assign(NotificationSpy, mockNotification)
+
+      await osIntegration.showNotification('Title', 'Body')
+
+      expect(NotificationSpy).not.toHaveBeenCalled()
+    })
+
+    test('handles environments without Notification API', async () => {
+      delete (window as any).Notification
+
+      await expect(osIntegration.showNotification('Title', 'Body')).resolves.not.toThrow()
+    })
+  })
+
+  describe('Desktop Feature Notifications', () => {
+    test('shows and auto-removes desktop feature notification', async () => {
+      window.electronAPI = undefined
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      const mockNotificationDiv = {
+        className: '',
+        innerHTML: '',
+        remove: jest.fn(),
+        parentElement: true,
+      }
+      documentCreateElement.mockReturnValue(mockNotificationDiv as any)
+
+      await osIntegration.revealInFolder('/test/file.jpg')
+
+      expect(documentCreateElement).toHaveBeenCalledWith('div')
+      expect(documentBodyAppendChild).toHaveBeenCalledWith(mockNotificationDiv)
+      expect(mockNotificationDiv.innerHTML).toContain('File reveal')
+
+      // Fast-forward timer
+      jest.advanceTimersByTime(5000)
+      expect(mockNotificationDiv.remove).toHaveBeenCalled()
+    })
+
+    test('handles notification removal when element already removed', async () => {
+      window.electronAPI = undefined
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      const mockNotificationDiv = {
+        className: '',
+        innerHTML: '',
+        remove: jest.fn(),
+        parentElement: null, // Element already removed
+      }
+      documentCreateElement.mockReturnValue(mockNotificationDiv as any)
+
+      await osIntegration.revealInFolder('/test/file.jpg')
+
+      jest.advanceTimersByTime(5000)
+      expect(mockNotificationDiv.remove).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Error Handling', () => {
+    test('throws error for unimplemented showFileProperties', async () => {
+      await expect(osIntegration.showFileProperties()).rejects.toThrow(
+        'File properties not yet implemented'
+      )
+    })
+
+    test('handles Electron API errors gracefully', async () => {
+      window.electronAPI = mockElectronAPI
+      mockElectronAPI.revealInFolder.mockRejectedValue(new Error('Electron error'))
+
+      await expect(osIntegration.revealInFolder('/test/file.jpg')).rejects.toThrow('Electron error')
+    })
+
+    test('handles clipboard API errors gracefully', async () => {
+      mockNavigator.clipboard.writeText.mockRejectedValue(new Error('Clipboard error'))
+      const mockTextArea = {
+        value: '',
+        focus: jest.fn(),
+        select: jest.fn(),
+      }
+      documentCreateElement.mockReturnValue(mockTextArea as any)
+
+      await expect(osIntegration.copyToClipboard('test')).resolves.not.toThrow()
+    })
+  })
+
+  describe('Path Handling', () => {
+    test('extracts folder path correctly for Unix paths', async () => {
+      window.electronAPI = undefined
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      await osIntegration.revealInFolder('/home/user/documents/file.txt')
+
+      expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('/home/user/documents')
+    })
+
+    test('extracts folder path correctly for Windows paths', async () => {
+      window.electronAPI = undefined
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      await osIntegration.revealInFolder('C:/Users/user/documents/file.txt')
+
+      expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('C:/Users/user/documents')
+    })
+
+    test('handles file in root directory', async () => {
+      window.electronAPI = undefined
+      mockNavigator.clipboard.writeText.mockResolvedValue(undefined)
+
+      await osIntegration.revealInFolder('/file.txt')
+
+      expect(mockNavigator.clipboard.writeText).toHaveBeenCalledWith('')
     })
   })
 })
