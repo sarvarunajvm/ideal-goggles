@@ -324,7 +324,7 @@ class TestCreatePerson:
                 "src.workers.face_worker.FaceDetectionWorker",
                 return_value=mock_face_worker,
             ),
-            patch("src.api.people._get_config_from_db", return_value=mock_config),
+            patch("src.api.config._get_config_from_db", return_value=mock_config),
         ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
             result = await create_person(request)
@@ -339,7 +339,7 @@ class TestCreatePerson:
         """Test creating a person when face search is disabled."""
         mock_config = {"face_search_enabled": False}
 
-        with patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with patch("src.api.config._get_config_from_db", return_value=mock_config):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
             with pytest.raises(HTTPException) as exc_info:
@@ -368,7 +368,7 @@ class TestCreatePerson:
 
         mock_config = {"face_search_enabled": True}
 
-        with patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with patch("src.api.config._get_config_from_db", return_value=mock_config):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
             with pytest.raises(HTTPException) as exc_info:
@@ -381,7 +381,7 @@ class TestCreatePerson:
         """Test creating a person with invalid photo IDs."""
         mock_config = {"face_search_enabled": True}
 
-        with patch("src.api.people._get_config_from_db", return_value=mock_config):
+        with patch("src.api.config._get_config_from_db", return_value=mock_config):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[999, 1000])
 
             with pytest.raises(HTTPException) as exc_info:
@@ -423,7 +423,7 @@ class TestCreatePerson:
                 "src.workers.face_worker.FaceDetectionWorker",
                 return_value=mock_face_worker,
             ),
-            patch("src.api.people._get_config_from_db", return_value=mock_config),
+            patch("src.api.config._get_config_from_db", return_value=mock_config),
         ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
@@ -465,7 +465,7 @@ class TestCreatePerson:
                 "src.workers.face_worker.FaceDetectionWorker",
                 return_value=mock_face_worker,
             ),
-            patch("src.api.people._get_config_from_db", return_value=mock_config),
+            patch("src.api.config._get_config_from_db", return_value=mock_config),
         ):
             request = CreatePersonRequest(name="John Doe", sample_file_ids=[1, 2, 3])
 
@@ -617,10 +617,17 @@ class TestUpdatePerson:
             return_value=updated_person
         )
 
+        # Get the actual photo IDs that were inserted
+        photo_rows = db_manager.execute_query(
+            "SELECT id FROM photos ORDER BY id DESC LIMIT 2", ()
+        )
+        photo_ids = [dict(row)["id"] for row in photo_rows]
+        photo_ids.reverse()  # Reverse to get ascending order
+
         with patch(
             "src.workers.face_worker.FaceDetectionWorker", return_value=mock_face_worker
         ):
-            request = UpdatePersonRequest(additional_sample_file_ids=[4, 5])
+            request = UpdatePersonRequest(additional_sample_file_ids=photo_ids)
             result = await update_person(1, request)
 
             assert result.name == "John Doe"

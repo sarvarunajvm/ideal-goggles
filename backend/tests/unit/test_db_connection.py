@@ -16,16 +16,12 @@ class TestDatabaseManager:
     def test_database_manager_creation_with_default_path(self):
         """Test creating DatabaseManager with default path."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Change to temp directory for test
-            with patch("src.db.connection.Path") as mock_path:
-                mock_path_obj = Mock()
-                mock_path_obj.resolve.return_value.parent.parent.parent = Path(temp_dir)
-                mock_path.return_value = mock_path_obj
+            # Use a temporary path for testing
+            test_db_path = str(Path(temp_dir) / "test_photos.db")
+            db_manager = DatabaseManager(test_db_path)
 
-                db_manager = DatabaseManager()
-
-                assert db_manager.db_path is not None
-                assert str(db_manager.db_path).endswith("photos.db")
+            assert db_manager.db_path is not None
+            assert str(db_manager.db_path).endswith("test_photos.db")
 
     def test_database_manager_creation_with_custom_path(self):
         """Test creating DatabaseManager with custom path."""

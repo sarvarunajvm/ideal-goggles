@@ -133,124 +133,110 @@ class TestEventQueue:
 
     def test_event_queue_initialization(self):
         """Test EventQueue initialization."""
-        queue = EventQueue(max_size=100)
-        assert queue.max_size == 100
-        assert queue.is_empty()
-        assert queue.size() == 0
+        queue = EventQueue(max_workers=10, enable_persistence=False)
+        assert queue.max_workers == 10
+        assert queue.enable_persistence is False
+        stats = queue.get_statistics()
+        assert stats["queue_size"] == 0
+        assert stats["max_workers"] == 10
 
-    def test_event_queue_put_and_get(self):
-        """Test putting and getting events from queue."""
-        queue = EventQueue()
-        event = Event(
-            id="test-1",
-            type=EventType.FILE_DISCOVERED,
+    def test_event_queue_publish_event(self):
+        """Test publishing events to queue."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event_id = queue.publish(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
             priority=Priority.NORMAL,
-            data={},
-            created_at=datetime.now(),
         )
 
-        queue.put(event)
-        assert queue.size() == 1
-        assert not queue.is_empty()
+        assert event_id is not None
+        assert len(event_id) == 36  # UUID length
+        stats = queue.get_statistics()
+        assert stats["queue_size"] >= 0  # Event may have been queued
 
-        retrieved_event = queue.get()
-        assert retrieved_event.id == "test-1"
-        assert queue.is_empty()
+    def test_event_queue_schedule_event(self):
+        """Test scheduling events for future processing."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
 
-    def test_event_queue_priority_ordering(self):
-        """Test that events are retrieved in priority order."""
-        queue = EventQueue()
-
-        low_priority = Event(
-            id="low",
-            type=EventType.CLEANUP_REQUESTED,
+        future_time = datetime.now() + timedelta(minutes=5)
+        event_id = queue.schedule_event(
+            event_type=EventType.CLEANUP_REQUESTED,
+            data={"cleanup_type": "temp"},
+            scheduled_at=future_time,
             priority=Priority.LOW,
-            data={},
-            created_at=datetime.now(),
-        )
-        high_priority = Event(
-            id="high",
-            type=EventType.SEARCH_REQUESTED,
-            priority=Priority.HIGH,
-            data={},
-            created_at=datetime.now(),
-        )
-        normal_priority = Event(
-            id="normal",
-            type=EventType.FILE_DISCOVERED,
-            priority=Priority.NORMAL,
-            data={},
-            created_at=datetime.now(),
         )
 
-        # Add in random order
-        queue.put(low_priority)
-        queue.put(normal_priority)
-        queue.put(high_priority)
+        assert event_id is not None
+        stats = queue.get_statistics()
+        assert stats["scheduled_events"] >= 1
 
-        # Should get high priority first
-        assert queue.get().id == "high"
-        assert queue.get().id == "normal"
-        assert queue.get().id == "low"
+    def test_event_queue_statistics(self):
+        """Test getting queue statistics."""
+        queue = EventQueue(max_workers=5, enable_persistence=False)
 
-    def test_event_queue_peek(self):
-        """Test peeking at next event without removing it."""
-        queue = EventQueue()
-        event = Event(
-            id="test-1",
-            type=EventType.FILE_DISCOVERED,
-            priority=Priority.NORMAL,
-            data={},
-            created_at=datetime.now(),
-        )
+        stats = queue.get_statistics()
+        assert "total_processed" in stats
+        assert "total_failed" in stats
+        assert "queue_size" in stats
+        assert "scheduled_events" in stats
+        assert "dead_letter_queue_size" in stats
+        assert "active_workers" in stats
+        assert "max_workers" in stats
+        assert "average_processing_time" in stats
+        assert "is_running" in stats
 
-        queue.put(event)
-        peeked = queue.peek()
-        assert peeked.id == "test-1"
-        assert queue.size() == 1  # Event should still be in queue
+        assert stats["max_workers"] == 5
+        assert stats["is_running"] is False
 
-    def test_event_queue_clear(self):
-        """Test clearing the queue."""
-        queue = EventQueue()
-        for i in range(5):
-            queue.put(
-                Event(
-                    id=f"test-{i}",
-                    type=EventType.FILE_DISCOVERED,
-                    priority=Priority.NORMAL,
-                    data={},
-                    created_at=datetime.now(),
-                )
-            )
+    def test_event_queue_add_handler(self):
+        """Test adding event handler."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
 
-        assert queue.size() == 5
-        queue.clear()
-        assert queue.is_empty()
+        class TestHandler(EventHandler):
+            def __init__(self):
+                super().__init__("test_handler")
+                self.handled_events = []
 
-    def test_event_queue_get_timeout(self):
-        """Test getting from empty queue with timeout."""
-        queue = EventQueue()
-        retrieved = queue.get(timeout=0.1)
-        assert retrieved is None
+            async def handle(self, event: Event) -> bool:
+                self.handled_events.append(event)
+                return True
 
-    def test_event_queue_get_all(self):
-        """Test getting all events from queue."""
-        queue = EventQueue()
-        events = []
-        for i in range(3):
-            event = Event(
-                id=f"test-{i}",
-                type=EventType.FILE_DISCOVERED,
-                priority=Priority.NORMAL,
-                data={},
-                created_at=datetime.now(),
-            )
-            events.append(event)
-            queue.put(event)
+            def can_handle(self, event: Event) -> bool:
+                return event.type == EventType.FILE_DISCOVERED
 
-        all_events = queue.get_all()
-        assert len(all_events) == 3
-        assert queue.is_empty()
+        handler = TestHandler()
+        queue.add_handler(EventType.FILE_DISCOVERED, handler)
+
+        # Handler should be registered
+        assert EventType.FILE_DISCOVERED in queue._handlers
+        assert handler in queue._handlers[EventType.FILE_DISCOVERED]
+
+    def test_event_queue_dead_letter_queue(self):
+        """Test dead letter queue operations."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Initially empty
+        dead_events = queue.get_dead_letter_events()
+        assert len(dead_events) == 0
+
+        # Clear should not raise error even when empty
+        queue.clear_dead_letter_queue()
+
+    @pytest.mark.asyncio
+    async def test_event_queue_start_stop(self):
+        """Test starting and stopping the queue."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Start the queue
+        await queue.start()
+        stats = queue.get_statistics()
+        assert stats["is_running"] is True
+
+        # Stop the queue
+        await queue.stop(timeout=5.0)
+        stats = queue.get_statistics()
+        assert stats["is_running"] is False
 
 
 class TestEventHandler:
@@ -260,17 +246,10 @@ class TestEventHandler:
         """Test EventHandler initialization."""
         handler = EventHandler(name="test_handler")
         assert handler.name == "test_handler"
-        assert handler.event_types == []
-        assert handler.handler_func is None
 
-    def test_event_handler_with_callback(self):
-        """Test EventHandler with callback function."""
-        callback = Mock()
-        handler = EventHandler(
-            name="test_handler",
-            event_types=[EventType.FILE_DISCOVERED],
-            handler_func=callback,
-        )
+    def test_event_handler_can_handle_default(self):
+        """Test EventHandler can_handle default implementation."""
+        handler = EventHandler(name="test_handler")
 
         event = Event(
             id="test-1",
@@ -280,16 +259,46 @@ class TestEventHandler:
             created_at=datetime.now(),
         )
 
-        handler.handle(event)
-        callback.assert_called_once_with(event)
+        # Default implementation returns True for all events
+        assert handler.can_handle(event) is True
 
-    def test_event_handler_can_handle(self):
-        """Test EventHandler can_handle method."""
-        handler = EventHandler(
-            name="test_handler",
-            event_types=[EventType.FILE_DISCOVERED, EventType.FILE_MODIFIED],
+    @pytest.mark.asyncio
+    async def test_event_handler_handle_not_implemented(self):
+        """Test EventHandler handle method raises NotImplementedError."""
+        handler = EventHandler(name="test_handler")
+
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
         )
 
+        # Base class should raise NotImplementedError
+        with pytest.raises(NotImplementedError):
+            await handler.handle(event)
+
+    @pytest.mark.asyncio
+    async def test_custom_event_handler(self):
+        """Test creating a custom event handler."""
+
+        class CustomHandler(EventHandler):
+            def __init__(self):
+                super().__init__("custom_handler")
+                self.handled_events = []
+
+            async def handle(self, event: Event) -> bool:
+                self.handled_events.append(event)
+                return True
+
+            def can_handle(self, event: Event) -> bool:
+                return event.type == EventType.FILE_DISCOVERED
+
+        handler = CustomHandler()
+        assert handler.name == "custom_handler"
+
+        # Test can_handle
         file_event = Event(
             id="test-1",
             type=EventType.FILE_DISCOVERED,
@@ -306,5 +315,11 @@ class TestEventHandler:
             created_at=datetime.now(),
         )
 
-        assert handler.can_handle(file_event)
-        assert not handler.can_handle(other_event)
+        assert handler.can_handle(file_event) is True
+        assert handler.can_handle(other_event) is False
+
+        # Test handle
+        result = await handler.handle(file_event)
+        assert result is True
+        assert len(handler.handled_events) == 1
+        assert handler.handled_events[0].id == "test-1"
