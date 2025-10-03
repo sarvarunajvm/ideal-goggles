@@ -140,7 +140,7 @@
       "output": "dist-electron",
       "buildResources": "build-resources"
     },
-    "icon": "frontend/public/icon.png",
+    "icon": "build-resources/icon.png",
     "files": [
       "frontend/dist/**/*",
       "frontend/electron/dist/**/*",
@@ -192,11 +192,10 @@
         }
       ],
       "category": "public.app-category.photography",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": null,
-      "entitlementsInherit": null,
-      "identity": null
+      "entitlements": "build-resources/entitlements.mac.plist",
+      "entitlementsInherit": "build-resources/entitlements.mac.plist"
     },
     "linux": {
       "target": [
