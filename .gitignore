@@ -67,7 +67,9 @@ tests/fixtures/images/
 # Backend packaging artifacts (PyInstaller)
 backend/dist/
 backend/build/
+# Ignore generic .spec files but keep the curated one used by Makefile
 backend/*.spec
+!backend/ideal-goggles-backend.spec
 
 # Backend runtime data (created at runtime or by installers)
 backend/data/
