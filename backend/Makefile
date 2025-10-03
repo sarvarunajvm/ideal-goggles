@@ -136,7 +136,7 @@ package: ## Build: Create standalone binary with PyInstaller
 	$(PYTHON) -m pip install --upgrade pip
 	pip install -e ".[dev]"
 	pip install pyinstaller
-	pyinstaller --onefile --name ideal-goggles-backend -p src -s src/main.py
+	pyinstaller --clean ideal-goggles-backend.spec
 	@echo "✅ Binary created: dist/ideal-goggles-backend"
 
 check-ml: ## Build: Verify ML dependencies are available
