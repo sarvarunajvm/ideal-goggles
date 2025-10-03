@@ -191,8 +191,9 @@
         }
       ],
       "category": "public.app-category.photography",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
+      "identity": null,
       "entitlements": "build-resources/entitlements.mac.plist",
       "entitlementsInherit": "build-resources/entitlements.mac.plist",
       "singleArchFiles": "**/*"
