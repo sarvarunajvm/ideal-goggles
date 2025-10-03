@@ -30,20 +30,20 @@ jobs:
     name: Verify CI Status
     runs-on: ubuntu-latest
     outputs:
-      ci_passed: ${{ steps.check.outputs.ci_passed }}
+      ci_passed: ${{ steps.final.outputs.ci_passed }}
     steps:
     - uses: actions/checkout@v4
 
     - name: Skip CI check (manual trigger only)
       if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_ci_check == 'true'
-      id: skip
+      id: check
       run: |
         echo "⚠️  Skipping CI verification (manual trigger)"
         echo "ci_passed=true" >> $GITHUB_OUTPUT
 
     - name: Check CI status for tagged commit
       if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_ci_check != 'true')
-      id: check
+      id: check_ci
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -99,10 +99,14 @@ jobs:
           echo "🛑 Release blocked - CI workflows failed or did not complete in time"
         fi
 
-    - name: Set output from skip step
-      if: steps.skip.outputs.ci_passed
+    - name: Set final output
+      id: final
       run: |
-        echo "ci_passed=true" >> $GITHUB_OUTPUT
+        if [[ "${{ steps.check.outputs.ci_passed }}" == "true" || "${{ steps.check_ci.outputs.ci_passed }}" == "true" ]]; then
+          echo "ci_passed=true" >> $GITHUB_OUTPUT
+        else
+          echo "ci_passed=false" >> $GITHUB_OUTPUT
+        fi
 
   build:
     name: Build & Package
