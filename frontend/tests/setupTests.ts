@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom'
 
+// Polyfill for TextEncoder/TextDecoder (required for React Router in Jest)
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder as any
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   constructor(cb: any) {}
