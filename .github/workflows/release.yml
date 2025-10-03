@@ -29,47 +29,56 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Get the commit SHA for this tag
         COMMIT_SHA="${{ github.sha }}"
         echo "🔍 Checking CI status for commit: $COMMIT_SHA"
 
-        # Check workflow runs for this commit
-        echo "📋 Fetching workflow runs for commit..."
+        # Poll GitHub Actions until Quick CI and E2E Tests complete
+        MAX_ATTEMPTS=60   # ~30 minutes at 30s interval
+        SLEEP_SECONDS=30
+        ATTEMPT=0
+        PASSED=0
 
-        # Get recent workflow runs for this commit
-        WORKFLOWS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-          "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$COMMIT_SHA")
+        while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "📋 Attempt $ATTEMPT: Fetching workflow runs for commit..."
 
-        # Check if both required workflows passed
-        # Quick CI: Quality checks + unit tests + coverage + P0 E2E tests
-        # E2E Tests: Full comprehensive E2E test suite
-        QUICK_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "Quick CI") | .conclusion' | head -1)
-        E2E_CI_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '.workflow_runs[] | select(.name == "E2E Tests") | .conclusion' | head -1)
+          WORKFLOWS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$COMMIT_SHA")
 
-        echo "Quick CI status: $QUICK_CI_STATUS"
-        echo "E2E Tests status: $E2E_CI_STATUS"
+          # Extract latest run status and conclusion for each workflow
+          QUICK_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '[.workflow_runs[] | select(.name == "Quick CI")] | sort_by(.created_at) | last | .status // empty')
+          QUICK_CONCLUSION=$(echo "$WORKFLOWS_RESPONSE" | jq -r '[.workflow_runs[] | select(.name == "Quick CI")] | sort_by(.created_at) | last | .conclusion // empty')
+          E2E_STATUS=$(echo "$WORKFLOWS_RESPONSE" | jq -r '[.workflow_runs[] | select(.name == "E2E Tests")] | sort_by(.created_at) | last | .status // empty')
+          E2E_CONCLUSION=$(echo "$WORKFLOWS_RESPONSE" | jq -r '[.workflow_runs[] | select(.name == "E2E Tests")] | sort_by(.created_at) | last | .conclusion // empty')
 
-        # Determine if we should proceed with release
-        # Both Quick CI and E2E Tests must pass for production release
-        if [[ "$QUICK_CI_STATUS" == "success" ]] && [[ "$E2E_CI_STATUS" == "success" ]]; then
-          echo "✅ Both CI workflows passed, proceeding with release"
-          echo "   - Quick CI: Quality checks + unit tests + coverage + P0 E2E ✅"
-          echo "   - E2E Tests: Full comprehensive E2E test suite ✅"
-          echo "ci_passed=true" >> $GITHUB_OUTPUT
-        elif [[ -z "$QUICK_CI_STATUS" ]] || [[ -z "$E2E_CI_STATUS" ]]; then
-          echo "⚠️  CI status not found, may be first release or workflows changed"
-          echo "🚀 Proceeding with release (manual verification recommended)"
-          echo "   - Ensure both 'Quick CI' and 'E2E Tests' workflows have run successfully"
+          echo "   Quick CI: status=$QUICK_STATUS conclusion=$QUICK_CONCLUSION"
+          echo "   E2E Tests: status=$E2E_STATUS conclusion=$E2E_CONCLUSION"
+
+          # If both completed successfully, proceed
+          if [[ "$QUICK_STATUS" == "completed" && "$QUICK_CONCLUSION" == "success" && \
+                "$E2E_STATUS" == "completed" && "$E2E_CONCLUSION" == "success" ]]; then
+            echo "✅ Both CI workflows passed, proceeding with release"
+            PASSED=1
+            break
+          fi
+
+          # If any completed with a non-success conclusion, fail fast
+          if [[ "$QUICK_STATUS" == "completed" && "$QUICK_CONCLUSION" != "success" ]] || \
+             [[ "$E2E_STATUS" == "completed" && "$E2E_CONCLUSION" != "success" ]]; then
+            echo "❌ CI workflows did not pass"
+            break
+          fi
+
+          # Otherwise, wait and poll again
+          echo "⏳ Workflows still running or not started. Waiting $SLEEP_SECONDS seconds..."
+          sleep $SLEEP_SECONDS
+        done
+
+        if [[ $PASSED -eq 1 ]]; then
           echo "ci_passed=true" >> $GITHUB_OUTPUT
         else
-          echo "❌ CI workflows failed or incomplete - blocking release for safety:"
-          echo "   Quick CI: $QUICK_CI_STATUS"
-          echo "   E2E Tests: $E2E_CI_STATUS"
-          echo ""
-          echo "🛑 Release blocked - fix failing tests before creating release"
-          echo "   - Quick CI provides fast feedback with essential checks"
-          echo "   - E2E Tests provides comprehensive regression testing"
           echo "ci_passed=false" >> $GITHUB_OUTPUT
+          echo "🛑 Release blocked - CI workflows failed or did not complete in time"
         fi
 
   build:
@@ -78,7 +87,7 @@ jobs:
     if: needs.check-ci-status.outputs.ci_passed == 'true'
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
         python-version: ["3.12"]
     runs-on: ${{ matrix.os }}
 
@@ -106,9 +115,26 @@ jobs:
     - name: Build and package app
       shell: bash
       run: |
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then pnpm run dist:mac; fi
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # Clean up any stuck DMG mounts before starting
+          for vol in /Volumes/ideal-goggles*; do
+            if [ -d "$vol" ]; then
+              echo "Force unmounting stuck volume: $vol"
+              hdiutil detach "$vol" -force || true
+            fi
+          done
+          # Build with sequential architecture to avoid mount conflicts
+          pnpm run dist:mac || {
+            echo "Build failed, cleaning up and retrying..."
+            # Force cleanup of any stuck mounts
+            for vol in /Volumes/ideal-goggles*; do
+              [ -d "$vol" ] && hdiutil detach "$vol" -force || true
+            done
+            sleep 5
+            pnpm run dist:mac
+          }
+        fi
         if [ "${{ matrix.os }}" = "windows-latest" ]; then pnpm run dist:win; fi
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then pnpm run dist:linux; fi
 
     - name: Upload artifacts (mac)
       if: matrix.os == 'macos-latest'
@@ -123,15 +149,6 @@ jobs:
       with:
         name: windows-installer
         path: dist-electron/*.exe
-
-    - name: Upload artifacts (linux)
-      if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-packages
-        path: |
-          dist-electron/*.AppImage
-          dist-electron/*.deb
 
   create-release:
     needs: [build]
@@ -151,8 +168,6 @@ jobs:
         files: |
           macos-dmg/*.dmg
           windows-installer/*.exe
-          linux-packages/*.AppImage
-          linux-packages/*.deb
         draft: false
         prerelease: false
         generate_release_notes: true
