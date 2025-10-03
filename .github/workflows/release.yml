@@ -14,6 +14,16 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      skip_ci_check:
+        description: 'Skip CI verification (for testing only)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   check-ci-status:
@@ -24,7 +34,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Skip CI check (manual trigger only)
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_ci_check == 'true'
+      id: skip
+      run: |
+        echo "⚠️  Skipping CI verification (manual trigger)"
+        echo "ci_passed=true" >> $GITHUB_OUTPUT
+
     - name: Check CI status for tagged commit
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_ci_check != 'true')
       id: check
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,6 +98,11 @@ jobs:
           echo "ci_passed=false" >> $GITHUB_OUTPUT
           echo "🛑 Release blocked - CI workflows failed or did not complete in time"
         fi
+
+    - name: Set output from skip step
+      if: steps.skip.outputs.ci_passed
+      run: |
+        echo "ci_passed=true" >> $GITHUB_OUTPUT
 
   build:
     name: Build & Package
