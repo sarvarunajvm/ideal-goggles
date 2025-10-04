@@ -318,7 +318,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         script: |
-          const { github, context, core } = require('@actions/github-script');
+          // github, context, and core are injected by actions/github-script
 
           const qualityStatus = '${{ needs.quality-checks.result }}';
           const backendStatus = '${{ needs.backend-tests.result }}';
