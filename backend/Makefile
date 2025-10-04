@@ -118,7 +118,10 @@ lint: ## Quality: Check code with ruff linter
 
 typecheck: ## Quality: Run type checking with mypy
 	@echo "🔍 Running type checker..."
-	mypy src/
+	$(PYTHON) -m pip install --upgrade pip >/dev/null 2>&1 || true
+	# Ensure dev extras (including mypy and compatible numpy stubs) are available
+	pip install -e ".[dev]" >/dev/null 2>&1 || true
+	$(PYTHON) -m mypy src/
 
 format: ## Quality: Format code with black
 	@echo "✨ Formatting code..."

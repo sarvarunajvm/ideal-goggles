@@ -330,7 +330,7 @@ class TestPhotoModel:
 
     def test_calculate_sha256_hash_file_error(self):
         """Test SHA-256 hash calculation handles file errors."""
-        with patch("builtins.open", side_effect=IOError("File not found")):
+        with patch("builtins.open", side_effect=OSError("File not found")):
             calculated_hash = Photo._calculate_sha1("/test/nonexistent.jpg")
 
         assert calculated_hash == ""
@@ -551,26 +551,26 @@ class TestPhotoFilter:
     def test_build_where_clause_empty(self):
         """Test building WHERE clause with no conditions."""
         f = PhotoFilter()
-        where, params = f.build_where_clause()
+        where, _params = f.build_where_clause()
 
         assert where == ""
-        assert params == []
+        assert _params == []
 
     def test_build_where_clause_single(self):
         """Test building WHERE clause with single condition."""
         f = PhotoFilter()
         f.by_folder("/photos")
-        where, params = f.build_where_clause()
+        where, _params = f.build_where_clause()
 
         assert where.startswith("WHERE ")
         assert "folder LIKE ?" in where
-        assert params == ["/photos%"]
+        assert _params == ["/photos%"]
 
     def test_build_where_clause_multiple(self):
         """Test building WHERE clause with multiple conditions."""
         f = PhotoFilter()
         f.by_folder("/photos").by_extension([".jpg"]).indexed_only()
-        where, params = f.build_where_clause()
+        where, _params = f.build_where_clause()
 
         assert where.startswith("WHERE ")
         assert " AND " in where

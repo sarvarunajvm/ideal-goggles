@@ -16,14 +16,16 @@ class TestSettings:
     def test_settings_default_values(self):
         """Test default configuration values."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch.object(Path, 'resolve') as mock_resolve:
+            with patch.object(Path, "resolve") as mock_resolve:
                 # Mock resolve to return predictable paths
                 def resolve_side_effect(self):
-                    if 'config.py' in str(self):
-                        return Path(temp_dir) / 'src' / 'core' / 'config.py'
+                    if "config.py" in str(self):
+                        return Path(temp_dir) / "src" / "core" / "config.py"
                     return Path(str(self))
 
-                mock_resolve.side_effect = lambda: Path(temp_dir) / 'src' / 'core' / 'config.py'
+                mock_resolve.side_effect = (
+                    lambda: Path(temp_dir) / "src" / "core" / "config.py"
+                )
 
                 test_settings = Settings()
 
@@ -86,7 +88,9 @@ class TestSettings:
                 test_settings = Settings()
 
                 # THUMBNAILS_DIR should be CACHE_DIR/thumbs
-                assert test_settings.THUMBNAILS_DIR == test_settings.CACHE_DIR / "thumbs"
+                assert (
+                    test_settings.THUMBNAILS_DIR == test_settings.CACHE_DIR / "thumbs"
+                )
 
     def test_settings_thumbnails_dir_override(self):
         """Test overriding thumbnails directory."""
@@ -99,16 +103,16 @@ class TestSettings:
             with patch.dict(os.environ, env_vars):
                 test_settings = Settings()
 
-                assert test_settings.THUMBNAILS_DIR == thumbnails_path.resolve()
+                assert thumbnails_path.resolve() == test_settings.THUMBNAILS_DIR
                 assert test_settings.THUMBNAILS_DIR.exists()
 
     def test_settings_models_dir(self):
         """Test models directory configuration."""
         test_settings = Settings()
 
-        assert test_settings.MODELS_DIR == Path("./models")
-        assert test_settings.CLIP_MODEL_PATH == Path("./models/clip-vit-b32.onnx")
-        assert test_settings.ARCFACE_MODEL_PATH == Path("./models/arcface-r100.onnx")
+        assert Path("./models") == test_settings.MODELS_DIR
+        assert Path("./models/clip-vit-b32.onnx") == test_settings.CLIP_MODEL_PATH
+        assert Path("./models/arcface-r100.onnx") == test_settings.ARCFACE_MODEL_PATH
 
     def test_settings_ocr_configuration(self):
         """Test OCR configuration settings."""
@@ -142,7 +146,7 @@ class TestSettings:
             env_file.write_text("HOST=192.168.1.1\nPORT=9000\n")
 
             # Change to temp directory
-            original_dir = os.getcwd()
+            original_dir = Path.cwd()
             try:
                 os.chdir(temp_dir)
                 test_settings = Settings()
@@ -176,7 +180,7 @@ class TestSettings:
             custom_data = Path(temp_dir) / "custom_data"
             test_settings = Settings(DATA_DIR=str(custom_data))
 
-            assert test_settings.DATA_DIR == custom_data.resolve()
+            assert custom_data.resolve() == test_settings.DATA_DIR
             assert test_settings.DATA_DIR.exists()
 
     def test_settings_custom_cache_dir(self):
@@ -185,7 +189,7 @@ class TestSettings:
             custom_cache = Path(temp_dir) / "custom_cache"
             test_settings = Settings(CACHE_DIR=str(custom_cache))
 
-            assert test_settings.CACHE_DIR == custom_cache.resolve()
+            assert custom_cache.resolve() == test_settings.CACHE_DIR
             assert test_settings.CACHE_DIR.exists()
 
     def test_settings_config_class(self):
@@ -201,4 +205,4 @@ class TestSettings:
             test_settings = Settings(DATA_DIR=str(nested_path))
 
             assert test_settings.DATA_DIR.exists()
-            assert test_settings.DATA_DIR == nested_path.resolve()
+            assert nested_path.resolve() == test_settings.DATA_DIR

@@ -386,14 +386,36 @@ class TestGetConfigFromDb:
 class TestGetPhotosForProcessing:
     """Test _get_photos_for_processing function."""
 
-    def test_get_photos_for_processing_full_reindex(
-        self, mock_db_manager, db_manager
-    ):
+    def test_get_photos_for_processing_full_reindex(self, mock_db_manager, db_manager):
         """Test getting photos for full reindex."""
         db_manager.execute_query = MagicMock(
             return_value=[
-                (1, "/path/photo1.jpg", "/path", "photo1.jpg", ".jpg", 1000, 100, 200, "", "", None),
-                (2, "/path/photo2.jpg", "/path", "photo2.jpg", ".jpg", 2000, 100, 200, "", "", None),
+                (
+                    1,
+                    "/path/photo1.jpg",
+                    "/path",
+                    "photo1.jpg",
+                    ".jpg",
+                    1000,
+                    100,
+                    200,
+                    "",
+                    "",
+                    None,
+                ),
+                (
+                    2,
+                    "/path/photo2.jpg",
+                    "/path",
+                    "photo2.jpg",
+                    ".jpg",
+                    2000,
+                    100,
+                    200,
+                    "",
+                    "",
+                    None,
+                ),
             ]
         )
 
@@ -403,13 +425,23 @@ class TestGetPhotosForProcessing:
         assert photos[0].id == 1
         assert photos[1].id == 2
 
-    def test_get_photos_for_processing_incremental(
-        self, mock_db_manager, db_manager
-    ):
+    def test_get_photos_for_processing_incremental(self, mock_db_manager, db_manager):
         """Test getting photos for incremental reindex."""
         db_manager.execute_query = MagicMock(
             return_value=[
-                (1, "/path/photo1.jpg", "/path", "photo1.jpg", ".jpg", 1000, 100, 200, "", "", None),
+                (
+                    1,
+                    "/path/photo1.jpg",
+                    "/path",
+                    "photo1.jpg",
+                    ".jpg",
+                    1000,
+                    100,
+                    200,
+                    "",
+                    "",
+                    None,
+                ),
             ]
         )
 
@@ -474,9 +506,10 @@ class TestRunProcessingPhases:
         self, reset_indexing_state, mock_db_manager, db_manager
     ):
         """Test running processing phases."""
-        with patch("src.api.indexing._setup_indexing_workers") as mock_setup, patch(
-            "src.api.indexing.asyncio.sleep"
-        ) as mock_sleep:
+        with (
+            patch("src.api.indexing._setup_indexing_workers") as mock_setup,
+            patch("src.api.indexing.asyncio.sleep") as mock_sleep,
+        ):
             # Mock workers
             mock_exif = MagicMock()
             mock_exif.process_photos = AsyncMock()
@@ -492,9 +525,9 @@ class TestRunProcessingPhases:
 
             workers = {
                 "EXIFExtractionPipeline": lambda: mock_exif,
-                "SmartOCRWorker": lambda **kwargs: mock_ocr,
+                "SmartOCRWorker": lambda **_kwargs: mock_ocr,
                 "OptimizedCLIPWorker": lambda: mock_embedding,
-                "SmartThumbnailGenerator": lambda **kwargs: mock_thumbnail,
+                "SmartThumbnailGenerator": lambda **_kwargs: mock_thumbnail,
             }
 
             config = {"face_search_enabled": False}
@@ -509,9 +542,10 @@ class TestRunProcessingPhases:
         self, reset_indexing_state, mock_db_manager, db_manager
     ):
         """Test running processing phases with face detection."""
-        with patch("src.api.indexing._setup_indexing_workers") as mock_setup, patch(
-            "src.api.indexing.asyncio.sleep"
-        ) as mock_sleep:
+        with (
+            patch("src.api.indexing._setup_indexing_workers") as mock_setup,
+            patch("src.api.indexing.asyncio.sleep") as mock_sleep,
+        ):
             # Mock workers
             mock_exif = MagicMock()
             mock_exif.process_photos = AsyncMock()
@@ -531,9 +565,9 @@ class TestRunProcessingPhases:
 
             workers = {
                 "EXIFExtractionPipeline": lambda: mock_exif,
-                "SmartOCRWorker": lambda **kwargs: mock_ocr,
+                "SmartOCRWorker": lambda **_kwargs: mock_ocr,
                 "OptimizedCLIPWorker": lambda: mock_embedding,
-                "SmartThumbnailGenerator": lambda **kwargs: mock_thumbnail,
+                "SmartThumbnailGenerator": lambda **_kwargs: mock_thumbnail,
                 "FaceDetectionWorker": lambda: mock_face,
             }
 
@@ -579,13 +613,9 @@ class TestRunIndexingProcess:
         self, reset_indexing_state, mock_db_manager, db_manager
     ):
         """Test indexing process cancellation."""
-        db_manager.execute_query = MagicMock(
-            return_value=[("roots", '["/tmp"]')]
-        )
+        db_manager.execute_query = MagicMock(return_value=[("roots", '["/tmp"]')])
 
-        with patch(
-            "src.api.indexing._setup_indexing_workers"
-        ) as mock_setup:
+        with patch("src.api.indexing._setup_indexing_workers") as mock_setup:
             mock_setup.side_effect = asyncio.CancelledError()
 
             await _run_indexing_process(full_reindex=False)

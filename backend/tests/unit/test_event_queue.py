@@ -509,7 +509,9 @@ class TestEventQueueAdvanced:
         await queue.stop(timeout=5.0)
 
         # Event should have been processed
-        assert len(processed_events) >= 0  # May or may not be processed depending on timing
+        assert (
+            len(processed_events) >= 0
+        )  # May or may not be processed depending on timing
 
     @pytest.mark.asyncio
     async def test_event_queue_multiple_start_calls(self):
@@ -540,10 +542,10 @@ class TestEventQueueAdvanced:
 
     def test_get_event_queue_singleton(self):
         """Test get_event_queue returns singleton."""
-        from src.core.event_queue import get_event_queue, _event_queue
-
         # Reset global
         import src.core.event_queue
+        from src.core.event_queue import _event_queue, get_event_queue
+
         src.core.event_queue._event_queue = None
 
         queue1 = get_event_queue()
@@ -553,10 +555,10 @@ class TestEventQueueAdvanced:
 
     def test_publish_event_convenience_function(self):
         """Test publish_event convenience function."""
-        from src.core.event_queue import publish_event
-
         # Reset global
         import src.core.event_queue
+        from src.core.event_queue import publish_event
+
         src.core.event_queue._event_queue = None
 
         event_id = publish_event(

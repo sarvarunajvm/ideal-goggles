@@ -69,7 +69,8 @@ class TestRequestLoggingMiddleware:
 
         # Mock time to simulate slow request (>1000ms)
         import time
-        with patch.object(time, 'time', side_effect=[0.0, 1.5]):  # 1500ms duration
+
+        with patch.object(time, "time", side_effect=[0.0, 1.5]):  # 1500ms duration
             response = await middleware.dispatch(mock_request, mock_call_next)
 
         assert response.status_code == 200
@@ -87,7 +88,8 @@ class TestRequestLoggingMiddleware:
 
         # Simulate error
         async def mock_call_next(request):
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         app = Mock()
         middleware = RequestLoggingMiddleware(app)
@@ -149,7 +151,8 @@ class TestErrorLoggingMiddleware:
         request_id_var.set("test-req-123")
 
         async def mock_call_next(request):
-            raise RuntimeError("Test runtime error")
+            msg = "Test runtime error"
+            raise RuntimeError(msg)
 
         app = Mock()
         middleware = ErrorLoggingMiddleware(app)
@@ -174,7 +177,8 @@ class TestErrorLoggingMiddleware:
         mock_request.body = mock_body
 
         async def mock_call_next(request):
-            raise ValueError("Validation error")
+            msg = "Validation error"
+            raise ValueError(msg)
 
         app = Mock()
         middleware = ErrorLoggingMiddleware(app)
@@ -199,7 +203,8 @@ class TestErrorLoggingMiddleware:
         mock_request.body = mock_body
 
         async def mock_call_next(request):
-            raise ValueError("Upload error")
+            msg = "Upload error"
+            raise ValueError(msg)
 
         app = Mock()
         middleware = ErrorLoggingMiddleware(app)
@@ -224,7 +229,8 @@ class TestErrorLoggingMiddleware:
         mock_request.body = mock_body
 
         async def mock_call_next(request):
-            raise KeyError("Missing field")
+            msg = "Missing field"
+            raise KeyError(msg)
 
         app = Mock()
         middleware = ErrorLoggingMiddleware(app)
@@ -242,12 +248,14 @@ class TestErrorLoggingMiddleware:
 
         # Mock body that raises an error
         async def mock_body():
-            raise IOError("Cannot read body")
+            msg = "Cannot read body"
+            raise OSError(msg)
 
         mock_request.body = mock_body
 
         async def mock_call_next(request):
-            raise ValueError("Processing error")
+            msg = "Processing error"
+            raise ValueError(msg)
 
         app = Mock()
         middleware = ErrorLoggingMiddleware(app)

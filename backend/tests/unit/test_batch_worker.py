@@ -33,7 +33,10 @@ def mock_photo():
     """Create a mock photo object."""
     photo = Mock(spec=Photo)
     photo.id = 1
-    photo.path = "/tmp/test_photo.jpg"
+    import tempfile
+
+    temp_dir = tempfile.gettempdir()
+    photo.path = str(Path(temp_dir) / "test_photo.jpg")
     photo.size = 1024
     return photo
 
@@ -49,10 +52,10 @@ def temp_test_image():
     yield temp_path
 
     # Cleanup
-    try:
+    import contextlib
+
+    with contextlib.suppress(BaseException):
         Path(temp_path).unlink()
-    except:
-        pass
 
 
 class TestBatchExport:
@@ -64,7 +67,7 @@ class TestBatchExport:
         await process_batch_export(
             job_id="test_job_1",
             photo_ids=["1", "2"],
-            destination="/tmp",
+            destination=tempfile.gettempdir(),
             job_store=None,
         )
         # Should complete without error but log warning
@@ -76,7 +79,7 @@ class TestBatchExport:
         await process_batch_export(
             job_id="missing_job",
             photo_ids=["1", "2"],
-            destination="/tmp",
+            destination=tempfile.gettempdir(),
             job_store=job_store,
         )
         # Should complete without error but log error
@@ -312,9 +315,7 @@ class TestBatchDelete:
         # Should complete without error but log error
 
     @pytest.mark.asyncio
-    async def test_process_batch_delete_to_trash(
-        self, mock_job_store, temp_test_image
-    ):
+    async def test_process_batch_delete_to_trash(self, mock_job_store, temp_test_image):
         """Test batch delete moving files to trash."""
         photo_path = temp_test_image
 
@@ -574,10 +575,12 @@ class TestBatchTag:
             # Create a mock object that will raise exception when accessing attributes
             class MalformedColumn:
                 def __getitem__(self, key):
-                    raise KeyError("Malformed column")
+                    msg = "Malformed column"
+                    raise KeyError(msg)
 
                 def get(self, key):
-                    raise AttributeError("Malformed column")
+                    msg = "Malformed column"
+                    raise AttributeError(msg)
 
             # Mock PRAGMA to return malformed column info
             mock_db.execute_query.return_value = [

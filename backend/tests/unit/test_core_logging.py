@@ -210,7 +210,7 @@ class TestSetupLogging:
             # Only test on non-Windows platforms
             if sys.platform != "win32":
                 # Mock syslog handler to succeed
-                with patch('logging.handlers.SysLogHandler'):
+                with patch("logging.handlers.SysLogHandler"):
                     setup_logging(
                         log_level="INFO",
                         log_dir=log_dir,
@@ -232,7 +232,9 @@ class TestSetupLogging:
             # Only test on non-Windows platforms
             if sys.platform != "win32":
                 # Mock syslog handler to raise an exception
-                with patch('logging.handlers.SysLogHandler', side_effect=OSError("No syslog")):
+                with patch(
+                    "logging.handlers.SysLogHandler", side_effect=OSError("No syslog")
+                ):
                     setup_logging(
                         log_level="INFO",
                         log_dir=log_dir,
@@ -246,7 +248,7 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_dir = Path(temp_dir) / "logs"
 
-            with patch('sys.platform', 'win32'):
+            with patch("sys.platform", "win32"):
                 setup_logging(
                     log_level="INFO",
                     log_dir=log_dir,
@@ -359,7 +361,7 @@ class TestLogSlowOperation:
         logger = logging.getLogger("test_slow_op")
         logger.setLevel(logging.WARNING)
 
-        with patch.object(logger, 'warning') as mock_warning:
+        with patch.object(logger, "warning") as mock_warning:
             log_slow_operation(
                 logger,
                 operation="test_operation",
@@ -376,7 +378,7 @@ class TestLogSlowOperation:
         """Test that fast operations are not logged."""
         logger = logging.getLogger("test_fast_op")
 
-        with patch.object(logger, 'warning') as mock_warning:
+        with patch.object(logger, "warning") as mock_warning:
             log_slow_operation(
                 logger,
                 operation="test_operation",
@@ -390,7 +392,7 @@ class TestLogSlowOperation:
         """Test logging slow operations with extra context."""
         logger = logging.getLogger("test_slow_context")
 
-        with patch.object(logger, 'warning') as mock_warning:
+        with patch.object(logger, "warning") as mock_warning:
             log_slow_operation(
                 logger,
                 operation="test_operation",
@@ -414,7 +416,7 @@ class TestLogErrorWithContext:
         """Test logging errors with context."""
         logger = logging.getLogger("test_error")
 
-        with patch.object(logger, 'exception') as mock_exception:
+        with patch.object(logger, "exception") as mock_exception:
             error = ValueError("Test error message")
             log_error_with_context(
                 logger,
@@ -433,7 +435,7 @@ class TestLogErrorWithContext:
         """Test logging errors with multiple context fields."""
         logger = logging.getLogger("test_error_multi")
 
-        with patch.object(logger, 'exception') as mock_exception:
+        with patch.object(logger, "exception") as mock_exception:
             error = RuntimeError("Runtime error")
             log_error_with_context(
                 logger,

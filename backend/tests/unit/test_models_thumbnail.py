@@ -688,10 +688,12 @@ class TestThumbnailCache:
             # Mock rmdir to raise OSError
             def mock_rmdir(self):
                 if "test_dir" in str(self):
-                    raise OSError("Permission denied")
+                    msg = "Permission denied"
+                    raise OSError(msg)
                 # Call the original implementation for other paths
                 import os
-                os.rmdir(str(self))
+
+                Path(self).rmdir()
 
             with patch.object(Path, "rmdir", mock_rmdir):
                 removed = cache.cleanup_empty_directories()

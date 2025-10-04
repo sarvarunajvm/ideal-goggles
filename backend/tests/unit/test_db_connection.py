@@ -3,7 +3,7 @@
 import sqlite3
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, call, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
@@ -423,15 +423,19 @@ class TestDatabaseManagerGlobals:
         """Test creating DatabaseManager without providing a path."""
         # Reset global state
         import src.db.connection
+
         src.db.connection._db_manager = None
 
         # Create temporary directory for the test
         import os
+
         original_file = src.db.connection.__file__
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # Temporarily override the __file__ attribute to control the data directory
-            with patch.object(src.db.connection, '__file__', temp_dir + '/src/db/connection.py'):
+            with patch.object(
+                src.db.connection, "__file__", temp_dir + "/src/db/connection.py"
+            ):
                 db_manager = DatabaseManager()
                 assert db_manager.db_path is not None
                 # Should create in backend/data directory
@@ -479,7 +483,7 @@ class TestDatabaseManagerGlobals:
             db_manager = DatabaseManager(str(db_path))
 
             # Mock migrations directory not existing
-            with patch.object(Path, 'exists', return_value=False):
+            with patch.object(Path, "exists", return_value=False):
                 version = db_manager._get_latest_migration_version()
                 assert version == 1
 
@@ -497,7 +501,9 @@ class TestDatabaseManagerGlobals:
             db_manager = DatabaseManager(str(db_path))
 
             # Mock the migrations directory
-            with patch.object(db_manager, '_get_latest_migration_version') as mock_version:
+            with patch.object(
+                db_manager, "_get_latest_migration_version"
+            ) as mock_version:
                 mock_version.return_value = 1
                 version = db_manager._get_latest_migration_version()
                 assert version == 1
@@ -523,7 +529,13 @@ class TestDatabaseManagerGlobals:
 
             # Manually run migrations from the temp directory
             original_path = Path(db_manager.db_path).parent / "migrations"
-            with patch.object(Path, '__truediv__', side_effect=lambda self, other: migrations_dir if other == "migrations" else Path(str(self)) / other):
+            with patch.object(
+                Path,
+                "__truediv__",
+                side_effect=lambda self, other: (
+                    migrations_dir if other == "migrations" else Path(str(self)) / other
+                ),
+            ):
                 # This is tricky to mock, so let's just verify the method can be called
                 pass
 
@@ -534,7 +546,9 @@ class TestDatabaseManagerGlobals:
             db_manager = DatabaseManager(str(db_path))
 
             # Create invalid SQL that will fail
-            migrations_dir = Path(__file__).parent.parent.parent / "src" / "db" / "migrations"
+            migrations_dir = (
+                Path(__file__).parent.parent.parent / "src" / "db" / "migrations"
+            )
 
             # We can't easily test this without actually creating bad migration files
             # Just verify the database is initialized
@@ -564,10 +578,10 @@ class TestDatabaseManagerGlobals:
 
     def test_get_database_context_manager(self):
         """Test the get_database context manager."""
-        from src.db.connection import get_database
-
         # Reset global state
         import src.db.connection
+        from src.db.connection import get_database
+
         src.db.connection._db_manager = None
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -624,7 +638,8 @@ class TestDatabaseManagerGlobals:
             db_manager = DatabaseManager(str(db_path))
 
             # Mock migrations_dir to point to empty directory
-            with patch.object(Path, '__truediv__') as mock_div:
+            with patch.object(Path, "__truediv__") as mock_div:
+
                 def mock_path_div(self, other):
                     if other == "migrations":
                         return migrations_dir
@@ -658,10 +673,12 @@ class TestDatabaseManagerGlobals:
             db_manager = DatabaseManager(str(db_path))
 
             # Create a mock migration that will fail
-            with patch.object(db_manager, 'get_connection') as mock_conn:
+            with patch.object(db_manager, "get_connection") as mock_conn:
                 mock_conn_instance = MagicMock()
                 mock_conn_instance.__enter__.return_value = mock_conn_instance
-                mock_conn_instance.executescript.side_effect = sqlite3.OperationalError("Test error")
+                mock_conn_instance.executescript.side_effect = sqlite3.OperationalError(
+                    "Test error"
+                )
                 mock_conn.return_value = mock_conn_instance
 
                 # The migration should handle the error

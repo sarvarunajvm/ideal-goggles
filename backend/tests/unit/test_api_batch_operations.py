@@ -133,9 +133,7 @@ class TestStartBatchExport:
         )
         background_tasks = BackgroundTasks()
 
-        with patch(
-            "src.api.batch_operations.process_batch_export"
-        ) as mock_process:
+        with patch("src.api.batch_operations.process_batch_export") as mock_process:
             result = await start_batch_export(request, background_tasks)
 
             assert "job_id" in result
@@ -170,9 +168,7 @@ class TestStartBatchDelete:
         request = BatchDeleteRequest(photo_ids=["1", "2", "3"], permanent=False)
         background_tasks = BackgroundTasks()
 
-        with patch(
-            "src.api.batch_operations.process_batch_delete"
-        ) as mock_process:
+        with patch("src.api.batch_operations.process_batch_delete") as mock_process:
             result = await start_batch_delete(request, background_tasks)
 
             assert "job_id" in result
@@ -245,9 +241,7 @@ class TestStartBatchTag:
     @pytest.mark.asyncio
     async def test_start_batch_tag_invalid_operation(self, clear_jobs):
         """Test batch tag with invalid operation."""
-        request = BatchTagRequest(
-            photo_ids=["1"], tags=["test"], operation="invalid"
-        )
+        request = BatchTagRequest(photo_ids=["1"], tags=["test"], operation="invalid")
         background_tasks = BackgroundTasks()
 
         with pytest.raises(HTTPException) as exc_info:

@@ -117,7 +117,9 @@ class TestDatabaseHealth:
         assert result["tables"]["photos"] == 100
 
     @pytest.mark.asyncio
-    async def test_check_database_health_query_failed(self, mock_db_manager, db_manager):
+    async def test_check_database_health_query_failed(
+        self, mock_db_manager, db_manager
+    ):
         """Test database health check when query fails."""
         db_manager.execute_query = MagicMock(return_value=[])
 
@@ -198,9 +200,10 @@ class TestHealthCheck:
             }
         )
 
-        with patch("src.api.health._get_system_info") as mock_system, patch(
-            "src.api.health._check_dependencies"
-        ) as mock_deps:
+        with (
+            patch("src.api.health._get_system_info") as mock_system,
+            patch("src.api.health._check_dependencies") as mock_deps,
+        ):
             mock_system.return_value = {"cpu": {"cores": 8}}
             mock_deps.return_value = {
                 "dependencies": {},
@@ -223,9 +226,10 @@ class TestHealthCheck:
         """Test health check with unhealthy database."""
         db_manager.execute_query = MagicMock(side_effect=Exception("DB error"))
 
-        with patch("src.api.health._get_system_info") as mock_system, patch(
-            "src.api.health._check_dependencies"
-        ) as mock_deps:
+        with (
+            patch("src.api.health._get_system_info") as mock_system,
+            patch("src.api.health._check_dependencies") as mock_deps,
+        ):
             mock_system.return_value = {"cpu": {"cores": 8}}
             mock_deps.return_value = {
                 "dependencies": {},
@@ -248,9 +252,10 @@ class TestHealthCheck:
             return_value={"database_size_mb": 10.5, "settings": {}, "table_counts": {}}
         )
 
-        with patch("src.api.health._get_system_info") as mock_system, patch(
-            "src.api.health._check_dependencies"
-        ) as mock_deps:
+        with (
+            patch("src.api.health._get_system_info") as mock_system,
+            patch("src.api.health._check_dependencies") as mock_deps,
+        ):
             mock_system.return_value = {"cpu": {"cores": 8}}
             mock_deps.return_value = {
                 "dependencies": {},
@@ -291,15 +296,13 @@ class TestDetailedHealthCheck:
             }
         )
 
-        with patch("src.api.health._get_system_info") as mock_system, patch(
-            "src.api.health._check_dependencies"
-        ) as mock_deps, patch(
-            "src.api.health._get_uptime"
-        ) as mock_uptime, patch(
-            "src.api.health._get_environment_info"
-        ) as mock_env, patch(
-            "src.api.health._get_performance_metrics"
-        ) as mock_perf:
+        with (
+            patch("src.api.health._get_system_info") as mock_system,
+            patch("src.api.health._check_dependencies") as mock_deps,
+            patch("src.api.health._get_uptime") as mock_uptime,
+            patch("src.api.health._get_environment_info") as mock_env,
+            patch("src.api.health._get_performance_metrics") as mock_perf,
+        ):
             mock_system.return_value = {"cpu": {"cores": 8}}
             mock_deps.return_value = {
                 "dependencies": {},

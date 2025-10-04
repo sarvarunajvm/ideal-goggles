@@ -159,9 +159,7 @@ class TestSearchPhotos:
             assert len(result.items) == 1
 
     @pytest.mark.asyncio
-    async def test_search_photos_with_date_filters(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_search_photos_with_date_filters(self, mock_db_manager, db_manager):
         """Test search with date filters."""
         db_manager.execute_query = MagicMock(return_value=[])
 
@@ -179,9 +177,7 @@ class TestSearchPhotos:
             assert result.total_matches == 0
 
     @pytest.mark.asyncio
-    async def test_search_photos_with_folder_filter(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_search_photos_with_folder_filter(self, mock_db_manager, db_manager):
         """Test search with folder filter."""
         db_manager.execute_query = MagicMock(return_value=[])
 
@@ -228,9 +224,11 @@ class TestSemanticSearch:
         """Test successful semantic search."""
         request = SemanticSearchRequest(text="sunset beach", top_k=10)
 
-        with patch("src.api.search.clip"), patch("src.api.search.torch"), patch(
-            "src.api.search.CLIPEmbeddingWorker"
-        ) as mock_worker_class:
+        with (
+            patch("src.api.search.clip"),
+            patch("src.api.search.torch"),
+            patch("src.api.search.CLIPEmbeddingWorker") as mock_worker_class,
+        ):
             mock_worker = MagicMock()
             mock_worker.generate_text_embedding = AsyncMock(
                 return_value=[0.1, 0.2, 0.3]
@@ -259,15 +257,15 @@ class TestSemanticSearch:
             assert "CLIP dependencies not installed" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_semantic_search_embedding_failed(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_semantic_search_embedding_failed(self, mock_db_manager, db_manager):
         """Test semantic search when embedding generation fails."""
         request = SemanticSearchRequest(text="sunset beach")
 
-        with patch("src.api.search.clip"), patch("src.api.search.torch"), patch(
-            "src.api.search.CLIPEmbeddingWorker"
-        ) as mock_worker_class:
+        with (
+            patch("src.api.search.clip"),
+            patch("src.api.search.torch"),
+            patch("src.api.search.CLIPEmbeddingWorker") as mock_worker_class,
+        ):
             mock_worker = MagicMock()
             mock_worker.generate_text_embedding = AsyncMock(return_value=None)
             mock_worker_class.return_value = mock_worker
@@ -279,15 +277,15 @@ class TestSemanticSearch:
             assert "Failed to generate text embedding" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_semantic_search_runtime_error(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_semantic_search_runtime_error(self, mock_db_manager, db_manager):
         """Test semantic search with runtime error."""
         request = SemanticSearchRequest(text="sunset beach")
 
-        with patch("src.api.search.clip"), patch("src.api.search.torch"), patch(
-            "src.api.search.CLIPEmbeddingWorker"
-        ) as mock_worker_class:
+        with (
+            patch("src.api.search.clip"),
+            patch("src.api.search.torch"),
+            patch("src.api.search.CLIPEmbeddingWorker") as mock_worker_class,
+        ):
             mock_worker = MagicMock()
             mock_worker.generate_text_embedding = AsyncMock(
                 side_effect=RuntimeError("CLIP dependencies not installed")
@@ -307,9 +305,7 @@ class TestImageSearch:
     async def test_image_search_success(self, mock_db_manager, db_manager):
         """Test successful image search."""
         # Create a temporary test image
-        with tempfile.NamedTemporaryFile(
-            suffix=".jpg", delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
             temp_file.write(b"fake image content")
             temp_path = temp_file.name
 
@@ -320,11 +316,12 @@ class TestImageSearch:
             upload_file.content_type = "image/jpeg"
             upload_file.read = AsyncMock(return_value=b"fake image content")
 
-            with patch("src.api.search.clip"), patch("src.api.search.torch"), patch(
-                "src.api.search.CLIPEmbeddingWorker"
-            ) as mock_worker_class, patch(
-                "src.api.search.Photo"
-            ) as mock_photo_class:
+            with (
+                patch("src.api.search.clip"),
+                patch("src.api.search.torch"),
+                patch("src.api.search.CLIPEmbeddingWorker") as mock_worker_class,
+                patch("src.api.search.Photo") as mock_photo_class,
+            ):
                 mock_worker = MagicMock()
                 mock_embedding_obj = MagicMock()
                 mock_embedding_obj.clip_vector = [0.1, 0.2, 0.3]
@@ -344,9 +341,7 @@ class TestImageSearch:
             os.unlink(temp_path)
 
     @pytest.mark.asyncio
-    async def test_image_search_invalid_file_type(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_image_search_invalid_file_type(self, mock_db_manager, db_manager):
         """Test image search with invalid file type."""
         upload_file = MagicMock(spec=UploadFile)
         upload_file.content_type = "text/plain"
@@ -358,9 +353,7 @@ class TestImageSearch:
         assert "Invalid image file" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_image_search_clip_not_installed(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_image_search_clip_not_installed(self, mock_db_manager, db_manager):
         """Test image search when CLIP not installed."""
         upload_file = MagicMock(spec=UploadFile)
         upload_file.content_type = "image/jpeg"
@@ -379,19 +372,21 @@ class TestImageSearch:
         upload_file.content_type = "image/jpeg"
         upload_file.read = AsyncMock(return_value=b"fake image")
 
-        with patch("src.api.search.clip"), patch("src.api.search.torch"), patch(
-            "src.api.search.CLIPEmbeddingWorker"
-        ) as mock_worker_class, patch(
-            "src.api.search.tempfile.NamedTemporaryFile"
-        ) as mock_temp, patch(
-            "src.api.search.Photo"
+        with (
+            patch("src.api.search.clip"),
+            patch("src.api.search.torch"),
+            patch("src.api.search.CLIPEmbeddingWorker") as mock_worker_class,
+            patch("src.api.search.tempfile.NamedTemporaryFile") as mock_temp,
+            patch("src.api.search.Photo"),
         ):
             mock_worker = MagicMock()
             mock_worker.generate_embedding = AsyncMock(return_value=None)
             mock_worker_class.return_value = mock_worker
 
             mock_temp_file = MagicMock()
-            mock_temp_file.name = "/tmp/test.jpg"
+            import tempfile
+
+            mock_temp_file.name = str(Path(tempfile.gettempdir()) / "test.jpg")
             mock_temp_file.__enter__.return_value = mock_temp_file
             mock_temp.return_value = mock_temp_file
 
@@ -465,9 +460,7 @@ class TestExecuteTextSearch:
     """Test _execute_text_search function."""
 
     @pytest.mark.asyncio
-    async def test_execute_text_search_with_query(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_execute_text_search_with_query(self, mock_db_manager, db_manager):
         """Test text search with query."""
         db_manager.execute_query = MagicMock(
             return_value=[
@@ -492,9 +485,7 @@ class TestExecuteTextSearch:
         assert results[0].filename == "vacation.jpg"
 
     @pytest.mark.asyncio
-    async def test_execute_text_search_with_dates(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_execute_text_search_with_dates(self, mock_db_manager, db_manager):
         """Test text search with date filters."""
         db_manager.execute_query = MagicMock(return_value=[])
 
@@ -511,9 +502,7 @@ class TestExecuteTextSearch:
         assert len(results) == 0
 
     @pytest.mark.asyncio
-    async def test_execute_text_search_with_folder(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_execute_text_search_with_folder(self, mock_db_manager, db_manager):
         """Test text search with folder filter."""
         db_manager.execute_query = MagicMock(return_value=[])
 
@@ -528,18 +517,14 @@ class TestExecuteSemanticSearch:
     """Test _execute_semantic_search function."""
 
     @pytest.mark.asyncio
-    async def test_execute_semantic_search_success(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_execute_semantic_search_success(self, mock_db_manager, db_manager):
         """Test semantic search execution."""
         import numpy as np
 
         query_embedding = np.array([0.1, 0.2, 0.3])
 
         with patch("src.api.search.Embedding") as mock_embedding_class:
-            mock_embedding_class._blob_to_numpy.return_value = np.array(
-                [0.1, 0.2, 0.3]
-            )
+            mock_embedding_class._blob_to_numpy.return_value = np.array([0.1, 0.2, 0.3])
 
             db_manager.execute_query = MagicMock(
                 return_value=[
@@ -557,7 +542,9 @@ class TestExecuteSemanticSearch:
 
             results = await _execute_semantic_search(db_manager, query_embedding, 10)
 
-            assert len(results) >= 0  # May be 0 or 1 depending on similarity calculation
+            assert (
+                len(results) >= 0
+            )  # May be 0 or 1 depending on similarity calculation
 
 
 class TestExecuteImageSearch:
@@ -610,9 +597,7 @@ class TestGetOriginalPhoto:
     @pytest.mark.asyncio
     async def test_get_original_photo_success(self, mock_db_manager, db_manager):
         """Test getting original photo."""
-        with tempfile.NamedTemporaryFile(
-            suffix=".jpg", delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
             temp_file.write(b"fake image content")
             temp_path = temp_file.name
 
@@ -638,13 +623,9 @@ class TestGetOriginalPhoto:
         assert "not found" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_get_original_photo_file_missing(
-        self, mock_db_manager, db_manager
-    ):
+    async def test_get_original_photo_file_missing(self, mock_db_manager, db_manager):
         """Test getting photo when file doesn't exist."""
-        db_manager.execute_query = MagicMock(
-            return_value=[["/nonexistent/photo.jpg"]]
-        )
+        db_manager.execute_query = MagicMock(return_value=[["/nonexistent/photo.jpg"]])
 
         with pytest.raises(HTTPException) as exc_info:
             await get_original_photo(photo_id=1)

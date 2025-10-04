@@ -580,7 +580,7 @@ class TestRankFusionService:
         """Test fusion recommendations with user preferences."""
         user_prefs = {"text": 0.5, "semantic": 1.0}
 
-        weights, method = fusion_service.get_fusion_recommendations(
+        weights, _method = fusion_service.get_fusion_recommendations(
             "text",
             user_preferences=user_prefs,
         )
@@ -593,7 +593,7 @@ class TestRankFusionService:
         """Test fusion recommendations with partial user preferences."""
         user_prefs = {"text": 0.5}  # Only override text
 
-        weights, method = fusion_service.get_fusion_recommendations(
+        weights, _method = fusion_service.get_fusion_recommendations(
             "text",
             user_preferences=user_prefs,
         )
@@ -641,6 +641,7 @@ class TestGlobalServiceFunction:
         """Test getting global service instance."""
         # Reset global variable
         import src.services.rank_fusion as rf_module
+
         rf_module._rank_fusion_service = None
 
         service1 = get_rank_fusion_service()

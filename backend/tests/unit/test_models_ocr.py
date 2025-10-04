@@ -124,7 +124,7 @@ class TestOCRResultModel:
             def get(self, key, default=None):
                 if key == "text":
                     return ["Good", "Quality", "Low"]  # Word list
-                elif key == "conf":
+                if key == "conf":
                     return [85, 90, 25]  # Confidences (last one low)
                 return super().get(key, default)
 
