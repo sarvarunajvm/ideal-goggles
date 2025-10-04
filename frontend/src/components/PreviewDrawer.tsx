@@ -58,23 +58,23 @@ export default function PreviewDrawer({
 
   const getBadgeColor = (badge: string) => {
     const colors: Record<string, string> = {
-      OCR: 'bg-blue-100 text-blue-800',
-      Face: 'bg-red-100 text-red-800',
-      'Photo-Match': 'bg-indigo-100 text-indigo-800',
-      EXIF: 'bg-orange-100 text-orange-800',
-      filename: 'bg-green-100 text-green-800',
-      folder: 'bg-purple-100 text-purple-800',
+      OCR: '[background:var(--gradient-gold)] text-black',
+      Face: '[background:var(--gradient-red)] text-white',
+      'Photo-Match': '[background:var(--gradient-purple)] text-white',
+      EXIF: '[background:var(--gradient-cyan)] text-black',
+      filename: '[background:var(--gradient-green)] text-black',
+      folder: '[background:var(--gradient-pink)] text-white',
     }
-    return colors[badge] || 'bg-gray-100 text-gray-800'
+    return colors[badge] || 'bg-primary/20 text-primary'
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-card rounded-lg shadow-2xl shadow-primary/20 border border-primary/20 max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-primary/20">
           <h2
-            className="text-lg font-semibold text-gray-900 truncate"
+            className="text-lg font-semibold text-foreground truncate"
             title={item.filename}
           >
             {item.filename}
@@ -83,7 +83,7 @@ export default function PreviewDrawer({
             {onPrevious && (
               <button
                 onClick={onPrevious}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                className="p-2 text-primary hover:text-primary-foreground rounded-lg hover:bg-primary transition-all"
                 title="Previous photo (←)"
               >
                 ←
@@ -92,7 +92,7 @@ export default function PreviewDrawer({
             {onNext && (
               <button
                 onClick={onNext}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                className="p-2 text-primary hover:text-primary-foreground rounded-lg hover:bg-primary transition-all"
                 title="Next photo (→)"
               >
                 →
@@ -100,7 +100,7 @@ export default function PreviewDrawer({
             )}
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              className="p-2 text-primary hover:text-primary-foreground rounded-lg hover:bg-primary transition-all"
               title="Close (Esc)"
             >
               ✕
@@ -110,7 +110,7 @@ export default function PreviewDrawer({
 
         <div className="flex flex-1 overflow-hidden">
           {/* Image Preview */}
-          <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+          <div className="flex-1 flex items-center justify-center bg-black p-4">
             {!imageError && item.thumb_path ? (
               <img
                 src={`${getThumbnailBaseUrl()}/${item.thumb_path}`}
@@ -119,7 +119,7 @@ export default function PreviewDrawer({
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="flex flex-col items-center text-gray-400">
+              <div className="flex flex-col items-center text-muted-foreground">
                 <div className="text-8xl mb-4">📷</div>
                 <p className="text-lg">Preview not available</p>
               </div>
@@ -127,33 +127,33 @@ export default function PreviewDrawer({
           </div>
 
           {/* Sidebar with details */}
-          <div className="w-80 border-l border-gray-200 bg-gray-50 overflow-y-auto">
+          <div className="w-80 border-l border-primary/20 bg-card overflow-y-auto">
             <div className="p-4 space-y-6">
               {/* Basic Info */}
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-3">
+                <h3 className="text-sm font-medium text-primary mb-3">
                   File Information
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Path:</span>
-                    <p className="text-gray-900 break-all">{item.path}</p>
+                    <span className="text-muted-foreground">Path:</span>
+                    <p className="text-foreground break-all">{item.path}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Folder:</span>
-                    <p className="text-gray-900 break-all">{item.folder}</p>
+                    <span className="text-muted-foreground">Folder:</span>
+                    <p className="text-foreground break-all">{item.folder}</p>
                   </div>
                   {item.shot_dt && (
                     <div>
-                      <span className="text-gray-500">Date Taken:</span>
-                      <p className="text-gray-900">
+                      <span className="text-muted-foreground">Date Taken:</span>
+                      <p className="text-foreground">
                         {formatTimestamp(item.shot_dt)}
                       </p>
                     </div>
                   )}
                   <div>
-                    <span className="text-gray-500">Relevance Score:</span>
-                    <p className="text-gray-900">
+                    <span className="text-muted-foreground">Relevance Score:</span>
+                    <p className="text-foreground">
                       {(item.score * 100).toFixed(1)}%
                     </p>
                   </div>
@@ -163,7 +163,7 @@ export default function PreviewDrawer({
               {/* Badges */}
               {item.badges.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">
+                  <h3 className="text-sm font-medium text-primary mb-3">
                     Match Types
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -199,7 +199,7 @@ export default function PreviewDrawer({
                 <div className="space-y-2">
                   <button
                     onClick={() => onRevealInFolder?.(item)}
-                    className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                    className="w-full px-4 py-2 text-sm rounded-lg transition-colors flex items-center justify-center space-x-2 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <span>📁</span>
                     <span>Reveal in Folder</span>

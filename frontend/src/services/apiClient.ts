@@ -59,6 +59,7 @@ export interface HealthResponse {
 
 export interface ConfigResponse {
   roots: string[]
+  ocr_enabled?: boolean
   ocr_languages: string[]
   face_search_enabled: boolean
   semantic_search_enabled?: boolean
@@ -198,6 +199,7 @@ class ApiService {
 
   async updateConfig(
     config: Partial<{
+      ocr_enabled: boolean
       ocr_languages: string[]
       face_search_enabled: boolean
       semantic_search_enabled: boolean

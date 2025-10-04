@@ -9,6 +9,9 @@ import App from './App'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
 import PeoplePage from './pages/PeoplePage'
+import StatsPage from './pages/StatsPage'
+import DependenciesPage from './pages/DependenciesPage'
+import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import './index.css'
 
 // Disable context menu in production
@@ -25,9 +28,14 @@ const router = createRouter(
     {
       path: '/',
       element: <App />,
+      errorElement: <RouteErrorBoundary />,
       children: [
         {
           index: true,
+          element: <SearchPage />,
+        },
+        {
+          path: 'search',
           element: <SearchPage />,
         },
         {
@@ -37,6 +45,14 @@ const router = createRouter(
         {
           path: 'people',
           element: <PeoplePage />,
+        },
+        {
+          path: 'stats',
+          element: <StatsPage />,
+        },
+        {
+          path: 'dependencies',
+          element: <DependenciesPage />,
         },
       ],
     },
