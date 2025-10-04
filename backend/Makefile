@@ -16,8 +16,8 @@ PYTHON ?= python3
 
 # Target declarations
 .PHONY: help install dev clean
-.PHONY: test test-unit test-integration test-contract test-performance
-.PHONY: coverage coverage-unit coverage-integration
+.PHONY: test test-unit test-performance
+.PHONY: coverage coverage-unit
 .PHONY: lint typecheck format check-style
 .PHONY: package check-ml
 
@@ -79,14 +79,6 @@ test-unit: ## Testing: Run unit tests only (fast)
 	@echo "⚡ Running unit tests..."
 	pytest tests/unit/ -q
 
-test-integration: ## Testing: Run integration tests only (medium)
-	@echo "🔗 Running integration tests..."
-	pytest tests/integration/ -q
-
-test-contract: ## Testing: Run API contract tests only (medium)
-	@echo "📋 Running contract tests..."
-	pytest tests/contract/ -q
-
 test-performance: ## Testing: Run performance tests only (slow)
 	@echo "🚀 Running performance tests..."
 	pytest tests/performance/ -q || true
@@ -103,10 +95,6 @@ coverage: ## Coverage: Generate coverage report for all tests
 coverage-unit: ## Coverage: Coverage report for unit tests only
 	@echo "📊 Generating unit test coverage..."
 	pytest tests/unit/ --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
-
-coverage-integration: ## Coverage: Coverage report for integration tests only
-	@echo "📊 Generating integration test coverage..."
-	pytest tests/integration/ --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
 
 # =============================================================================
 # Code Quality & Formatting
