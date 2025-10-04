@@ -78,10 +78,26 @@ As a photo studio operator, I need to quickly find specific client photos from o
 - **FR-016**: System MUST handle library sizes up to 1 million photos on standard hardware
 - **FR-017**: System MUST preserve original photo files without modification during indexing
 
+**User Experience & Onboarding**
+- **FR-018**: System MUST provide first-run onboarding wizard to guide folder selection and initial indexing
+- **FR-019**: System MUST display full-screen photo lightbox with keyboard navigation (arrow keys, Esc)
+- **FR-020**: System MUST support batch operations (export, delete, tag) on multiple selected photos
+- **FR-021**: System MUST use virtual scrolling to maintain 60fps performance with 10K+ photos
+- **FR-022**: System MUST show photo metadata overlay in lightbox (EXIF, tags, location)
+- **FR-023**: System MUST provide visual selection mode with checkboxes for batch operations
+- **FR-024**: System MUST move deleted photos to system trash (recoverable) instead of permanent deletion
+
+**Desktop Experience**
+- **FR-025**: System MUST provide code-signed installers for macOS, Windows, and Linux
+- **FR-026**: System MUST include auto-update functionality with delta updates
+- **FR-027**: System MUST download updates in background without blocking user interaction
+- **FR-028**: System MUST allow users to disable auto-updates in settings
+
 **Privacy and Security**
-- **FR-018**: System MUST process all data locally without internet connectivity requirements
-- **FR-019**: System MUST encrypt stored face recognition data when face search is enabled
-- **FR-020**: System MUST require explicit user consent before enabling face recognition features
+- **FR-029**: System MUST process all data locally without internet connectivity requirements
+- **FR-030**: System MUST encrypt stored face recognition data when face search is enabled
+- **FR-031**: System MUST require explicit user consent before enabling face recognition features
+- **FR-032**: System MUST not send telemetry or analytics data to external servers
 
 ### Key Entities *(include if feature involves data)*
 - **Photo**: Represents individual image files with metadata including path, size, timestamps, format, and extracted content

@@ -137,6 +137,100 @@
 - [x] T066 Windows installer with code signing
 - [x] T067 [P] Application documentation and user manual
 
+## Phase 3.6: UX Enhancements (v1.0 Market-Ready) ⚠️ CRITICAL FOR LAUNCH
+
+### Dependencies Installation
+- [ ] T068 Install frontend UX dependencies (@tanstack/react-virtual@3.x, framer-motion@11.x) in package.json
+- [ ] T069 Install backend batch job dependencies (arq>=0.26.0, fakeredis>=2.23.0, send2trash>=1.8.0) in backend/pyproject.toml
+
+### Onboarding Wizard (Sequential - High Priority)
+- [ ] T070 Create onboarding state store in frontend/src/stores/onboardingStore.ts
+- [ ] T071 Create OnboardingWizard component shell in frontend/src/components/OnboardingWizard/OnboardingWizard.tsx
+- [ ] T072 Implement WelcomeStep component in frontend/src/components/OnboardingWizard/WelcomeStep.tsx
+- [ ] T073 Implement FolderSelectionStep component in frontend/src/components/OnboardingWizard/FolderSelectionStep.tsx
+- [ ] T074 Implement IndexingStep component in frontend/src/components/OnboardingWizard/IndexingStep.tsx
+- [ ] T075 Implement CompleteStep component in frontend/src/components/OnboardingWizard/CompleteStep.tsx
+- [ ] T076 Integrate onboarding into App.tsx (show modal on first launch)
+- [ ] T077 Add "Reset Onboarding" button to SettingsPage
+
+### Photo Lightbox (Parallel - Can Run with Virtual Scroll)
+- [ ] T078 [P] Create Lightbox state store in frontend/src/stores/lightboxStore.ts
+- [ ] T079 [P] Create Lightbox component shell in frontend/src/components/Lightbox/Lightbox.tsx
+- [ ] T080 [P] Implement LightboxImage component in frontend/src/components/Lightbox/LightboxImage.tsx
+- [ ] T081 [P] Implement LightboxNavigation component in frontend/src/components/Lightbox/LightboxNavigation.tsx
+- [ ] T082 [P] Implement LightboxMetadata component in frontend/src/components/Lightbox/LightboxMetadata.tsx
+- [ ] T083 [P] Add keyboard event listeners to Lightbox
+- [ ] T084 Integrate Lightbox into SearchPage (modify existing)
+
+### Virtual Scrolling (Parallel - Can Run with Lightbox)
+- [ ] T085 [P] Create useVirtualGrid custom hook in frontend/src/hooks/useVirtualGrid.ts
+- [ ] T086 [P] Create VirtualGrid component in frontend/src/components/VirtualGrid/VirtualGrid.tsx
+- [ ] T087 [P] Create VirtualGridItem component in frontend/src/components/VirtualGrid/VirtualGridItem.tsx
+- [ ] T088 [P] Implement thumbnail lazy loading with IntersectionObserver
+- [ ] T089 [P] Add loading skeletons to VirtualGrid in frontend/src/components/VirtualGrid/LoadingSkeleton.tsx
+- [ ] T090 Replace existing grid with VirtualGrid in SearchPage (modify existing)
+
+### Batch Operations Backend (Sequential - After Virtual Scroll)
+- [ ] T091 Create batch operations API router in backend/src/api/batch_operations.py
+- [ ] T092 Implement batch export worker in backend/src/workers/batch_worker.py
+- [ ] T093 Implement batch delete worker in backend/src/workers/batch_worker.py (modify)
+- [ ] T094 Implement batch tag worker in backend/src/workers/batch_worker.py (modify)
+- [ ] T095 Add batch job status endpoint in backend/src/api/batch_operations.py (modify)
+
+### Batch Operations Frontend (Sequential - After Backend APIs)
+- [ ] T096 Create batch selection state store in frontend/src/stores/batchSelectionStore.ts
+- [ ] T097 Create BatchActions toolbar component in frontend/src/components/BatchActions/BatchActions.tsx
+- [ ] T098 Implement batch export dialog in frontend/src/components/BatchActions/BatchExportDialog.tsx
+- [ ] T099 Implement batch delete dialog in frontend/src/components/BatchActions/BatchDeleteDialog.tsx
+- [ ] T100 Implement batch tag dialog in frontend/src/components/BatchActions/BatchTagDialog.tsx
+- [ ] T101 Add selection mode to VirtualGridItem (modify existing)
+- [ ] T102 Integrate BatchActions into SearchPage (modify existing)
+
+### Desktop Installers & Auto-Update (Sequential - After All Features)
+- [ ] T103 Configure electron-builder for macOS in package.json (modify build section)
+- [ ] T104 Create macOS entitlements file in electron/build/entitlements.mac.plist
+- [ ] T105 Create macOS notarization script in electron/build/notarize.js
+- [ ] T106 Configure electron-builder for Windows in package.json (modify)
+- [ ] T107 Configure electron-builder for Linux in package.json (modify)
+- [ ] T108 Integrate electron-updater in electron/main/updater.ts
+- [ ] T109 Add update notification dialogs in electron/main/updater.ts (modify)
+- [ ] T110 Update CI/CD pipeline for signed builds in .github/workflows/release.yml
+
+### UX Integration Tests (Parallel - After Implementation)
+- [ ] T111 [P] E2E test: Onboarding wizard flow in func_tests/e2e/test_onboarding.spec.ts
+- [ ] T112 [P] E2E test: Lightbox keyboard navigation in func_tests/e2e/test_lightbox.spec.ts
+- [ ] T113 [P] Component test: VirtualGrid performance in frontend/tests/components/VirtualGrid.test.tsx
+- [ ] T114 [P] Integration test: Batch export 1K photos in backend/tests/integration/test_batch_export.py
+- [ ] T115 [P] Integration test: Batch delete 500 photos in backend/tests/integration/test_batch_delete.py
+- [ ] T116 [P] Performance test: Virtual scroll with 100K photos in func_tests/performance/test_virtual_scroll_perf.spec.ts
+- [ ] T117 [P] Build test: Verify installer signatures in scripts/verify-signatures.sh
+- [ ] T118 Manual QA: Complete all quickstart scenarios (specs/001-core-features-mandatory/quickstart.md)
+
+## Git Worktree Strategy
+
+**IMPORTANT**: UX Enhancement tasks (T078-T118) use git worktrees to enable parallel development without file conflicts.
+
+### Worktree Setup Pattern
+```bash
+# Main branch stays at: /Users/sarkalimuthu/WebstormProjects/ideal-goggles
+# Create worktrees for parallel UX tasks:
+git worktree add ../ideal-goggles-task-T078 001-core-features-mandatory
+git worktree add ../ideal-goggles-task-T079 001-core-features-mandatory
+# ... one worktree per [P] task
+```
+
+### Task Execution in Worktrees
+Each [P] task in Phase 3.6 runs in its own worktree directory to prevent conflicts. After task completion, changes are committed in the worktree, then merged back to main worktree.
+
+### Cleanup After Parallel Batch
+```bash
+# After completing Lightbox batch (T078-T083):
+git worktree remove ../ideal-goggles-task-T078
+git worktree remove ../ideal-goggles-task-T079
+# ... remove all worktrees
+git worktree prune
+```
+
 ## Dependencies
 
 ### Critical Path Dependencies
@@ -145,6 +239,11 @@
 - **Workers before search**: T034-T039 block T048-T050
 - **API endpoints need models**: T040-T047 depend on T028-T033
 - **Frontend needs API**: T051-T058 depend on T040-T047
+- **UX dependencies first**: T068-T069 block T070-T118
+- **Onboarding before lightbox**: T070-T077 should complete before T078-T118 (user-facing priority)
+- **Virtual scroll before batch ops**: T090 blocks T091-T102 (batch UX depends on grid)
+- **Batch backend before frontend**: T091-T095 block T096-T102
+- **All features before installers**: T103-T110 require all UX features complete
 
 ### Parallel Execution Boundaries
 - **Setup phase** (T001-T006): All can run in parallel
@@ -153,6 +252,9 @@
 - **Data models** (T028-T033): All can run in parallel
 - **Workers** (T034-T039): All can run in parallel after models exist
 - **Performance tasks** (T059-T064): Can run in parallel
+- **Lightbox components** (T078-T083): All can run in parallel (6 tasks)
+- **Virtual scroll components** (T085-T089): All can run in parallel (5 tasks)
+- **UX integration tests** (T111-T117): All can run in parallel (7 tasks)
 
 ## Parallel Execution Examples
 
@@ -195,6 +297,67 @@ Task: "Thumbnail generator worker in backend/src/workers/thumbnail_worker.py"
 Task: "Face detection worker (optional) in backend/src/workers/face_worker.py"
 ```
 
+### Phase 3.6 - Lightbox Components in Parallel (Git Worktrees)
+```bash
+# Create 6 worktrees for lightbox tasks
+for i in {078..083}; do
+  git worktree add ../ideal-goggles-task-T$i 001-core-features-mandatory
+done
+
+# Execute in parallel (6 terminals or concurrent processes)
+cd ../ideal-goggles-task-T078 && <execute T078: Lightbox state store>
+cd ../ideal-goggles-task-T079 && <execute T079: Lightbox component shell>
+cd ../ideal-goggles-task-T080 && <execute T080: LightboxImage>
+cd ../ideal-goggles-task-T081 && <execute T081: LightboxNavigation>
+cd ../ideal-goggles-task-T082 && <execute T082: LightboxMetadata>
+cd ../ideal-goggles-task-T083 && <execute T083: Keyboard listeners>
+
+# Merge and cleanup
+cd /Users/sarkalimuthu/WebstormProjects/ideal-goggles
+for i in {078..083}; do
+  git -C ../ideal-goggles-task-T$i commit -am "Complete T0$i: Lightbox component"
+  git merge --no-ff FETCH_HEAD
+  git worktree remove ../ideal-goggles-task-T$i
+done
+git worktree prune
+```
+
+### Phase 3.6 - Virtual Scroll Components in Parallel (Git Worktrees)
+```bash
+# Create 5 worktrees for virtual scroll tasks (can run parallel with Lightbox batch)
+for i in {085..089}; do
+  git worktree add ../ideal-goggles-task-T$i 001-core-features-mandatory
+done
+
+# Execute all 5 tasks in parallel
+cd ../ideal-goggles-task-T085 && <execute T085: useVirtualGrid hook>
+cd ../ideal-goggles-task-T086 && <execute T086: VirtualGrid component>
+cd ../ideal-goggles-task-T087 && <execute T087: VirtualGridItem>
+cd ../ideal-goggles-task-T088 && <execute T088: Lazy loading>
+cd ../ideal-goggles-task-T089 && <execute T089: Loading skeletons>
+
+# Merge and cleanup (same pattern as above)
+```
+
+### Phase 3.6 - UX Integration Tests in Parallel
+```bash
+# Create 7 worktrees for integration tests
+for i in {111..117}; do
+  git worktree add ../ideal-goggles-task-T$i 001-core-features-mandatory
+done
+
+# Execute all 7 tests in parallel
+cd ../ideal-goggles-task-T111 && <execute T111: Onboarding E2E test>
+cd ../ideal-goggles-task-T112 && <execute T112: Lightbox E2E test>
+cd ../ideal-goggles-task-T113 && <execute T113: VirtualGrid performance test>
+cd ../ideal-goggles-task-T114 && <execute T114: Batch export integration test>
+cd ../ideal-goggles-task-T115 && <execute T115: Batch delete integration test>
+cd ../ideal-goggles-task-T116 && <execute T116: Virtual scroll performance test>
+cd ../ideal-goggles-task-T117 && <execute T117: Installer signature test>
+
+# Merge and cleanup (same pattern)
+```
+
 ## Task Completion Criteria
 
 ### Phase Gates
@@ -207,12 +370,29 @@ Task: "Face detection worker (optional) in backend/src/workers/face_worker.py"
 - **Integration Complete**: Performance targets met, packaging successful
 
 ### Acceptance Validation
-- [ ] All contract tests pass with real implementations
-- [ ] Integration tests validate user scenarios from quickstart.md
-- [ ] Search response times meet constitutional requirements (<2s text, <5s image)
-- [ ] Memory usage stays under 512MB during normal operation
-- [ ] Can index and search 50k+ photos on target hardware
-- [ ] Windows installer deploys and runs without errors
+
+**Core Search Features** (T001-T067):
+- [x] All contract tests pass with real implementations
+- [x] Integration tests validate user scenarios from quickstart.md
+- [x] Search response times meet constitutional requirements (<2s text, <5s image)
+- [x] Memory usage stays under 512MB during normal operation
+- [x] Can index and search 50k+ photos on target hardware
+- [x] Windows installer deploys and runs without errors
+
+**UX Enhancements** (T068-T118 - v1.0 Market-Ready):
+- [ ] Onboarding wizard guides new users through setup successfully
+- [ ] Lightbox opens in <100ms with smooth 60fps animations
+- [ ] Lightbox keyboard navigation (←/→/Esc/Space) works correctly
+- [ ] Virtual scrolling maintains 60fps with 100K+ photos loaded
+- [ ] Memory usage <500MB with 50K photos in virtual grid
+- [ ] Batch export: ≥100 photos/min throughput
+- [ ] Batch delete: ≥400 photos/min, moves to system trash (not permanent)
+- [ ] Batch tagging: ≥600 tag operations/min
+- [ ] Code-signed installers for macOS (notarized), Windows (Authenticode), Linux
+- [ ] Installer size <150MB compressed, <300MB installed
+- [ ] Auto-update downloads delta updates in background
+- [ ] All 7 quickstart scenarios pass on macOS, Windows, Linux
+- [ ] Manual QA sign-off from product owner
 
 ## Notes
 - **[P] tasks** = different files, no dependencies, can run in true parallel
@@ -220,3 +400,17 @@ Task: "Face detection worker (optional) in backend/src/workers/face_worker.py"
 - **TDD mandatory**: Verify tests fail before implementing (constitutional requirement)
 - **Performance validation**: Continuous benchmarking during development
 - **Constitutional compliance**: All tasks must maintain local-first privacy and offline operation
+- **Git worktree benefits**: Eliminates file conflicts for Phase 3.6 parallel development
+- **Commit strategy**: Each task commits in its worktree, main branch merges sequentially
+- **Cleanup**: Always `git worktree prune` after batch completion
+
+---
+
+**Total Tasks**: 118 (67 core features ✅ + 51 UX enhancements)
+**Estimated UX Duration**: 1-1.5 weeks with git worktree parallelization
+**Sequential UX Duration**: ~3-4 weeks (without parallelization)
+**Speedup**: 2-3x faster with git worktree strategy
+
+---
+
+Ready for execution via /implement command or manual development.

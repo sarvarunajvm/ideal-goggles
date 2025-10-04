@@ -1,8 +1,8 @@
 
-# Implementation Plan: Ideal Goggles
+# Implementation Plan: [FEATURE]
 
-**Branch**: `001-core-features-mandatory` | **Date**: 2025-09-22 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-core-features-mandatory/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -31,38 +31,23 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Complete market-ready desktop photo management application for studios with offline-first design. Core features: Multi-modal search (text, image, face) with <2s response times, first-run onboarding wizard, full-screen photo lightbox with keyboard navigation, batch operations (export/delete/tag), virtual scrolling for 60fps performance with 10K+ photos, and code-signed installers with auto-update. Electron + React 19 frontend with Python FastAPI backend. SQLite + FAISS storage supporting 1M+ photos on standard hardware.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
-**Language/Version**: Python 3.12 (backend), TypeScript 5.9 + React 19 (frontend)
-**Primary Dependencies**:
-- Backend: FastAPI 0.115+, SQLite, FAISS, ONNX Runtime, Tesseract OCR, ARQ 0.26+ (background jobs), Pydantic V2
-- Frontend: React 19, Zustand 5.0 (state), TanStack Query 5.x (data fetching), TanStack Virtual 3.x (virtualization), Framer Motion 11.x (animations)
-- Build: electron-builder 25.x (installers), electron-updater 6.x (auto-update), @electron/notarize (macOS)
-**Storage**: SQLite (metadata/FTS5), FAISS (vectors), File cache (thumbnails)
-**Testing**: pytest 8.x (Python), Jest 30.x + RTL (TypeScript), Playwright 1.50+ (E2E)
-**Target Platform**: macOS, Windows, Linux (code-signed installers)
-**Project Type**: web - frontend (Electron) + backend (Python API)
-**Performance Goals**:
-- Search: <2s text, <5s image, 100k photos/day indexing
-- UX: 60fps scrolling with 100K+ photos, <100ms lightbox photo switches
-- Batch: ≥100 photos/min export, ≥400 photos/min delete
-- Install: <150MB compressed installer, <300MB installed
-**Constraints**: Offline-only, <512MB memory, 1M+ photos support, non-destructive operations
-**Scale/Scope**: Photo studios, 1M photos, multi-modal search + complete UX
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**I. Local-First Privacy**: ✅ PASS - All processing offline, no external services, encrypted face data
-**II. Test-Driven Development**: ✅ PASS - TDD mandatory, contract tests before implementation
-**III. Specification-Driven Development**: ✅ PASS - Complete spec exists, planning follows spec
-**IV. Performance & Reliability**: ✅ PASS - <2s search targets, 1M photo support, fail-safe indexing
-**V. User-Centric Design**: ✅ PASS - Progressive disclosure, multi-modal search, intuitive interface
-
-**Performance Standards**: ✅ PASS - Sub-second warm search, 99%+ indexing, optimized storage
-**Development Workflow**: ✅ PASS - Following spec→plan→tasks pipeline, TDD ordering
-**Security Requirements**: ✅ PASS - No network deps, signed installers, encrypted biometrics
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -86,10 +71,10 @@ src/
 ├── cli/
 └── lib/
 
-func_tests/
-├── e2e/
+tests/
+├── contract/
 ├── integration/
-└── functional/
+└── unit/
 
 # Option 2: Web application (when "frontend" + "backend" detected)
 backend/
@@ -114,7 +99,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: Option 2 (Web application) - Electron frontend + Python FastAPI backend
+**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -210,18 +195,18 @@ ios/ or android/
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS
-- [x] All NEEDS CLARIFICATION resolved
-- [x] Complexity deviations documented (none required)
+- [ ] Initial Constitution Check: PASS
+- [ ] Post-Design Constitution Check: PASS
+- [ ] All NEEDS CLARIFICATION resolved
+- [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.1 - See `.specify/memory/constitution.md`*

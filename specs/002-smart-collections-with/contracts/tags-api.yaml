@@ -1,0 +1,211 @@
+openapi: 3.0.0
+info:
+  title: Tags API
+  version: 1.0.0
+  description: Manage photo tags (auto-generated and manual)
+
+paths:
+  /api/tags:
+    get:
+      summary: List all tags
+      parameters:
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [auto, manual, all]
+          description: Filter by tag source
+        - name: min_usage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: Minimum usage count
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+                  total:
+                    type: integer
+
+    post:
+      summary: Create manual tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '409':
+          description: Tag already exists
+
+  /api/tags/{tag_id}:
+    get:
+      summary: Get tag details
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tag details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagDetail'
+
+    delete:
+      summary: Delete tag (removes from all photos)
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag deleted
+        '404':
+          description: Tag not found
+
+  /api/photos/{photo_id}/tags:
+    get:
+      summary: Get all tags for a photo
+      parameters:
+        - name: photo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Photo tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PhotoTag'
+
+    post:
+      summary: Add tag to photo (manual)
+      parameters:
+        - name: photo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_name]
+              properties:
+                tag_name:
+                  type: string
+      responses:
+        '201':
+          description: Tag added
+        '409':
+          description: Photo already has this tag
+
+    delete:
+      summary: Remove tag from photo
+      parameters:
+        - name: photo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tag_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag removed
+
+components:
+  schemas:
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        source_type:
+          type: string
+          enum: [auto, manual, system]
+        usage_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    TagDetail:
+      allOf:
+        - $ref: '#/components/schemas/Tag'
+        - type: object
+          properties:
+            sample_photos:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  thumb_path:
+                    type: string
+                  confidence:
+                    type: number
+
+    PhotoTag:
+      type: object
+      properties:
+        tag_id:
+          type: integer
+        tag_name:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: [auto, manual]
+        created_at:
+          type: string
+          format: date-time
