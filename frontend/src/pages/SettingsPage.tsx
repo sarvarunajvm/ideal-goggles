@@ -32,8 +32,9 @@ export default function SettingsPage() {
   const [ocrLanguages, setOcrLanguages] = useState<string[]>([])
   const [faceSearchEnabled, setFaceSearchEnabled] = useState(false)
   const [semanticSearchEnabled, setSemanticSearchEnabled] = useState(true)
-  const [batchSize, setBatchSize] = useState(50)
-  const [thumbnailSize, setThumbnailSize] = useState('medium')
+  // Reserved for future config surface
+  // const [batchSize, setBatchSize] = useState(50)
+  // const [thumbnailSize, setThumbnailSize] = useState('medium')
 
   // Debounce timer ref
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)

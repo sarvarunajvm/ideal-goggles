@@ -37,7 +37,8 @@ export function IndexingStep() {
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  // Track elapsed onboarding time (reserved for future UX tweaks)
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [showBackgroundOption, setShowBackgroundOption] = useState(false);
 
   useEffect(() => {

@@ -75,8 +75,8 @@ export default function Navigation() {
       {/* Developer Mode Code Dialog */}
       <Dialog open={showCodePrompt} onOpenChange={() => {}}>
         <DialogContent
-          onInteractOutside={(e: Event) => e.preventDefault()}
-          onEscapeKeyDown={(e: KeyboardEvent) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
           className="sm:max-w-md"
         >
           <DialogHeader>
