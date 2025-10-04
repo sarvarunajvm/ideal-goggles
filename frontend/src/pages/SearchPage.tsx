@@ -443,7 +443,7 @@ export default function SearchPage() {
   })
 
   const handleSearch = async (query: string) => {
-    if (!query.trim() && searchMode !== 'image') return
+    if (!query.trim()) return
 
     setLoading(true)
     setError(null)
@@ -451,19 +451,11 @@ export default function SearchPage() {
     try {
       let results: SearchResponse
 
-      switch (searchMode) {
-        case 'text':
-          results = await apiService.searchPhotos({
-            q: query,
-            ...filters,
-          })
-          break
-        case 'semantic':
-          results = await apiService.semanticSearch(query, filters.limit)
-          break
-        default:
-          throw new Error('Invalid search mode')
-      }
+      // Image mode handled separately by CompactSearchBar
+      results =
+        searchMode === 'semantic'
+          ? await apiService.semanticSearch(query, filters.limit)
+          : await apiService.searchPhotos({ q: query, ...filters })
 
       setSearchResults(results)
     } catch (err) {
