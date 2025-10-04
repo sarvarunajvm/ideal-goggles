@@ -4,6 +4,7 @@ import { createWriteStream, readFileSync } from 'fs';
 import net from 'net';
 import { spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync } from 'fs';
+import { initializeAutoUpdater, checkForUpdatesManually } from './updater';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -315,6 +316,11 @@ function setupIpcHandlers(): void {
     return process.platform;
   });
 
+  // Check for updates manually
+  ipcMain.handle('check-for-updates', () => {
+    checkForUpdatesManually();
+  });
+
   // Get backend log file path
   ipcMain.handle('get-backend-log-path', () => {
     const userDataDir = app.getPath('userData');
@@ -404,6 +410,10 @@ app.whenReady().then(async () => {
     // Setup IPC handlers
     console.log('[App] Setting up IPC handlers...');
     setupIpcHandlers();
+
+    // Initialize auto-updater
+    console.log('[App] Initializing auto-updater...');
+    initializeAutoUpdater();
 
     // Expose the selected port to renderer via global shared object BEFORE creating the window,
     // so preload can read it and expose window.BACKEND_PORT properly.
