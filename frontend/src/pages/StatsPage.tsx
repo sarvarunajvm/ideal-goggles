@@ -9,18 +9,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import {
-  Image,
-  Users,
-  FileText,
-  Search,
-  Database,
-  HardDrive,
-  Activity,
-  TrendingUp,
-  Clock,
-  Loader2,
-} from 'lucide-react'
+import { Image, Users, FileText, Search, Database, Activity, TrendingUp, Loader2 } from 'lucide-react'
 
 interface IndexStats {
   database: {

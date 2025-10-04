@@ -56,8 +56,8 @@ export default function SettingsPage() {
       setOcrLanguages(configData.ocr_languages || [])
       setFaceSearchEnabled(configData.face_search_enabled || false)
       setSemanticSearchEnabled(configData.semantic_search_enabled !== false)
-      setBatchSize(configData.batch_size || 50)
-      setThumbnailSize(configData.thumbnail_size || 'medium')
+      // setBatchSize(configData.batch_size || 50)
+      // setThumbnailSize(configData.thumbnail_size || 'medium')
 
       initialLoadRef.current = false
     } catch (err) {

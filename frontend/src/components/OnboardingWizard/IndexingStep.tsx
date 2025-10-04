@@ -38,6 +38,7 @@ export function IndexingStep() {
   const [isComplete, setIsComplete] = useState(false);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   // Track elapsed onboarding time (reserved for future UX tweaks)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [showBackgroundOption, setShowBackgroundOption] = useState(false);
 

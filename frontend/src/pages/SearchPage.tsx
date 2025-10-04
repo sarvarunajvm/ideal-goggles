@@ -533,7 +533,7 @@ export default function SearchPage() {
       thumbnail_path: result.thumb_path ?? undefined,
       filename: result.filename,
       metadata: {
-        date_taken: result.shot_dt,
+        date_taken: result.shot_dt ?? undefined,
         // Additional metadata can be added when available
       },
       ocr_text: result.snippet,
