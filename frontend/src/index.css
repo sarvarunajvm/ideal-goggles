@@ -1,31 +1,52 @@
 @import "tailwindcss";
+@import "./lib/theme-colors.css";
 @plugin "tailwindcss-animate";
 
 @theme {
-  --color-border: hsl(20 5.9% 90%);
-  --color-input: hsl(20 5.9% 90%);
-  --color-ring: hsl(20 14.3% 4.1%);
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(20 14.3% 4.1%);
-  --color-primary: hsl(47.9 95.8% 53.1%);
-  --color-primary-foreground: hsl(26 83.3% 14.1%);
-  --color-secondary: hsl(60 4.8% 95.9%);
-  --color-secondary-foreground: hsl(24 9.8% 10%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(60 9.1% 97.8%);
-  --color-muted: hsl(60 4.8% 95.9%);
-  --color-muted-foreground: hsl(25 5.3% 44.7%);
-  --color-accent: hsl(60 4.8% 95.9%);
-  --color-accent-foreground: hsl(24 9.8% 10%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(20 14.3% 4.1%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(20 14.3% 4.1%);
-  --color-chart-1: hsl(12 76% 61%);
-  --color-chart-2: hsl(173 58% 39%);
-  --color-chart-3: hsl(197 37% 24%);
-  --color-chart-4: hsl(43 74% 66%);
-  --color-chart-5: hsl(27 87% 67%);
+  /* =================================================================
+     UNIFIED THEME MAPPING - Maps CSS variables to Tailwind
+     All colors reference the theme-colors.css file
+     ================================================================= */
+
+  /* Core Colors */
+  --color-background: var(--black-base);
+  --color-foreground: var(--text-cream);
+
+  /* Primary: Gold */
+  --color-primary: 45 100% 51%; /* Keep HSL format for Tailwind */
+  --color-primary-foreground: 0 0% 5%;
+
+  /* Secondary: Neon purple */
+  --color-secondary: 270 100% 60%;
+  --color-secondary-foreground: 0 0% 98%;
+
+  /* Accent: Neon cyan */
+  --color-accent: 180 100% 50%;
+  --color-accent-foreground: 0 0% 5%;
+
+  /* Destructive: Neon red */
+  --color-destructive: 0 100% 50%;
+  --color-destructive-foreground: 0 0% 98%;
+
+  /* Muted Colors */
+  --color-muted: var(--black-muted);
+  --color-muted-foreground: var(--text-muted);
+
+  /* UI Elements */
+  --color-border: hsl(45 15% 20%);
+  --color-input: var(--black-input);
+  --color-ring: var(--gold-primary);
+  --color-card: var(--black-card);
+  --color-card-foreground: var(--text-cream);
+  --color-popover: var(--black-card);
+  --color-popover-foreground: var(--text-cream);
+
+  /* Chart colors */
+  --color-chart-1: var(--gold-primary);
+  --color-chart-2: var(--neon-green);
+  --color-chart-3: var(--neon-purple);
+  --color-chart-4: var(--neon-cyan);
+  --color-chart-5: var(--neon-pink);
 
   --radius-lg: 0.65rem;
   --radius-md: calc(0.65rem - 2px);
@@ -35,31 +56,27 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
-.dark {
-  --color-background: hsl(20 14.3% 4.1%);
-  --color-foreground: hsl(60 9.1% 97.8%);
-  --color-card: hsl(20 14.3% 4.1%);
-  --color-card-foreground: hsl(60 9.1% 97.8%);
-  --color-popover: hsl(20 14.3% 4.1%);
-  --color-popover-foreground: hsl(60 9.1% 97.8%);
-  --color-primary: hsl(47.9 95.8% 53.1%);
-  --color-primary-foreground: hsl(26 83.3% 14.1%);
-  --color-secondary: hsl(12 6.5% 15.1%);
-  --color-secondary-foreground: hsl(60 9.1% 97.8%);
-  --color-muted: hsl(12 6.5% 15.1%);
-  --color-muted-foreground: hsl(24 5.4% 63.9%);
-  --color-accent: hsl(12 6.5% 15.1%);
-  --color-accent-foreground: hsl(60 9.1% 97.8%);
-  --color-destructive: hsl(0 62.8% 30.6%);
-  --color-destructive-foreground: hsl(60 9.1% 97.8%);
-  --color-border: hsl(12 6.5% 15.1%);
-  --color-input: hsl(12 6.5% 15.1%);
-  --color-ring: hsl(35.5 91.7% 32.9%);
-  --color-chart-1: hsl(220 70% 50%);
-  --color-chart-2: hsl(160 60% 45%);
-  --color-chart-3: hsl(30 80% 55%);
-  --color-chart-4: hsl(280 65% 60%);
-  --color-chart-5: hsl(340 75% 55%);
+/* Light theme override - Optional, kept for future use */
+.light {
+  --color-background: hsl(0 0% 98%); /* Off-white */
+  --color-foreground: hsl(0 0% 10%); /* Near black */
+  --color-border: hsl(45 30% 85%); /* Light gold border */
+  --color-input: hsl(45 20% 95%); /* Very light gold */
+  --color-ring: hsl(45 100% 51%); /* Gold focus */
+  --color-primary: 45 100% 45%; /* Slightly darker gold for light mode */
+  --color-primary-foreground: 0 0% 98%; /* White on gold */
+  --color-secondary: hsl(270 30% 90%); /* Light lavender */
+  --color-secondary-foreground: hsl(270 40% 30%); /* Dark purple */
+  --color-muted: hsl(45 10% 90%); /* Light warm gray */
+  --color-muted-foreground: hsl(0 0% 40%); /* Dark gray */
+  --color-accent: hsl(150 30% 85%); /* Light mint */
+  --color-accent-foreground: hsl(150 40% 25%); /* Dark mint */
+  --color-card: hsl(0 0% 100%); /* Pure white */
+  --color-card-foreground: hsl(0 0% 10%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(0 0% 10%);
+  --color-destructive: hsl(0 60% 60%); /* Brighter red for light mode */
+  --color-destructive-foreground: hsl(0 0% 98%);
 }
 
 @keyframes accordion-down {
@@ -96,4 +113,150 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force dark theme styles */
+html {
+  color-scheme: dark;
+}
+
+/* =================================================================
+   ELEMENT STYLES USING UNIFIED THEME
+   ================================================================= */
+
+/* Gold Primary Elements */
+.text-primary {
+  text-shadow: 0 0 20px rgba(var(--gold-rgb), 0.3);
+}
+
+.bg-primary {
+  background: var(--gradient-gold);
+  box-shadow: var(--shadow-gold);
+}
+
+.border-primary {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 10px rgba(var(--gold-rgb), 0.15);
+}
+
+/* Neon Button Styles */
+button.bg-primary,
+.btn-primary {
+  background: var(--gradient-gold);
+  box-shadow: var(--shadow-gold);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  transition: all 0.3s ease;
+}
+
+button.bg-primary:hover,
+.btn-primary:hover {
+  box-shadow: var(--shadow-gold-lg);
+  transform: translateY(-2px);
+}
+
+button.bg-primary:active,
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(var(--gold-rgb), 0.3);
+}
+
+/* Neon Secondary Elements */
+.bg-secondary {
+  background: var(--gradient-purple);
+  box-shadow: var(--shadow-purple);
+}
+
+/* Neon Accent Elements */
+.bg-accent {
+  background: var(--gradient-cyan);
+  box-shadow: var(--shadow-cyan);
+}
+
+/* Neon Success Elements */
+.bg-success {
+  background: var(--gradient-green);
+  box-shadow: var(--shadow-green);
+}
+
+/* Neon Destructive Elements */
+.bg-destructive {
+  background: var(--gradient-red);
+  box-shadow: var(--shadow-red);
+}
+
+/* Secondary/Outline button styles */
+button[class*="border-primary"],
+.btn-outline {
+  box-shadow:
+    0 2px 8px hsla(45, 100%, 51%, 0.15),
+    inset 0 0 20px hsla(45, 100%, 51%, 0.05);
+}
+
+button[class*="border-primary"]:hover,
+.btn-outline:hover {
+  box-shadow:
+    0 4px 15px hsla(45, 100%, 51%, 0.25),
+    inset 0 0 30px hsla(45, 100%, 51%, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Disabled state with gold tint */
+button:disabled {
+  background: linear-gradient(135deg, hsl(45 30% 25%), hsl(45 20% 20%)) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Custom scrollbar with gold accent */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(0 0% 10%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(45 50% 30%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(45 100% 51%);
+}
+
+/* Selection color */
+::selection {
+  background-color: hsla(45, 100%, 51%, 0.3);
+  color: hsl(48 20% 95%);
+}
+
+/* Focus visible override for gold */
+:focus-visible {
+  outline: 2px solid hsl(45 100% 51%);
+  outline-offset: 2px;
+}
+
+/* Gradient backgrounds for special elements */
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(45 100% 51%), hsl(45 85% 40%));
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 5%));
+}
+
+/* Subtle animations */
+@keyframes golden-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-golden-pulse {
+  animation: golden-pulse 2s ease-in-out infinite;
 }
