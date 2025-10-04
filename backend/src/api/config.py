@@ -16,6 +16,7 @@ class ConfigurationResponse(BaseModel):
     """Configuration response model."""
 
     roots: list[str] = Field(description="Configured root folders")
+    ocr_enabled: bool = Field(description="Whether OCR text extraction is enabled")
     ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
     semantic_search_enabled: bool = Field(
@@ -61,6 +62,7 @@ class UpdateRootsRequest(BaseModel):
 class UpdateConfigRequest(BaseModel):
     """Request model for updating configuration."""
 
+    ocr_enabled: bool | None = Field(None, description="Enable/disable OCR text extraction")
     ocr_languages: list[str] | None = Field(None, description="OCR languages to enable")
     face_search_enabled: bool | None = Field(
         None, description="Enable/disable face search"
@@ -110,6 +112,7 @@ async def get_configuration() -> ConfigurationResponse:
 
         return ConfigurationResponse(
             roots=config_data.get("roots", []),
+            ocr_enabled=config_data.get("ocr_enabled", False),  # Default to False
             ocr_languages=config_data.get("ocr_languages", ["eng"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
             semantic_search_enabled=config_data.get("semantic_search_enabled", True),
@@ -139,11 +142,40 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
     try:
         db_manager = get_database_manager()
 
+        # Get current roots before updating
+        config_data = _get_config_from_db(db_manager)
+        old_roots = config_data.get("roots", [])
+
         # Convert to absolute paths
         absolute_roots = []
         for root_path in request.roots:
             abs_path = str(Path(root_path).absolute())
             absolute_roots.append(abs_path)
+
+        # Find removed roots (paths that were in old but not in new)
+        removed_roots = [root for root in old_roots if root not in absolute_roots]
+
+        # Clear photos from removed roots
+        if removed_roots:
+            for removed_root in removed_roots:
+                # Delete photos from removed root paths
+                delete_query = """
+                    DELETE FROM photos
+                    WHERE file_path LIKE ? || '%'
+                """
+                db_manager.execute_update(delete_query, (removed_root,))
+
+                # Also delete associated faces
+                delete_faces_query = """
+                    DELETE FROM faces
+                    WHERE photo_id NOT IN (SELECT id FROM photos)
+                """
+                db_manager.execute_update(delete_faces_query)
+
+            # Reset indexing state if roots changed
+            from ..services.indexing_state import IndexingStateManager
+            state_manager = IndexingStateManager()
+            state_manager.reset_state()
 
         # Update configuration in database
         _update_config_in_db(db_manager, "roots", absolute_roots)
@@ -153,10 +185,13 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
 
         logger = logging.getLogger(__name__)
         logger.info(f"Root folders updated: {absolute_roots}")
+        if removed_roots:
+            logger.info(f"Removed roots and cleared associated photos: {removed_roots}")
 
         return {
             "message": "Root folders updated successfully",
             "roots": absolute_roots,
+            "removed_roots": removed_roots if removed_roots else [],
             "updated_at": datetime.now().isoformat(),
         }
 
@@ -183,6 +218,11 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
     try:
         db_manager = get_database_manager()
         updated_fields = []
+
+        # Update OCR enabled setting if provided
+        if request.ocr_enabled is not None:
+            _update_config_in_db(db_manager, "ocr_enabled", request.ocr_enabled)
+            updated_fields.append("ocr_enabled")
 
         # Update OCR languages if provided
         if request.ocr_languages is not None:
@@ -259,6 +299,7 @@ async def get_default_configuration() -> dict[str, Any]:
     """
     return {
         "roots": [],
+        "ocr_enabled": False,  # Default to off
         "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
         "semantic_search_enabled": True,
@@ -340,8 +381,10 @@ async def reset_configuration() -> dict[str, Any]:
         # Reset to default values
         default_config = {
             "roots": [],
+            "ocr_enabled": False,  # Default to off
             "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
+            "semantic_search_enabled": True,
             "thumbnail_size": "medium",
             "thumbnail_quality": 85,
         }
@@ -380,6 +423,8 @@ def _parse_json_setting(key: str, value: str) -> Any:
 
 def _parse_boolean_setting(value: str) -> bool:
     """Parse boolean setting."""
+    if value is None:
+        return False
     return value.lower() in ("true", "1", "yes")
 
 
@@ -395,9 +440,9 @@ def _parse_setting_value(key: str, value: str) -> Any:
     """Parse setting value based on key type."""
     if key in ["roots", "ocr_languages"]:
         return _parse_json_setting(key, value)
-    if key == "face_search_enabled":
+    if key in ["face_search_enabled", "ocr_enabled", "semantic_search_enabled"]:
         return _parse_boolean_setting(value)
-    if key == "thumbnail_quality":
+    if key in ["thumbnail_quality", "batch_size"]:
         return _parse_int_setting(key, value)
     if key == "thumbnail_size":
         return value
@@ -408,8 +453,11 @@ def _get_config_defaults() -> dict[str, Any]:
     """Get default configuration values."""
     return {
         "roots": [],
+        "ocr_enabled": False,  # Default to off
         "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
+        "semantic_search_enabled": True,
+        "batch_size": 50,
         "thumbnail_size": "medium",
         "thumbnail_quality": 85,
         "index_version": "1",
