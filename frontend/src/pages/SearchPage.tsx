@@ -195,16 +195,7 @@ function CompactSearchBar({
             >
               <Sparkles className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              type="button"
-              variant={searchMode === 'image' ? 'default' : 'ghost'}
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => onSearchModeChange('image')}
-              title="Similar Photos - Find visually similar images"
-            >
-              <ImageIcon className="h-3.5 w-3.5" />
-            </Button>
+            {/* Image search is handled via drag-drop/upload area */}
           </div>
 
           <Input
