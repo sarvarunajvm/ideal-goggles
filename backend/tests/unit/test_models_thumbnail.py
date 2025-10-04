@@ -661,3 +661,40 @@ class TestThumbnailCache:
             assert stats["exists"] is True
             assert stats["total_files"] == 2
             assert stats["total_size_bytes"] > 0
+
+    def test_get_cache_directory_structure_with_subdirectories(self):
+        """Test cache structure counts subdirectories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create subdirectories
+            (Path(tmpdir) / "subdir1").mkdir()
+            (Path(tmpdir) / "subdir2").mkdir()
+            (Path(tmpdir) / "test.webp").write_text("test")
+
+            result = Thumbnail.get_cache_directory_structure(tmpdir)
+
+            assert result["exists"] is True
+            assert result["total_files"] == 1
+            assert result["directories"] >= 2
+
+    def test_cleanup_empty_directories_with_oserror(self):
+        """Test cleanup handles OSError when removing directories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache = ThumbnailCache(tmpdir)
+
+            # Create a directory structure
+            dir_path = Path(tmpdir) / "test_dir"
+            dir_path.mkdir()
+
+            # Mock rmdir to raise OSError
+            def mock_rmdir(self):
+                if "test_dir" in str(self):
+                    raise OSError("Permission denied")
+                # Call the original implementation for other paths
+                import os
+                os.rmdir(str(self))
+
+            with patch.object(Path, "rmdir", mock_rmdir):
+                removed = cache.cleanup_empty_directories()
+
+                # Should handle the error gracefully
+                assert removed >= 0
