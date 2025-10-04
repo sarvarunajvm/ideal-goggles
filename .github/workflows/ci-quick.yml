@@ -9,6 +9,11 @@
 
 name: Quick CI
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 on:
   # On push to main branches (needed for release workflow CI checks)
   push:
@@ -292,6 +297,10 @@ jobs:
     name: Comment Test Results on PR
     runs-on: ubuntu-latest
     needs: [quality-checks, backend-tests, frontend-tests, p0-e2e-tests]
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     if: |
       always() &&
       github.event_name == 'pull_request' &&
