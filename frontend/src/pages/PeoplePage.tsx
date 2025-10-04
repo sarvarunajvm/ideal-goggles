@@ -172,13 +172,13 @@ export default function PeoplePage() {
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">People</h1>
+            <h1 className="text-3xl font-bold text-foreground">People</h1>
             <Button onClick={openAddForm}>➕ Add Person</Button>
           </div>
 
           {/* Search */}
           <div className="mb-6 flex items-center gap-3">
-            <SearchIcon className="w-4 h-4 text-gray-500" />
+            <SearchIcon className="w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search people by name"
               value={search}
@@ -233,7 +233,7 @@ export default function PeoplePage() {
                 {error && (
                   <div
                     role="alert"
-                    className="mt-3 flex items-center text-red-700 text-sm"
+                    className="mt-3 flex items-center text-destructive text-sm"
                   >
                     <AlertCircle className="w-4 h-4 mr-2" />
                     {error}
@@ -283,14 +283,14 @@ export default function PeoplePage() {
               <Card
                 key={person.id}
                 data-testid="person-item"
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer border-border/50 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all duration-200 hover:-translate-y-1"
                 onClick={() => setSelectedId(person.id)}
               >
                 <CardHeader className="text-center">
-                  <div className="flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4">
+                  <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30 rounded-full mx-auto mb-4">
                     <span className="text-2xl">👤</span>
                   </div>
-                  <CardTitle className="text-lg">{person.name}</CardTitle>
+                  <CardTitle className="text-lg text-foreground">{person.name}</CardTitle>
                   <CardDescription>
                     <span data-testid="photo-count">
                       {person.photos.length} sample photo
@@ -484,7 +484,7 @@ export default function PeoplePage() {
           {toast && (
             <div
               role="alert"
-              className="fixed bottom-4 right-4 bg-black text-white px-4 py-2 rounded shadow"
+              className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-yellow-300 text-black font-semibold px-6 py-3 rounded-full shadow-lg shadow-primary/50"
             >
               {toast.kind}
             </div>
