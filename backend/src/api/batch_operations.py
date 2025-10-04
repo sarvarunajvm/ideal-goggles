@@ -4,15 +4,15 @@ Batch operations API endpoints.
 Handles batch export, delete, and tag operations on multiple photos.
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
-from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel, Field
 
 from src.workers.batch_worker import (
-    process_batch_export,
     process_batch_delete,
+    process_batch_export,
     process_batch_tag,
 )
 
@@ -25,25 +25,34 @@ _jobs = {}
 class BatchExportRequest(BaseModel):
     """Request to export multiple photos"""
 
-    photo_ids: List[str] = Field(..., description="List of photo IDs to export")
+    photo_ids: list[str] = Field(..., description="List of photo IDs to export")
     destination: str = Field(..., description="Destination folder path")
-    format: Optional[str] = Field("original", description="Export format (original, jpg, png)")
-    max_dimension: Optional[int] = Field(None, description="Maximum dimension for resizing")
+    format: str | None = Field(
+        default="original", description="Export format (original, jpg, png)"
+    )
+    max_dimension: int | None = Field(
+        default=None, description="Maximum dimension for resizing"
+    )
 
 
 class BatchDeleteRequest(BaseModel):
     """Request to delete multiple photos"""
 
-    photo_ids: List[str] = Field(..., description="List of photo IDs to delete")
-    permanent: bool = Field(False, description="Permanently delete (true) or move to trash (false)")
+    photo_ids: list[str] = Field(..., description="List of photo IDs to delete")
+    permanent: bool = Field(
+        default=False,
+        description="Permanently delete (true) or move to trash (false)",
+    )
 
 
 class BatchTagRequest(BaseModel):
     """Request to tag multiple photos"""
 
-    photo_ids: List[str] = Field(..., description="List of photo IDs to tag")
-    tags: List[str] = Field(..., description="Tags to add")
-    operation: str = Field("add", description="Operation: add, remove, or replace")
+    photo_ids: list[str] = Field(..., description="List of photo IDs to tag")
+    tags: list[str] = Field(..., description="Tags to add")
+    operation: str = Field(
+        default="add", description="Operation: add, remove, or replace"
+    )
 
 
 class BatchJobStatus(BaseModel):
@@ -56,8 +65,8 @@ class BatchJobStatus(BaseModel):
     processed_items: int
     failed_items: int
     created_at: str
-    completed_at: Optional[str] = None
-    error: Optional[str] = None
+    completed_at: str | None = None
+    error: str | None = None
 
 
 @router.post("/export", response_model=dict)
@@ -75,7 +84,7 @@ async def start_batch_export(request: BatchExportRequest, background_tasks: Back
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -112,7 +121,7 @@ async def start_batch_delete(request: BatchDeleteRequest, background_tasks: Back
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -152,7 +161,7 @@ async def start_batch_tag(request: BatchTagRequest, background_tasks: Background
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -184,7 +193,7 @@ async def get_batch_job_status(job_id: str):
     return BatchJobStatus(**job)
 
 
-@router.get("/jobs", response_model=List[BatchJobStatus])
+@router.get("/jobs", response_model=list[BatchJobStatus])
 async def list_batch_jobs(limit: int = 50):
     """
     List recent batch jobs.
@@ -207,6 +216,6 @@ async def cancel_batch_job(job_id: str):
         raise HTTPException(status_code=400, detail="Cannot cancel completed job")
 
     job["status"] = "cancelled"
-    job["completed_at"] = datetime.utcnow().isoformat()
+    job["completed_at"] = datetime.now(timezone.utc).isoformat()
 
     return {"job_id": job_id, "status": "cancelled"}
