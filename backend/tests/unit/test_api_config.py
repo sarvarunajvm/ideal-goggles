@@ -60,6 +60,7 @@ class TestConfigurationResponse:
         """Test creating ConfigurationResponse."""
         response = ConfigurationResponse(
             roots=["/path/to/photos"],
+            ocr_enabled=False,
             ocr_languages=["eng", "tam"],
             face_search_enabled=True,
             semantic_search_enabled=True,
@@ -69,6 +70,7 @@ class TestConfigurationResponse:
         )
 
         assert response.roots == ["/path/to/photos"]
+        assert response.ocr_enabled is False
         assert response.ocr_languages == ["eng", "tam"]
         assert response.face_search_enabled is True
         assert response.semantic_search_enabled is True
