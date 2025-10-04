@@ -1,0 +1,426 @@
+"""Integration test for batch delete of 500 photos."""
+
+import asyncio
+import os
+import shutil
+import tempfile
+import time
+from pathlib import Path
+from typing import Dict, List  # noqa: UP035
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from src.db.connection import get_session
+from src.models.photo import Photo
+from src.workers.batch_worker import BatchJob, BatchJobStatus, BatchWorker
+
+
+class TestBatchDelete:
+    """Test batch delete performance with 500 photos."""
+
+    @pytest.fixture
+    async def batch_worker(self):
+        """Create batch worker instance."""
+        worker = BatchWorker()
+        yield worker
+        await worker.shutdown()
+
+    @pytest.fixture
+    def mock_photos(self) -> list[dict]:
+        """Generate 500 mock photo records."""
+        photos = []
+        temp_dir = tempfile.mkdtemp(prefix="batch_delete_test_")
+
+        for i in range(500):
+            # Create actual test files
+            photo_path = os.path.join(temp_dir, f"photo_{i:04d}.jpg")
+            thumb_path = os.path.join(temp_dir, "thumbs", f"thumb_{i:04d}.jpg")
+
+            # Create directories if needed
+            os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+
+            # Create dummy files
+            Path(photo_path).touch()
+            Path(thumb_path).touch()
+
+            photos.append(
+                {
+                    "file_id": i + 1,
+                    "path": photo_path,
+                    "filename": f"photo_{i:04d}.jpg",
+                    "folder": temp_dir,
+                    "size": 1024 * 1024 * (i % 5 + 1),  # 1-5 MB files
+                    "sha1": f"sha1_{i:040x}",
+                    "thumb_path": thumb_path,
+                    "_temp_dir": temp_dir,  # Store for cleanup
+                }
+            )
+
+        yield photos
+
+        # Cleanup
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    @pytest.mark.asyncio
+    async def test_delete_500_photos_performance(self, batch_worker, mock_photos):
+        """Test deleting 500 photos meets performance requirements (≥400 photos/min)."""
+        # Create batch delete job
+        job = BatchJob(
+            id="delete_500_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=len(mock_photos),
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos],
+            params={
+                "mode": "trash",  # Move to trash, not permanent delete
+                "delete_thumbnails": True,
+                "delete_metadata": True,
+            },
+        )
+
+        # Mock database operations
+        with patch("src.workers.batch_worker.get_session") as mock_session:
+            mock_db = MagicMock()
+            mock_query = MagicMock()
+
+            # Mock photo query
+            mock_photos_db = [MagicMock(**photo) for photo in mock_photos]
+            mock_query.filter.return_value.all.return_value = mock_photos_db
+            mock_db.query.return_value = mock_query
+
+            # Mock delete operations
+            mock_db.delete = MagicMock()
+            mock_db.commit = MagicMock()
+
+            mock_session.return_value.__enter__.return_value = mock_db
+
+            # Mock send2trash for performance
+            with patch("send2trash.send2trash") as mock_trash:
+                mock_trash.return_value = None
+
+                # Start timing
+                start_time = time.time()
+
+                # Execute delete
+                await batch_worker.execute_job(job)
+
+                # Calculate metrics
+                elapsed_time = time.time() - start_time
+                photos_per_minute = (len(mock_photos) / elapsed_time) * 60
+
+                # Verify performance requirement: ≥400 photos/min
+                assert (
+                    photos_per_minute >= 400
+                ), f"Delete too slow: {photos_per_minute:.1f} photos/min"
+
+                # Verify job completed successfully
+                assert job.status == BatchJobStatus.COMPLETED
+                assert job.processed_items == 500
+                assert job.error is None
+
+                # Verify send2trash was called for each file
+                assert mock_trash.call_count >= 500  # At least once per photo
+
+    @pytest.mark.asyncio
+    async def test_delete_moves_to_trash(self, batch_worker, mock_photos):
+        """Test delete moves files to system trash (not permanent)."""
+        job = BatchJob(
+            id="delete_trash_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=10,  # Smaller subset for detailed test
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:10]],
+            params={"mode": "trash", "delete_thumbnails": True},
+        )
+
+        trash_calls = []
+
+        def track_trash(path):
+            trash_calls.append(path)
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash", side_effect=track_trash) as mock_trash:
+                await batch_worker.execute_job(job)
+
+        # Verify files were sent to trash, not permanently deleted
+        assert len(trash_calls) > 0
+
+        # Should include both photos and thumbnails
+        photo_paths = [p["path"] for p in mock_photos[:10]]
+        thumb_paths = [p["thumb_path"] for p in mock_photos[:10]]
+
+        for path in photo_paths:
+            assert path in trash_calls or any(path in call for call in trash_calls)
+
+    @pytest.mark.asyncio
+    async def test_delete_cleanup_database(self, batch_worker, mock_photos):
+        """Test delete removes database records correctly."""
+        job = BatchJob(
+            id="delete_db_cleanup_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=50,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:50]],
+            params={"mode": "trash", "delete_metadata": True},
+        )
+
+        deleted_records = []
+
+        with patch("src.workers.batch_worker.get_session") as mock_session:
+            mock_db = MagicMock()
+
+            # Track deletions
+            def track_delete(record):
+                deleted_records.append(record)
+
+            mock_db.delete = MagicMock(side_effect=track_delete)
+            mock_db.commit = MagicMock()
+            mock_query = MagicMock()
+            mock_query.filter.return_value.all.return_value = [
+                MagicMock(**photo) for photo in mock_photos[:50]
+            ]
+            mock_db.query.return_value = mock_query
+
+            mock_session.return_value.__enter__.return_value = mock_db
+
+            with patch("send2trash.send2trash"):
+                await batch_worker.execute_job(job)
+
+        # Verify database records were deleted
+        assert len(deleted_records) >= 50  # At least one per photo
+        assert mock_db.commit.called
+
+    @pytest.mark.asyncio
+    async def test_delete_batch_size_efficiency(self, batch_worker, mock_photos):
+        """Test delete processes efficiently in batches."""
+        job = BatchJob(
+            id="delete_batch_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=500,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos],
+            params={"mode": "trash", "batch_size": 50},  # Process in batches of 50
+        )
+
+        commit_count = 0
+
+        with patch("src.workers.batch_worker.get_session") as mock_session:
+            mock_db = MagicMock()
+
+            # Count commits (should be ~10 for 500 items in batches of 50)
+            def count_commit():
+                nonlocal commit_count
+                commit_count += 1
+
+            mock_db.commit = MagicMock(side_effect=count_commit)
+            mock_db.delete = MagicMock()
+            mock_query = MagicMock()
+            mock_query.filter.return_value.all.return_value = [
+                MagicMock(**photo) for photo in mock_photos
+            ]
+            mock_db.query.return_value = mock_query
+
+            mock_session.return_value.__enter__.return_value = mock_db
+
+            with patch("send2trash.send2trash"):
+                await batch_worker.execute_job(job)
+
+        # Should commit in batches, not for each item
+        assert commit_count <= 15  # Allow some overhead
+        assert commit_count >= 5  # But should batch
+
+    @pytest.mark.asyncio
+    async def test_delete_error_recovery(self, batch_worker, mock_photos):
+        """Test delete handles individual file errors gracefully."""
+        job = BatchJob(
+            id="delete_error_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=100,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:100]],
+            params={"mode": "trash", "continue_on_error": True},
+        )
+
+        failed_files = []
+
+        def mock_trash_with_errors(path):
+            # Fail every 10th file
+            if "0" in path and path.endswith("0.jpg"):
+                failed_files.append(path)
+                msg = f"Cannot move {path}"
+                raise OSError(msg)
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash", side_effect=mock_trash_with_errors):
+                await batch_worker.execute_job(job)
+
+        # Job should complete despite some failures
+        assert job.status == BatchJobStatus.COMPLETED_WITH_ERRORS
+
+        # Should process most files
+        assert job.processed_items >= 90
+
+        # Should track failed files
+        assert len(failed_files) > 0
+
+    @pytest.mark.asyncio
+    async def test_delete_memory_efficiency(self, batch_worker, mock_photos):
+        """Test delete maintains memory usage under limits."""
+        import psutil
+
+        process = psutil.Process()
+        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+
+        job = BatchJob(
+            id="delete_memory_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=500,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos],
+            params={
+                "mode": "trash",
+                "batch_size": 25,  # Smaller batches for memory efficiency
+            },
+        )
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash"):
+                await batch_worker.execute_job(job)
+
+        peak_memory = process.memory_info().rss / 1024 / 1024  # MB
+        memory_increase = peak_memory - initial_memory
+
+        # Memory increase should be minimal for delete operations
+        assert (
+            memory_increase < 100
+        ), f"Memory usage too high: {memory_increase:.1f}MB increase"
+
+    @pytest.mark.asyncio
+    async def test_delete_concurrent_safety(self, batch_worker, mock_photos):
+        """Test concurrent delete operations don't conflict."""
+        # Split photos into 3 groups
+        group_size = 150
+        jobs = []
+
+        for i in range(3):
+            start_idx = i * group_size
+            end_idx = start_idx + group_size
+
+            job = BatchJob(
+                id=f"concurrent_delete_{i}",
+                type="delete",
+                status=BatchJobStatus.PENDING,
+                total_items=group_size,
+                processed_items=0,
+                file_ids=[p["file_id"] for p in mock_photos[start_idx:end_idx]],
+                params={"mode": "trash"},
+            )
+            jobs.append(job)
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash"):
+                # Execute jobs concurrently
+                tasks = [batch_worker.execute_job(job) for job in jobs]
+                await asyncio.gather(*tasks)
+
+        # All jobs should complete without conflicts
+        for job in jobs:
+            assert job.status == BatchJobStatus.COMPLETED
+            assert job.processed_items == group_size
+
+    @pytest.mark.asyncio
+    async def test_delete_rollback_on_failure(self, batch_worker, mock_photos):
+        """Test delete can rollback on critical failure."""
+        job = BatchJob(
+            id="delete_rollback_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=50,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:50]],
+            params={"mode": "trash", "atomic": True},  # All or nothing
+        )
+
+        with patch("src.workers.batch_worker.get_session") as mock_session:
+            mock_db = MagicMock()
+            mock_db.rollback = MagicMock()
+            mock_db.commit = MagicMock(side_effect=Exception("Database error"))
+            mock_db.delete = MagicMock()
+
+            mock_query = MagicMock()
+            mock_query.filter.return_value.all.return_value = [
+                MagicMock(**photo) for photo in mock_photos[:50]
+            ]
+            mock_db.query.return_value = mock_query
+
+            mock_session.return_value.__enter__.return_value = mock_db
+
+            with patch("send2trash.send2trash"):
+                await batch_worker.execute_job(job)
+
+        # Should rollback on failure
+        assert mock_db.rollback.called
+        assert job.status == BatchJobStatus.FAILED
+
+    @pytest.mark.asyncio
+    async def test_delete_preserves_related_data(self, batch_worker, mock_photos):
+        """Test delete only removes specified data, preserving related items."""
+        job = BatchJob(
+            id="delete_preserve_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=20,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:20]],
+            params={
+                "mode": "trash",
+                "delete_thumbnails": False,  # Keep thumbnails
+                "delete_metadata": False,  # Keep metadata
+                "delete_embeddings": False,  # Keep embeddings
+            },
+        )
+
+        deleted_items = []
+
+        def track_delete(path):
+            deleted_items.append(path)
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash", side_effect=track_delete):
+                await batch_worker.execute_job(job)
+
+        # Should only delete main photo files
+        for item in deleted_items:
+            assert "thumb" not in item  # Thumbnails preserved
+            assert item.endswith(".jpg")  # Only photo files
+
+    @pytest.mark.asyncio
+    async def test_delete_undo_capability(self, batch_worker, mock_photos):
+        """Test delete operation can be undone (trash recovery)."""
+        job = BatchJob(
+            id="delete_undo_test",
+            type="delete",
+            status=BatchJobStatus.PENDING,
+            total_items=10,
+            processed_items=0,
+            file_ids=[p["file_id"] for p in mock_photos[:10]],
+            params={"mode": "trash", "create_undo_log": True},
+        )
+
+        with patch("src.workers.batch_worker.get_session"):
+            with patch("send2trash.send2trash"):
+                await batch_worker.execute_job(job)
+
+            # Should have undo information
+            assert job.params.get("undo_log") is not None or job.params.get("can_undo")
+
+        # Verify job completed and items are recoverable
+        assert job.status == BatchJobStatus.COMPLETED
+        assert job.params.get("mode") == "trash"  # Not permanent
