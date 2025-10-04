@@ -78,16 +78,17 @@ export default function StatusBar() {
   }
 
   // Map connection state to badge variant
-  const getConnectionBadgeVariant = () => {
-    switch (healthStatus) {
-      case 'connected':
-        return 'secondary'
-      case 'disconnected':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
+  // Using icon + text; badge variant helper intentionally unused
+  // const getConnectionBadgeVariant = () => {
+  //   switch (healthStatus) {
+  //     case 'connected':
+  //       return 'secondary'
+  //     case 'disconnected':
+  //       return 'destructive'
+  //     default:
+  //       return 'outline'
+  //   }
+  // }
 
   const getConnectionText = () => {
     switch (healthStatus) {
