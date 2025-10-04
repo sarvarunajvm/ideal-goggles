@@ -248,7 +248,6 @@ class TestFaceDetection:
         worker.face_app = mock_face_app
 
         with mock_cv2():
-
             detections = worker._detect_faces_sync("/test/photo.jpg")
 
             assert len(detections) == 1
@@ -272,7 +271,6 @@ class TestFaceDetection:
         worker.face_app = mock_face_app
 
         with mock_cv2():
-
             detections = worker._detect_faces_sync("/test/photo.jpg")
 
             # Should be filtered out due to low confidence
@@ -374,7 +372,6 @@ class TestBatchProcessing:
         ]
 
         with mock_cv2():
-
             results = await worker.process_batch(photos)
 
             assert len(results) == 3
@@ -424,7 +421,6 @@ class TestPersonEnrollment:
         ]
 
         with mock_cv2():
-
             person = await worker.enroll_person("John Doe", photos)
 
             assert person is not None
@@ -464,7 +460,6 @@ class TestPersonEnrollment:
         ]
 
         with mock_cv2():
-
             with pytest.raises(ValueError, match="No suitable faces found"):
                 await worker.enroll_person("John Doe", photos)
 
@@ -504,7 +499,6 @@ class TestPersonEnrollment:
         ]
 
         with mock_cv2():
-
             person = await worker.enroll_person("John Doe", photos)
 
             # Should take the highest confidence face
@@ -548,7 +542,6 @@ class TestUpdatePersonEnrollment:
         original_sample_count = sample_person.sample_count
 
         with mock_cv2():
-
             updated_person = await worker.update_person_enrollment(
                 sample_person, photos
             )
@@ -581,7 +574,6 @@ class TestUpdatePersonEnrollment:
         original_sample_count = sample_person.sample_count
 
         with mock_cv2():
-
             updated_person = await worker.update_person_enrollment(
                 sample_person, photos
             )

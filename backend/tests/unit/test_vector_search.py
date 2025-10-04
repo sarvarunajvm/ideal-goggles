@@ -34,7 +34,6 @@ class TestFAISSVectorSearchService:
             patch("faiss.write_index") as mock_write,
             patch("faiss.read_index") as mock_read,
         ):
-
             # Create mock index instances
             mock_index = Mock()
             mock_index.ntotal = 0

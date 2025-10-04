@@ -521,7 +521,7 @@ class TestSmartOCRWorker:
                             mock_result = Mock()
                             mock_result.returncode = 0
                             mock_result.stdout = (
-                                f"level\tconf\ttext\n5\t{int(conf*100)}\tTest\n"
+                                f"level\tconf\ttext\n5\t{int(conf * 100)}\tTest\n"
                             )
                             results.append(mock_result)
 

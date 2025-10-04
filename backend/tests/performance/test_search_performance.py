@@ -128,12 +128,12 @@ class TestTextSearchPerformance(PerformanceBenchmark):
                 self.results[f"filename_search_{len(query)}_chars"] = results
 
                 # Performance assertions
-                assert (
-                    results["mean"] < 0.05
-                ), f"Filename search too slow: {results['mean']:.3f}s"
-                assert (
-                    results["p95"] < 0.1
-                ), f"95th percentile too slow: {results['p95']:.3f}s"
+                assert results["mean"] < 0.05, (
+                    f"Filename search too slow: {results['mean']:.3f}s"
+                )
+                assert results["p95"] < 0.1, (
+                    f"95th percentile too slow: {results['p95']:.3f}s"
+                )
 
     def _mock_filename_search(self, query: str):
         """Mock filename search for performance testing."""
@@ -163,9 +163,9 @@ class TestTextSearchPerformance(PerformanceBenchmark):
 
             # Performance assertions
             assert results["mean"] < 0.2, f"FTS search too slow: {results['mean']:.3f}s"
-            assert (
-                results["p95"] < 0.5
-            ), f"95th percentile too slow: {results['p95']:.3f}s"
+            assert results["p95"] < 0.5, (
+                f"95th percentile too slow: {results['p95']:.3f}s"
+            )
 
     def _mock_fts_search(self, query: str):
         """Mock full-text search for performance testing."""
@@ -199,12 +199,12 @@ class TestTextSearchPerformance(PerformanceBenchmark):
             self.results[f"combined_search_case_{i}"] = results
 
             # Performance assertions
-            assert (
-                results["mean"] < 0.5
-            ), f"Combined search too slow: {results['mean']:.3f}s"
-            assert (
-                results["p95"] < 1.0
-            ), f"95th percentile too slow: {results['p95']:.3f}s"
+            assert results["mean"] < 0.5, (
+                f"Combined search too slow: {results['mean']:.3f}s"
+            )
+            assert results["p95"] < 1.0, (
+                f"95th percentile too slow: {results['p95']:.3f}s"
+            )
 
     def _mock_combined_search(
         self, query: str, from_date=None, to_date=None, folder=None
@@ -247,9 +247,9 @@ class TestTextSearchPerformance(PerformanceBenchmark):
         }
 
         # Performance assertions
-        assert (
-            self.results["concurrent_search"]["queries_per_second"] > 50
-        ), "Concurrent search throughput too low"
+        assert self.results["concurrent_search"]["queries_per_second"] > 50, (
+            "Concurrent search throughput too low"
+        )
 
 
 @pytest.mark.performance
@@ -293,9 +293,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
         self.results["single_vector_addition"] = results
 
         # Performance assertions
-        assert (
-            results["mean"] < 0.01
-        ), f"Vector addition too slow: {results['mean']:.4f}s"
+        assert results["mean"] < 0.01, (
+            f"Vector addition too slow: {results['mean']:.4f}s"
+        )
 
     def _add_single_vector(self, vectors: list[np.ndarray]):
         """Add a single vector for performance testing."""
@@ -327,9 +327,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
             vectors_per_second = self.results[f"batch_addition_{batch_size}"][
                 "vectors_per_second"
             ]
-            assert (
-                vectors_per_second > 100
-            ), f"Batch addition too slow: {vectors_per_second:.1f} vectors/s"
+            assert vectors_per_second > 100, (
+                f"Batch addition too slow: {vectors_per_second:.1f} vectors/s"
+            )
 
     def test_similarity_search_performance(self):
         """Benchmark similarity search performance."""
@@ -352,9 +352,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
             self.results[f"similarity_search_k{k}"] = results
 
             # Performance assertions
-            assert (
-                results["mean"] < 0.1
-            ), f"Similarity search k={k} too slow: {results['mean']:.3f}s"
+            assert results["mean"] < 0.1, (
+                f"Similarity search k={k} too slow: {results['mean']:.3f}s"
+            )
 
     def test_index_size_scaling(self):
         """Test performance scaling with index size."""
@@ -389,9 +389,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
 
             # Performance should not degrade significantly with size
             mean_search_time = statistics.mean(search_times)
-            assert (
-                mean_search_time < 0.2
-            ), f"Search time degraded with size {size}: {mean_search_time:.3f}s"
+            assert mean_search_time < 0.2, (
+                f"Search time degraded with size {size}: {mean_search_time:.3f}s"
+            )
 
     def test_concurrent_search_performance(self):
         """Benchmark concurrent similarity search."""
@@ -425,9 +425,9 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
         searches_per_second = self.results["concurrent_vector_search"][
             "searches_per_second"
         ]
-        assert (
-            searches_per_second > 10
-        ), f"Concurrent search throughput too low: {searches_per_second:.1f}/s"
+        assert searches_per_second > 10, (
+            f"Concurrent search throughput too low: {searches_per_second:.1f}/s"
+        )
 
     def teardown_method(self):
         """Clean up test fixtures."""
@@ -484,9 +484,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
             self.results[f"fusion_case_{i}"] = results
 
             # Performance assertions
-            assert (
-                results["mean"] < 0.1
-            ), f"Fusion case {i} too slow: {results['mean']:.3f}s"
+            assert results["mean"] < 0.1, (
+                f"Fusion case {i} too slow: {results['mean']:.3f}s"
+            )
 
     def test_large_scale_fusion(self):
         """Test fusion performance with large result sets."""
@@ -511,9 +511,9 @@ class TestRankFusionPerformance(PerformanceBenchmark):
         self.results["large_scale_fusion"] = results
 
         # Performance assertions
-        assert (
-            results["mean"] < 1.0
-        ), f"Large scale fusion too slow: {results['mean']:.3f}s"
+        assert results["mean"] < 1.0, (
+            f"Large scale fusion too slow: {results['mean']:.3f}s"
+        )
         assert results["p95"] < 2.0, "Large scale fusion 95th percentile too slow"
 
     def test_reciprocal_rank_fusion_performance(self):
