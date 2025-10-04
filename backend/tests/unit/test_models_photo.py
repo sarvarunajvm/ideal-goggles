@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.models.photo import Photo
+from src.models.photo import Photo, PhotoFilter, PhotoState
 
 
 class TestPhotoModel:
@@ -328,6 +328,13 @@ class TestPhotoModel:
 
         assert calculated_hash == expected_hash
 
+    def test_calculate_sha256_hash_file_error(self):
+        """Test SHA-256 hash calculation handles file errors."""
+        with patch("builtins.open", side_effect=IOError("File not found")):
+            calculated_hash = Photo._calculate_sha1("/test/nonexistent.jpg")
+
+        assert calculated_hash == ""
+
     def test_file_exists(self):
         """Test file_exists method."""
         photo = Photo(path="/test/photo.jpg")
@@ -375,6 +382,207 @@ class TestPhotoModel:
             sha1="short",  # Invalid hash
         )
         assert invalid_photo.is_valid() is False
+
+    def test_from_db_row(self):
+        """Test creating Photo from database row."""
+        row = {
+            "id": 1,
+            "path": "/test/photo.jpg",
+            "folder": "/test",
+            "filename": "photo.jpg",
+            "ext": ".jpg",
+            "size": 2048,
+            "created_ts": 1640995200.0,
+            "modified_ts": 1640995300.0,
+            "sha1": "a" * 40,
+            "phash": "b" * 16,
+            "indexed_at": 1640995400.0,
+            "index_version": 2,
+        }
+
+        photo = Photo.from_db_row(row)
+
+        assert photo.id == 1
+        assert photo.path == "/test/photo.jpg"
+        assert photo.folder == "/test"
+        assert photo.filename == "photo.jpg"
+        assert photo.ext == ".jpg"
+        assert photo.size == 2048
+        assert photo.created_ts == 1640995200.0
+        assert photo.modified_ts == 1640995300.0
+        assert photo.sha1 == "a" * 40
+        assert photo.phash == "b" * 16
+        assert photo.indexed_at == 1640995400.0
+        assert photo.index_version == 2
+
+    def test_calculate_perceptual_hash_success(self):
+        """Test calculating perceptual hash successfully."""
+        photo = Photo(path="/test/photo.jpg")
+
+        # Create a mock image
+        with patch("src.models.photo.Image.open") as mock_open:
+            mock_img = Mock()
+            mock_img.mode = "RGB"
+            mock_img.__enter__ = Mock(return_value=mock_img)
+            mock_img.__exit__ = Mock(return_value=False)
+            mock_open.return_value = mock_img
+
+            with patch("src.models.photo.imagehash.average_hash") as mock_hash:
+                mock_hash.return_value = "1234567890abcdef"
+                result = photo.calculate_perceptual_hash()
+
+                assert result == "1234567890abcdef"
+                mock_hash.assert_called_once_with(mock_img, hash_size=8)
+
+    def test_calculate_perceptual_hash_convert_mode(self):
+        """Test perceptual hash with image mode conversion."""
+        photo = Photo(path="/test/photo.jpg")
+
+        with patch("src.models.photo.Image.open") as mock_open:
+            mock_img = Mock()
+            mock_img.mode = "CMYK"  # Non-RGB mode
+            mock_converted = Mock()
+            mock_converted.mode = "RGB"
+            mock_img.convert.return_value = mock_converted
+            mock_img.__enter__ = Mock(return_value=mock_img)
+            mock_img.__exit__ = Mock(return_value=False)
+            mock_open.return_value = mock_img
+
+            with patch("src.models.photo.imagehash.average_hash") as mock_hash:
+                mock_hash.return_value = "abcdef1234567890"
+                result = photo.calculate_perceptual_hash()
+
+                assert result == "abcdef1234567890"
+                mock_img.convert.assert_called_once_with("RGB")
+                # Hash should be called on converted image
+                mock_hash.assert_called_once_with(mock_converted, hash_size=8)
+
+    def test_calculate_perceptual_hash_error(self):
+        """Test perceptual hash handles errors gracefully."""
+        photo = Photo(path="/test/photo.jpg")
+
+        with patch("src.models.photo.Image.open") as mock_open:
+            mock_open.side_effect = Exception("Image loading failed")
+            result = photo.calculate_perceptual_hash()
+
+            assert result is None
+
+    def test_calculate_perceptual_hash_import_error(self):
+        """Test perceptual hash handles missing dependencies."""
+        photo = Photo(path="/test/photo.jpg")
+
+        # Test when imagehash can't be imported
+        with patch.dict("sys.modules", {"imagehash": None}):
+            result = photo.calculate_perceptual_hash()
+            assert result is None
+
+
+class TestPhotoState:
+    """Test PhotoState constants."""
+
+    def test_photo_state_constants(self):
+        """Test that PhotoState has expected constants."""
+        assert PhotoState.DISCOVERED == "discovered"
+        assert PhotoState.PROCESSING == "processing"
+        assert PhotoState.INDEXED == "indexed"
+        assert PhotoState.REPROCESSING == "reprocessing"
+        assert PhotoState.DELETED == "deleted"
+        assert PhotoState.ERROR == "error"
+
+
+class TestPhotoFilter:
+    """Test PhotoFilter query builder."""
+
+    def test_photo_filter_creation(self):
+        """Test creating PhotoFilter."""
+        f = PhotoFilter()
+        assert f.conditions == []
+        assert f.params == []
+
+    def test_by_folder(self):
+        """Test filtering by folder."""
+        f = PhotoFilter()
+        f.by_folder("/home/photos")
+
+        assert "folder LIKE ?" in f.conditions
+        assert "/home/photos%" in f.params
+
+    def test_by_extension(self):
+        """Test filtering by extensions."""
+        f = PhotoFilter()
+        f.by_extension([".jpg", ".png"])
+
+        assert "ext IN (?,?)" in f.conditions
+        assert ".jpg" in f.params
+        assert ".png" in f.params
+
+    def test_by_date_range(self):
+        """Test filtering by date range."""
+        f = PhotoFilter()
+        f.by_date_range(1640995200.0, 1640995400.0)
+
+        assert "created_ts BETWEEN ? AND ?" in f.conditions
+        assert 1640995200.0 in f.params
+        assert 1640995400.0 in f.params
+
+    def test_by_size_range(self):
+        """Test filtering by size range."""
+        f = PhotoFilter()
+        f.by_size_range(1024, 10240)
+
+        assert "size BETWEEN ? AND ?" in f.conditions
+        assert 1024 in f.params
+        assert 10240 in f.params
+
+    def test_indexed_only(self):
+        """Test filtering for indexed photos only."""
+        f = PhotoFilter()
+        f.indexed_only()
+
+        assert "indexed_at IS NOT NULL" in f.conditions
+
+    def test_needs_processing(self):
+        """Test filtering for photos needing processing."""
+        f = PhotoFilter()
+        f.needs_processing()
+
+        assert "(indexed_at IS NULL OR modified_ts > indexed_at)" in f.conditions
+
+    def test_build_where_clause_empty(self):
+        """Test building WHERE clause with no conditions."""
+        f = PhotoFilter()
+        where, params = f.build_where_clause()
+
+        assert where == ""
+        assert params == []
+
+    def test_build_where_clause_single(self):
+        """Test building WHERE clause with single condition."""
+        f = PhotoFilter()
+        f.by_folder("/photos")
+        where, params = f.build_where_clause()
+
+        assert where.startswith("WHERE ")
+        assert "folder LIKE ?" in where
+        assert params == ["/photos%"]
+
+    def test_build_where_clause_multiple(self):
+        """Test building WHERE clause with multiple conditions."""
+        f = PhotoFilter()
+        f.by_folder("/photos").by_extension([".jpg"]).indexed_only()
+        where, params = f.build_where_clause()
+
+        assert where.startswith("WHERE ")
+        assert " AND " in where
+        assert len(f.conditions) == 3
+
+    def test_filter_chaining(self):
+        """Test that filter methods return self for chaining."""
+        f = PhotoFilter()
+        result = f.by_folder("/photos").by_extension([".jpg"]).indexed_only()
+
+        assert result is f
+        assert len(f.conditions) == 3
 
 
 def mock_open_hash(content: str):

@@ -100,7 +100,7 @@ async def process_batch_export(
                     # Save in requested format
                     output_name = source_path.stem + f".{export_format}"
                     output_path = dest_path / output_name
-                    img.save(output_path, format.upper())
+                    img.save(output_path, export_format.upper())
 
                 processed += 1
                 job["processed_items"] = processed
