@@ -2,11 +2,34 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-    <true/>
+    <!-- Allow JIT for V8 JavaScript engine -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+
+    <!-- Allow unsigned executable memory (required for Electron) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Disable library validation to allow loading of dynamic libraries -->
     <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- Allow executing arbitrary binaries (for Python backend) -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+
+    <!-- Network access for local API server -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+
+    <!-- File access for photo indexing -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Camera access (optional, for future features) -->
+    <key>com.apple.security.device.camera</key>
     <true/>
 </dict>
 </plist>

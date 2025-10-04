@@ -31,6 +31,9 @@ dependencies = [
     "keyring>=25.6.0",
     "opencv-python-headless>=4.11.0,<4.12.0",
     "insightface>=0.7.3",
+    "arq>=0.26.0",
+    "fakeredis>=2.23.0",
+    "send2trash>=1.8.0",
 ]
 
 [project.optional-dependencies]
