@@ -292,7 +292,10 @@ jobs:
     name: Comment Test Results on PR
     runs-on: ubuntu-latest
     needs: [quality-checks, backend-tests, frontend-tests, p0-e2e-tests]
-    if: github.event_name == 'pull_request' && always()
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
     - name: Download test results
@@ -302,6 +305,8 @@ jobs:
 
     - name: Create test summary comment
       uses: actions/github-script@v7
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         script: |
           const fs = require('fs');
@@ -344,6 +349,12 @@ jobs:
           comment += '- Full E2E test suite runs in dedicated workflow\\n';
 
           // Find and update or create comment
+          const token = process.env.GITHUB_TOKEN;
+          if (!token) {
+            core.warning('Missing GITHUB_TOKEN; skipping PR comment.');
+            return;
+          }
+
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
