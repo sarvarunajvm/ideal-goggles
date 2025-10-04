@@ -318,46 +318,47 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         script: |
-          const fs = require('fs');
+          const { github, context, core } = require('@actions/github-script');
 
-          let comment = '## 🚀 Quick CI Results\\n\\n';
-          comment += `🔨 **Build:** #${{ github.run_number }} | `;
-          comment += `⚡ **Triggered by:** ${{ github.actor }}\\n\\n`;
-
-          comment += '### Test Results\\n\\n';
-          comment += '| Component | Status | Details |\\n';
-          comment += '|-----------|--------|---------|\\n';
-
-          // Quality checks
           const qualityStatus = '${{ needs.quality-checks.result }}';
-          const qualityIcon = qualityStatus === 'success' ? '✅' : qualityStatus === 'failure' ? '❌' : '⏭️';
-          comment += `| 🔍 Code Quality | ${qualityIcon} | Lint, TypeCheck, Format |\\n`;
-
-          // Backend results
           const backendStatus = '${{ needs.backend-tests.result }}';
-          const backendIcon = backendStatus === 'success' ? '✅' : backendStatus === 'failure' ? '❌' : '⏭️';
-          comment += `| 🐍 Backend Tests | ${backendIcon} | Unit tests with coverage |\\n`;
-
-          // Frontend results
           const frontendStatus = '${{ needs.frontend-tests.result }}';
-          const frontendIcon = frontendStatus === 'success' ? '✅' : frontendStatus === 'failure' ? '❌' : '⏭️';
-          comment += `| ⚛️ Frontend Tests | ${frontendIcon} | Unit tests with coverage |\\n`;
-
-          // P0 E2E results
           const p0Status = '${{ needs.p0-e2e-tests.result }}';
-          const p0Icon = p0Status === 'success' ? '✅' : p0Status === 'failure' ? '❌' : '⏭️';
-          comment += `| 🎭 P0 E2E Tests | ${p0Icon} | Critical user flows |\\n`;
 
-          comment += '\\n### 📊 Coverage\\n';
-          comment += '- Coverage reports uploaded to [Codecov](https://codecov.io/gh/${{ github.repository }})\\n';
-          comment += '- View detailed reports in workflow artifacts\\n';
-          comment += `- Generated at: ${new Date().toISOString()}\\n`;
+          const icon = (s) => s === 'success' ? '✅' : s === 'failure' ? '❌' : '⏭️';
+          const label = (s) => s === 'success' ? 'Pass' : s === 'failure' ? 'Fail' : 'Skipped';
 
-          comment += '\\n### ⚡ Performance\\n';
-          comment += '- All jobs ran in parallel for faster feedback\\n';
-          comment += '- Full E2E test suite runs in dedicated workflow\\n';
+          const repo = `${context.repo.owner}/${context.repo.repo}`;
+          const runUrl = `https://github.com/${repo}/actions/runs/${context.runId}`;
 
-          // Find and update or create comment
+          const comment = `
+          ## 🚀 Quick CI Results
+
+          🔨 Build: #${context.runNumber} • ⚡ Triggered by: @${context.actor}  
+          🔗 Run: [${context.runId}](${runUrl})
+
+          ### ✅ Summary
+          - Code Quality: ${icon(qualityStatus)} ${label(qualityStatus)}
+          - Backend Tests: ${icon(backendStatus)} ${label(backendStatus)}
+          - Frontend Tests: ${icon(frontendStatus)} ${label(frontendStatus)}
+          - P0 E2E Tests: ${icon(p0Status)} ${label(p0Status)}
+
+          <details><summary>Details</summary>
+
+          | Component | Status | Notes |
+          |---|---|---|
+          | 🔍 Code Quality | ${icon(qualityStatus)} ${qualityStatus} | Lint, TypeCheck, Format |
+          | 🐍 Backend Tests | ${icon(backendStatus)} ${backendStatus} | Unit tests with coverage |
+          | ⚛️ Frontend Tests | ${icon(frontendStatus)} ${frontendStatus} | Unit tests with coverage |
+          | 🎭 P0 E2E Tests | ${icon(p0Status)} ${p0Status} | Critical user flows |
+
+          </details>
+
+          ### 📊 Coverage
+          - Reports uploaded to [Codecov](https://codecov.io/gh/${repo})
+          - Generated: ${new Date().toISOString()}
+          `;
+
           const token = process.env.GITHUB_TOKEN;
           if (!token) {
             core.warning('Missing GITHUB_TOKEN; skipping PR comment.');
@@ -370,23 +371,19 @@ jobs:
             issue_number: context.issue.number,
           });
 
-          const botComment = comments.find(comment =>
-            comment.user.type === 'Bot' &&
-            comment.body.includes('🚀 Quick CI Results')
-          );
-
+          const botComment = comments.find(c => c.user?.type === 'Bot' && c.body?.includes('🚀 Quick CI Results'));
           if (botComment) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: botComment.id,
-              body: comment
+              body: comment,
             });
           } else {
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: comment
+              body: comment,
             });
           }
