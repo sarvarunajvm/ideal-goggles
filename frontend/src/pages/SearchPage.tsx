@@ -530,7 +530,7 @@ export default function SearchPage() {
     const lightboxPhotos: LightboxPhoto[] = searchResults.items.map(result => ({
       id: result.file_id.toString(),
       path: result.path,
-      thumbnail_path: result.thumb_path,
+      thumbnail_path: result.thumb_path ?? undefined,
       filename: result.filename,
       metadata: {
         date_taken: result.shot_dt,

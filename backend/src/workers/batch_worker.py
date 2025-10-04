@@ -22,7 +22,7 @@ async def process_batch_export(
     job_id: str,
     photo_ids: list[str],
     destination: str,
-    format: str = "original",
+    export_format: str = "original",
     max_dimension: int | None = None,
     job_store: dict | None = None,
 ):
@@ -82,7 +82,7 @@ async def process_batch_export(
                     continue
 
                 # Determine output filename
-                if format == "original":
+                if export_format == "original":
                     output_path = dest_path / source_path.name
                     shutil.copy2(source_path, output_path)
                 else:
@@ -94,7 +94,7 @@ async def process_batch_export(
                         img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
 
                     # Save in requested format
-                    output_name = source_path.stem + f".{format}"
+                    output_name = source_path.stem + f".{export_format}"
                     output_path = dest_path / output_name
                     img.save(output_path, format.upper())
 

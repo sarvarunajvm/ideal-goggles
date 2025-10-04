@@ -653,11 +653,11 @@ async def get_original_photo(photo_id: int):
         ".svg": "image/svg+xml",
         ".ico": "image/x-icon",
     }
-    media_type = media_types.get(file_ext, 'application/octet-stream')
+    media_type = media_types.get(file_ext, "application/octet-stream")
 
     # Return the file
     return FileResponse(
         path=photo_path,
         media_type=media_type,
-        filename=os.path.basename(photo_path)
+        filename=Path(photo_path).name
     )

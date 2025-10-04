@@ -16,21 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/components/ui/use-toast'
-import {
-  FolderOpen,
-  FolderPlus,
-  Settings2,
-  Database,
-  Zap,
-  Languages,
-  Search,
-  Trash2,
-  Play,
-  Square,
-  RotateCcw,
-  Loader2,
-  Package,
-} from 'lucide-react'
+import { FolderOpen, FolderPlus, Settings2, Trash2, Play, Square, RotateCcw, Loader2, Zap } from 'lucide-react'
 
 
 export default function SettingsPage() {

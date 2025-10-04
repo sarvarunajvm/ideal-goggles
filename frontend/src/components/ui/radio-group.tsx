@@ -1,4 +1,5 @@
 import * as React from 'react'
+// @ts-ignore: component provided by @radix-ui/react-radio-group in dependencies
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group'
 import { Circle } from 'lucide-react'
 

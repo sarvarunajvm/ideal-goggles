@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5555';
 
@@ -202,23 +202,23 @@ export function IndexingStep() {
                 <div
                   className="h-full bg-gradient-to-r from-primary to-yellow-300 transition-all duration-500 shadow-sm"
                   style={{
-                    width: status?.progress.total_files > 0
+                    width: status && status.progress && status.progress.total_files > 0
                       ? `${(status.progress.processed_files / status.progress.total_files) * 100}%`
-                      : status?.status === 'indexing' ? '5%' : '0%', // Show minimal progress when indexing starts
+                      : status?.status === 'indexing' ? '5%' : '0%',
                   }}
                 />
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-foreground/90 text-center font-medium">
-                  {status?.progress.processed_files || 0} / {status?.progress.total_files || '?'}{' '}
-                  photos {status?.progress.total_files > 0 &&
+                  {status?.progress?.processed_files || 0} / {status?.progress?.total_files || '?'}{' '}
+                  photos {status?.progress && status?.progress.total_files > 0 &&
                     `(${Math.round((status.progress.processed_files / status.progress.total_files) * 100)}%)`
                   }
                 </p>
-                {status?.progress.total_files > 0 && status?.progress.processed_files > 0 && (
+                {status?.progress && status?.progress.total_files > 0 && status?.progress.processed_files > 0 && (
                   <p className="text-xs text-muted-foreground text-center">
                     {(() => {
-                      const photosLeft = status.progress.total_files - status.progress.processed_files;
+                      const photosLeft = (status?.progress?.total_files || 0) - (status?.progress?.processed_files || 0);
                       const photosPerSecond = status.progress.processed_files / 30; // Rough estimate
                       const secondsLeft = Math.ceil(photosLeft / photosPerSecond);
                       const minutesLeft = Math.ceil(secondsLeft / 60);
