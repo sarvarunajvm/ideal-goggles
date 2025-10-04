@@ -199,13 +199,13 @@
 ### UX Integration Tests (Parallel - After Implementation)
 **NOTE**: These are validation/QA tasks to be run after deployment. All implementation tasks (T068-T110) are complete.
 
-- [ ] T111 [P] E2E test: Onboarding wizard flow in func_tests/e2e/test_onboarding.spec.ts
-- [ ] T112 [P] E2E test: Lightbox keyboard navigation in func_tests/e2e/test_lightbox.spec.ts
-- [ ] T113 [P] Component test: VirtualGrid performance in frontend/tests/components/VirtualGrid.test.tsx
-- [ ] T114 [P] Integration test: Batch export 1K photos in backend/tests/integration/test_batch_export.py
-- [ ] T115 [P] Integration test: Batch delete 500 photos in backend/tests/integration/test_batch_delete.py
-- [ ] T116 [P] Performance test: Virtual scroll with 100K photos in func_tests/performance/test_virtual_scroll_perf.spec.ts
-- [ ] T117 [P] Build test: Verify installer signatures in scripts/verify-signatures.sh
+- [x] T111 [P] E2E test: Onboarding wizard flow in func_tests/e2e/test_onboarding.spec.ts
+- [x] T112 [P] E2E test: Lightbox keyboard navigation in func_tests/e2e/test_lightbox.spec.ts
+- [x] T113 [P] Component test: VirtualGrid performance in frontend/tests/components/VirtualGrid.test.tsx
+- [x] T114 [P] Integration test: Batch export 1K photos in backend/tests/integration/test_batch_export.py
+- [x] T115 [P] Integration test: Batch delete 500 photos in backend/tests/integration/test_batch_delete.py
+- [x] T116 [P] Performance test: Virtual scroll with 100K photos in func_tests/performance/test_virtual_scroll_perf.spec.ts
+- [x] T117 [P] Build test: Verify installer signatures in scripts/verify-signatures.sh
 - [ ] T118 Manual QA: Complete all quickstart scenarios (specs/001-core-features-mandatory/quickstart.md)
 
 ## Git Worktree Strategy
