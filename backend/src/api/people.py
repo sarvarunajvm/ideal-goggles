@@ -428,7 +428,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             # Execute update
             update_query = f"""
                 UPDATE people
-                SET {', '.join(update_fields)}
+                SET {", ".join(update_fields)}
                 WHERE id = ?
             """
 
