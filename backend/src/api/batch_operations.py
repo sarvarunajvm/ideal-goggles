@@ -5,7 +5,7 @@ Handles batch export, delete, and tag operations on multiple photos.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
@@ -84,7 +84,7 @@ async def start_batch_export(request: BatchExportRequest, background_tasks: Back
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -121,7 +121,7 @@ async def start_batch_delete(request: BatchDeleteRequest, background_tasks: Back
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -161,7 +161,7 @@ async def start_batch_tag(request: BatchTagRequest, background_tasks: Background
         "total_items": len(request.photo_ids),
         "processed_items": 0,
         "failed_items": 0,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "completed_at": None,
         "error": None,
         "request": request.dict(),
@@ -216,6 +216,6 @@ async def cancel_batch_job(job_id: str):
         raise HTTPException(status_code=400, detail="Cannot cancel completed job")
 
     job["status"] = "cancelled"
-    job["completed_at"] = datetime.now(timezone.utc).isoformat()
+    job["completed_at"] = datetime.now(UTC).isoformat()
 
     return {"job_id": job_id, "status": "cancelled"}

@@ -642,16 +642,16 @@ async def get_original_photo(photo_id: int):
         )
 
     # Detect media type based on file extension
-    file_ext = os.path.splitext(photo_path)[1].lower()
+    file_ext = Path(photo_path).suffix.lower()
     media_types = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.ico': 'image/x-icon',
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
     }
     media_type = media_types.get(file_ext, 'application/octet-stream')
 

@@ -5,7 +5,7 @@ Handles background processing for batch export, delete, and tag operations.
 """
 
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import send2trash
@@ -102,13 +102,13 @@ async def process_batch_export(
                 job["processed_items"] = processed
 
             except Exception as e:
-                logger.error(f"Failed to export photo {photo_id}: {e}")
+                logger.exception(f"Failed to export photo {photo_id}: {e}")
                 failed += 1
                 job["failed_items"] = failed
 
         # Mark job as complete
         job["status"] = "completed"
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
 
         logger.info(
             f"Batch export completed: {processed} exported, {failed} failed"
@@ -118,7 +118,7 @@ async def process_batch_export(
         logger.exception(f"Batch export job {job_id} failed: {e}")
         job["status"] = "failed"
         job["error"] = str(e)
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
 
 
 async def process_batch_delete(
@@ -194,7 +194,7 @@ async def process_batch_delete(
 
         # Mark job as complete
         job["status"] = "completed"
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
 
         logger.info(
             f"Batch delete completed: {processed} deleted, {failed} failed"
@@ -204,7 +204,7 @@ async def process_batch_delete(
         logger.exception(f"Batch delete job {job_id} failed: {e}")
         job["status"] = "failed"
         job["error"] = str(e)
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
 
 
 async def process_batch_tag(
@@ -260,7 +260,7 @@ async def process_batch_tag(
             logger.warning("'tags' column not found on photos table; skipping batch tag operation")
             job["status"] = "failed"
             job["error"] = "Tagging not supported: 'tags' column missing"
-            job["completed_at"] = datetime.now(timezone.utc).isoformat()
+            job["completed_at"] = datetime.now(UTC).isoformat()
             return
 
         for photo_id in photo_ids:
@@ -310,7 +310,7 @@ async def process_batch_tag(
 
         # Mark job as complete
         job["status"] = "completed"
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
 
         logger.info(
             f"Batch tag completed: {processed} tagged, {failed} failed"
@@ -320,4 +320,4 @@ async def process_batch_tag(
         logger.exception(f"Batch tag job {job_id} failed: {e}")
         job["status"] = "failed"
         job["error"] = str(e)
-        job["completed_at"] = datetime.now(timezone.utc).isoformat()
+        job["completed_at"] = datetime.now(UTC).isoformat()
