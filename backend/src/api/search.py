@@ -629,7 +629,7 @@ async def get_original_photo(photo_id: int):
     if not rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Photo with ID {photo_id} not found"
+            detail=f"Photo with ID {photo_id} not found",
         )
 
     photo_path = rows[0][0]
@@ -638,7 +638,7 @@ async def get_original_photo(photo_id: int):
     if not os.path.exists(photo_path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Photo file not found at path: {photo_path}"
+            detail=f"Photo file not found at path: {photo_path}",
         )
 
     # Detect media type based on file extension
@@ -657,7 +657,5 @@ async def get_original_photo(photo_id: int):
 
     # Return the file
     return FileResponse(
-        path=photo_path,
-        media_type=media_type,
-        filename=Path(photo_path).name
+        path=photo_path, media_type=media_type, filename=Path(photo_path).name
     )

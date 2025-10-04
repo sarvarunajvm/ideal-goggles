@@ -67,7 +67,9 @@ async def process_batch_export(
                     failed += 1
                     continue
 
-                rows = db_manager.execute_query("SELECT * FROM photos WHERE id = ?", (pid,))
+                rows = db_manager.execute_query(
+                    "SELECT * FROM photos WHERE id = ?", (pid,)
+                )
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
@@ -91,7 +93,9 @@ async def process_batch_export(
 
                     # Resize if max_dimension is specified
                     if max_dimension:
-                        img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+                        img.thumbnail(
+                            (max_dimension, max_dimension), Image.Resampling.LANCZOS
+                        )
 
                     # Save in requested format
                     output_name = source_path.stem + f".{export_format}"
@@ -110,9 +114,7 @@ async def process_batch_export(
         job["status"] = "completed"
         job["completed_at"] = datetime.now(UTC).isoformat()
 
-        logger.info(
-            f"Batch export completed: {processed} exported, {failed} failed"
-        )
+        logger.info(f"Batch export completed: {processed} exported, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch export job {job_id} failed: {e}")
@@ -162,7 +164,9 @@ async def process_batch_delete(
                     failed += 1
                     continue
 
-                rows = db_manager.execute_query("SELECT * FROM photos WHERE id = ?", (pid,))
+                rows = db_manager.execute_query(
+                    "SELECT * FROM photos WHERE id = ?", (pid,)
+                )
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
@@ -196,9 +200,7 @@ async def process_batch_delete(
         job["status"] = "completed"
         job["completed_at"] = datetime.now(UTC).isoformat()
 
-        logger.info(
-            f"Batch delete completed: {processed} deleted, {failed} failed"
-        )
+        logger.info(f"Batch delete completed: {processed} deleted, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch delete job {job_id} failed: {e}")
@@ -243,6 +245,7 @@ async def process_batch_tag(
         # Determine if a 'tags' column exists on photos
         try:
             cols = db_manager.execute_query("PRAGMA table_info(photos)")
+
             # cols can be tuples (name at index 1) or dict-like with 'name'
             def _col_is_tags(col):
                 try:
@@ -257,7 +260,9 @@ async def process_batch_tag(
             has_tags = False
 
         if not has_tags:
-            logger.warning("'tags' column not found on photos table; skipping batch tag operation")
+            logger.warning(
+                "'tags' column not found on photos table; skipping batch tag operation"
+            )
             job["status"] = "failed"
             job["error"] = "Tagging not supported: 'tags' column missing"
             job["completed_at"] = datetime.now(UTC).isoformat()
@@ -273,7 +278,10 @@ async def process_batch_tag(
                     failed += 1
                     continue
 
-                rows = db_manager.execute_query("SELECT id, COALESCE(tags, '') as tags FROM photos WHERE id = ?", (pid,))
+                rows = db_manager.execute_query(
+                    "SELECT id, COALESCE(tags, '') as tags FROM photos WHERE id = ?",
+                    (pid,),
+                )
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
@@ -283,7 +291,9 @@ async def process_batch_tag(
                 current = row[1] if isinstance(row, (tuple, list)) else row["tags"]
                 existing_tags = []
                 if current:
-                    existing_tags = [t.strip() for t in str(current).split(",") if t.strip()]
+                    existing_tags = [
+                        t.strip() for t in str(current).split(",") if t.strip()
+                    ]
 
                 # Perform operation
                 if operation == "add":
@@ -298,7 +308,9 @@ async def process_batch_tag(
                     continue
 
                 # Update photo tags (store as comma-separated string)
-                db_manager.execute_update("UPDATE photos SET tags = ? WHERE id = ?", (",".join(new_tags), pid))
+                db_manager.execute_update(
+                    "UPDATE photos SET tags = ? WHERE id = ?", (",".join(new_tags), pid)
+                )
 
                 processed += 1
                 job["processed_items"] = processed
@@ -312,9 +324,7 @@ async def process_batch_tag(
         job["status"] = "completed"
         job["completed_at"] = datetime.now(UTC).isoformat()
 
-        logger.info(
-            f"Batch tag completed: {processed} tagged, {failed} failed"
-        )
+        logger.info(f"Batch tag completed: {processed} tagged, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch tag job {job_id} failed: {e}")

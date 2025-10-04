@@ -70,7 +70,9 @@ class BatchJobStatus(BaseModel):
 
 
 @router.post("/export", response_model=dict)
-async def start_batch_export(request: BatchExportRequest, background_tasks: BackgroundTasks):
+async def start_batch_export(
+    request: BatchExportRequest, background_tasks: BackgroundTasks
+):
     """
     Start a batch export operation.
 
@@ -106,7 +108,9 @@ async def start_batch_export(request: BatchExportRequest, background_tasks: Back
 
 
 @router.post("/delete", response_model=dict)
-async def start_batch_delete(request: BatchDeleteRequest, background_tasks: BackgroundTasks):
+async def start_batch_delete(
+    request: BatchDeleteRequest, background_tasks: BackgroundTasks
+):
     """
     Start a batch delete operation.
 
@@ -151,7 +155,10 @@ async def start_batch_tag(request: BatchTagRequest, background_tasks: Background
     - replace: Replace all tags with specified tags
     """
     if request.operation not in ["add", "remove", "replace"]:
-        raise HTTPException(status_code=400, detail="Invalid operation. Must be: add, remove, or replace")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid operation. Must be: add, remove, or replace",
+        )
 
     job_id = str(uuid.uuid4())
     job = {

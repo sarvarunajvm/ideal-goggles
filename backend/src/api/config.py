@@ -62,7 +62,9 @@ class UpdateRootsRequest(BaseModel):
 class UpdateConfigRequest(BaseModel):
     """Request model for updating configuration."""
 
-    ocr_enabled: bool | None = Field(None, description="Enable/disable OCR text extraction")
+    ocr_enabled: bool | None = Field(
+        None, description="Enable/disable OCR text extraction"
+    )
     ocr_languages: list[str] | None = Field(None, description="OCR languages to enable")
     face_search_enabled: bool | None = Field(
         None, description="Enable/disable face search"
@@ -174,6 +176,7 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
 
             # Reset indexing state if roots changed
             from ..services.indexing_state import IndexingStateManager
+
             state_manager = IndexingStateManager()
             state_manager.reset_state()
 
