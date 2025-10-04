@@ -1,0 +1,55 @@
+/* =================================================================
+   UNIFIED THEME SYSTEM - BLACK & GOLD WITH NEON ACCENTS
+   Change these values to update the entire app's theme
+   ================================================================= */
+
+:root {
+  /* Core Colors - RGB values for use in shadows and transparency */
+  --gold-rgb: 255, 215, 0;
+  --purple-rgb: 153, 51, 255;
+  --cyan-rgb: 0, 255, 255;
+  --green-rgb: 0, 255, 0;
+  --pink-rgb: 255, 0, 127;
+  --red-rgb: 255, 0, 0;
+
+  /* Primary Gold Colors */
+  --gold-primary: hsl(45, 100%, 51%);
+  --gold-light: hsl(45, 100%, 60%);
+  --gold-dark: hsl(45, 100%, 40%);
+
+  /* Neon Accent Colors */
+  --neon-purple: hsl(270, 100%, 60%);
+  --neon-cyan: hsl(180, 100%, 50%);
+  --neon-green: hsl(120, 100%, 50%);
+  --neon-pink: hsl(330, 100%, 60%);
+  --neon-red: hsl(0, 100%, 50%);
+
+  /* Background Colors */
+  --black-base: hsl(0, 0%, 5%);
+  --black-card: hsl(0, 0%, 8%);
+  --black-input: hsl(0, 0%, 12%);
+  --black-muted: hsl(0, 0%, 15%);
+
+  /* Text Colors */
+  --text-cream: hsl(48, 20%, 95%);
+  --text-muted: hsl(45, 10%, 65%);
+  --text-black: hsl(0, 0%, 5%);
+  --text-white: hsl(0, 0%, 98%);
+
+  /* Shadow Presets */
+  --shadow-gold: 0 10px 25px rgba(var(--gold-rgb), 0.4);
+  --shadow-gold-lg: 0 20px 40px rgba(var(--gold-rgb), 0.5);
+  --shadow-purple: 0 10px 25px rgba(var(--purple-rgb), 0.4);
+  --shadow-cyan: 0 10px 25px rgba(var(--cyan-rgb), 0.4);
+  --shadow-green: 0 10px 25px rgba(var(--green-rgb), 0.4);
+  --shadow-pink: 0 10px 25px rgba(var(--pink-rgb), 0.4);
+  --shadow-red: 0 10px 25px rgba(var(--red-rgb), 0.4);
+
+  /* Gradient Presets */
+  --gradient-gold: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+  --gradient-purple: linear-gradient(135deg, var(--neon-purple), hsl(280, 100%, 70%));
+  --gradient-cyan: linear-gradient(135deg, var(--neon-cyan), hsl(190, 100%, 60%));
+  --gradient-green: linear-gradient(135deg, var(--neon-green), hsl(130, 100%, 60%));
+  --gradient-pink: linear-gradient(135deg, var(--neon-pink), hsl(340, 100%, 70%));
+  --gradient-red: linear-gradient(135deg, var(--neon-red), hsl(10, 100%, 60%));
+}

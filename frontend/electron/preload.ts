@@ -22,6 +22,7 @@ const electronAPI = {
 
   // File/folder selection
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+  selectDirectory: () => ipcRenderer.invoke('select-folder'), // Alias for compatibility
   selectFiles: () => ipcRenderer.invoke('select-files'),
 
   // Window operations
@@ -43,6 +44,7 @@ const electronAPI = {
 
 // Security: Only expose specific API methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld('electron', electronAPI); // Alias for compatibility
 // Backend always runs on port 5555
 contextBridge.exposeInMainWorld('BACKEND_PORT', 5555);
 

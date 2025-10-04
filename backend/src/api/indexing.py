@@ -373,6 +373,7 @@ async def _run_processing_phases(workers, config, photos_to_process):
 
     # Save thumbnails to database
     from ..db.connection import get_database_manager
+
     db_manager = get_database_manager()
     saved_count = 0
     for thumbnail in thumbnails:
@@ -394,7 +395,9 @@ async def _run_processing_phases(workers, config, photos_to_process):
                 db_manager.execute_update(query, params)
                 saved_count += 1
             except Exception as e:
-                logger.warning(f"Failed to save thumbnail for file_id {thumbnail.file_id}: {e}")
+                logger.warning(
+                    f"Failed to save thumbnail for file_id {thumbnail.file_id}: {e}"
+                )
 
     logger.info(f"Saved {saved_count}/{len(thumbnails)} thumbnails to database")
     processed_count = int(total_photos * 0.8)  # 80% complete after thumbnails
@@ -474,7 +477,9 @@ async def _run_indexing_process(full_reindex: bool):
 
             # Update indexed_at for all processed photos
             placeholders = ",".join("?" * len(photo_ids))
-            update_query = f"UPDATE photos SET indexed_at = ? WHERE id IN ({placeholders})"
+            update_query = (
+                f"UPDATE photos SET indexed_at = ? WHERE id IN ({placeholders})"
+            )
             db_manager.execute_update(update_query, (indexed_time, *photo_ids))
             logger.info(f"Marked {len(photo_ids)} photos as indexed")
 

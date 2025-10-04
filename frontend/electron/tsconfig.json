@@ -7,8 +7,9 @@
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
-  "include": ["main.ts", "preload.ts"],
+  "include": ["main.ts", "preload.ts", "updater.ts", "**/*.d.ts"],
   "exclude": ["node_modules"]
 }

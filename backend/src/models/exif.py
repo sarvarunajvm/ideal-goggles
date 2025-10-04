@@ -232,7 +232,7 @@ class EXIFData:
             speed = float(value)
             if speed >= 1:
                 return f"{speed:.1f}s"
-            return f"1/{int(1/speed)}"
+            return f"1/{int(1 / speed)}"
         except (ValueError, TypeError, ZeroDivisionError):
             return str(value)
 

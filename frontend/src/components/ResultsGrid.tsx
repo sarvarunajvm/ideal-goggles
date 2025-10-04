@@ -67,20 +67,20 @@ export default function ResultsGrid({
 
   const getBadgeColor = (badge: string) => {
     const colors: Record<string, string> = {
-      OCR: 'bg-blue-100 text-blue-800',
-      Face: 'bg-red-100 text-red-800',
-      'Photo-Match': 'bg-indigo-100 text-indigo-800',
-      EXIF: 'bg-orange-100 text-orange-800',
-      filename: 'bg-green-100 text-green-800',
-      folder: 'bg-purple-100 text-purple-800',
+      OCR: 'bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary',
+      Face: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+      'Photo-Match': 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
+      EXIF: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      filename: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+      folder: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
     }
-    return colors[badge] || 'bg-gray-100 text-gray-800'
+    return colors[badge] || 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-200'
   }
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64" role="status">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <span className="sr-only">Loading...</span>
       </div>
     )
@@ -118,8 +118,8 @@ export default function ResultsGrid({
         {results.map((item, index) => (
           <div
             key={item.file_id}
-            className={`result-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer ${
-              index === focusedIndex ? 'ring-2 ring-blue-500' : ''
+            className={`result-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow transition-colors cursor-pointer ${
+              index === focusedIndex ? 'ring-2 ring-primary' : ''
             }`}
             onClick={() => onItemClick?.(item)}
             onDoubleClick={() => onItemDoubleClick?.(item)}
@@ -221,7 +221,7 @@ export default function ResultsGrid({
                   e.stopPropagation()
                   onRevealInFolder?.(item)
                 }}
-                className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                className="mt-2 text-xs text-primary hover:text-primary/80"
                 title="Reveal in folder"
               >
                 📁 Show in folder

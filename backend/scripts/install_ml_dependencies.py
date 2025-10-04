@@ -368,7 +368,6 @@ def main():
         skip_clip=args.skip_clip,
         skip_face=args.skip_face,
     ):
-
         # Verify
         results = installer.verify_installations()
 

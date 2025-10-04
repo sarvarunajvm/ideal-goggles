@@ -526,16 +526,6 @@ export default function DependenciesManager() {
         </Alert>
       )}
 
-      {allMLInstalled && (
-        <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertTitle>All Set!</AlertTitle>
-          <AlertDescription>
-            All ML dependencies are installed. You can now use advanced features
-            like semantic search, OCR text extraction, and face recognition.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   )
 }

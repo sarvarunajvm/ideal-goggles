@@ -150,7 +150,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
   if (loading && photos.length === 0) {
     return (
       <div className="flex justify-center items-center h-64" role="status">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <span className="sr-only">Loading...</span>
       </div>
     )
@@ -208,7 +208,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
               layout === 'list'
                 ? 'flex items-center space-x-4 p-2 hover:bg-gray-50'
                 : ''
-            } ${focusedIndex === index ? 'ring-2 ring-blue-500' : ''}`}
+            } ${focusedIndex === index ? 'ring-2 ring-primary' : ''}`}
             onClick={() => handlePhotoClick(photo)}
             onDoubleClick={() => handleDoubleClick(photo)}
             onMouseEnter={() => setHoveredPhoto(photo.id)}
@@ -270,7 +270,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
             )}
 
             {selectedPhotos.has(photo.id) && (
-              <div className="absolute inset-0 bg-blue-500 bg-opacity-20 rounded-lg pointer-events-none"></div>
+              <div className="absolute inset-0 rounded-lg pointer-events-none bg-primary/20"></div>
             )}
           </div>
         ))}
@@ -282,11 +282,11 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
           className="h-20 flex justify-center items-center"
         >
           {loading ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           ) : (
             <button
               onClick={onLoadMore}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Load More
             </button>

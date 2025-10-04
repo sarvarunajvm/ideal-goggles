@@ -16,7 +16,8 @@ declare global {
     showInfoDialog: (title: string, content: string) => Promise<void>
 
     // File/folder selection
-    selectFolder: () => Promise<string>
+    selectFolder: () => Promise<{ canceled: boolean; filePaths: string[] }>
+    selectDirectory: () => Promise<{ canceled: boolean; filePaths: string[] }>
     selectFiles: () => Promise<string[]>
 
     // Window operations
@@ -32,6 +33,7 @@ declare global {
 
   interface Window {
     electronAPI?: ElectronAPI
+    electron?: ElectronAPI // Alias for compatibility
     BACKEND_PORT?: number
   }
 }

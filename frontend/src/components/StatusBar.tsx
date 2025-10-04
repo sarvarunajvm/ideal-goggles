@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
   Wifi,
@@ -10,11 +9,9 @@ import {
   CheckCircle,
   XCircle,
   Pause,
-  ExternalLink,
-  BookOpen,
   AlertCircle,
 } from 'lucide-react'
-import { apiService, IndexStatus, getApiBaseUrl } from '../services/apiClient'
+import { apiService, IndexStatus } from '../services/apiClient'
 
 export default function StatusBar() {
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null)
@@ -80,16 +77,18 @@ export default function StatusBar() {
     }
   }
 
-  const getConnectionBadgeVariant = () => {
-    switch (healthStatus) {
-      case 'connected':
-        return 'secondary'
-      case 'disconnected':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
+  // Map connection state to badge variant
+  // Using icon + text; badge variant helper intentionally unused
+  // const getConnectionBadgeVariant = () => {
+  //   switch (healthStatus) {
+  //     case 'connected':
+  //       return 'secondary'
+  //     case 'disconnected':
+  //       return 'destructive'
+  //     default:
+  //       return 'outline'
+  //   }
+  // }
 
   const getConnectionText = () => {
     switch (healthStatus) {
@@ -118,14 +117,84 @@ export default function StatusBar() {
   }
 
   return (
-    <footer className="bg-card border-t border-border px-4 py-2 shrink-0">
+    <footer className="bg-card/95 backdrop-blur-sm border-t border-border/50 px-4 py-2 shrink-0 shadow-inner">
       <div className="flex items-center justify-between text-xs sm:text-sm">
-        {/* Connection Status */}
+        {/* Index Status - Left Side */}
         <div className="flex items-center space-x-3">
-          <Badge
-            variant={getConnectionBadgeVariant()}
-            className={`transition-all duration-300 ${
-              healthStatus === 'checking' ? 'animate-pulse' : ''
+          {indexStatus && indexStatus.status === 'indexing' && (
+            <>
+              <Badge
+                variant={getStatusBadgeVariant(indexStatus.status)}
+                className="transition-all duration-300 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50"
+              >
+                {(() => {
+                  const IconComponent = getStatusIcon(indexStatus.status)
+                  return (
+                    <>
+                      <IconComponent
+                        className={`w-3 h-3 mr-1.5 text-amber-400 animate-pulse`}
+                      />
+                      <span className="text-amber-400">Indexing</span>
+                    </>
+                  )
+                })()}
+              </Badge>
+
+              {indexStatus.status === 'indexing' && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-muted-foreground text-xs capitalize">
+                    {indexStatus.progress.current_phase?.replace(/_/g, ' ') || 'Processing'}
+                  </span>
+                  {indexStatus.progress.total_files > 0 && (
+                    <>
+                      <div className="w-20">
+                        <Progress
+                          value={getProgressPercentage()}
+                          className="h-1.5"
+                        />
+                      </div>
+                      <span className="text-xs font-medium">
+                        {indexStatus.progress.processed_files.toLocaleString()}/
+                        {indexStatus.progress.total_files.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({Math.round(getProgressPercentage())}%)
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Show indexed count when not actively indexing */}
+          {indexStatus && indexStatus.status !== 'indexing' && (
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+              <CheckCircle className="h-3 w-3 text-green-400" />
+              <span>
+                {indexStatus.progress.processed_files.toLocaleString()} photos indexed
+              </span>
+            </div>
+          )}
+
+          {indexStatus && indexStatus.errors.length > 0 && (
+            <Badge variant="destructive" className="animate-pulse">
+              <AlertCircle className="w-3 h-3 mr-1.5" />
+              {indexStatus.errors.length} error
+              {indexStatus.errors.length !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+
+        {/* Connection Status - Right Side */}
+        <div className="flex items-center">
+          <div
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-300 ${
+              healthStatus === 'connected'
+                ? 'bg-green-500/20 text-green-400 border border-green-500/50 shadow-md shadow-green-500/20'
+                : healthStatus === 'disconnected'
+                ? 'bg-red-500/20 text-red-400 border border-red-500/50 shadow-md shadow-red-500/20'
+                : 'bg-muted text-muted-foreground border border-border animate-pulse'
             }`}
             data-testid="connection-badge"
           >
@@ -142,81 +211,7 @@ export default function StatusBar() {
                 </>
               )
             })()}
-          </Badge>
-        </div>
-
-        {/* Index Status */}
-        <div className="flex items-center space-x-3">
-          {indexStatus && (
-            <>
-              <Badge
-                variant={getStatusBadgeVariant(indexStatus.status)}
-                className="transition-all duration-300"
-              >
-                {(() => {
-                  const IconComponent = getStatusIcon(indexStatus.status)
-                  return (
-                    <>
-                      <IconComponent
-                        className={`w-3 h-3 mr-1.5 ${
-                          indexStatus.status === 'indexing'
-                            ? 'animate-pulse'
-                            : ''
-                        }`}
-                      />
-                      {indexStatus.status.charAt(0).toUpperCase() +
-                        indexStatus.status.slice(1)}
-                    </>
-                  )
-                })()}
-              </Badge>
-
-              {indexStatus.status === 'indexing' && (
-                <div className="hidden sm:flex items-center space-x-2">
-                  <span className="text-muted-foreground text-xs">
-                    {indexStatus.progress.current_phase}
-                  </span>
-                  {indexStatus.progress.total_files > 0 && (
-                    <>
-                      <div className="w-16">
-                        <Progress
-                          value={getProgressPercentage()}
-                          className="h-1.5"
-                        />
-                      </div>
-                      <span className="text-muted-foreground text-xs">
-                        {indexStatus.progress.processed_files}/
-                        {indexStatus.progress.total_files}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {indexStatus.errors.length > 0 && (
-                <Badge variant="destructive" className="animate-pulse">
-                  <AlertCircle className="w-3 h-3 mr-1.5" />
-                  {indexStatus.errors.length} error
-                  {indexStatus.errors.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.open(`${getApiBaseUrl()}/docs`, '_blank')}
-            className="h-7 px-2 text-xs hover:scale-105 transition-all duration-200"
-            title="Open API Documentation"
-          >
-            <BookOpen className="w-3 h-3 mr-1.5" />
-            <span className="hidden sm:inline">API Docs</span>
-            <ExternalLink className="w-2.5 h-2.5 ml-1" />
-          </Button>
+          </div>
         </div>
       </div>
 

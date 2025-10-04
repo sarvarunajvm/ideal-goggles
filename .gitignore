@@ -96,3 +96,5 @@ AGENTS.md
 CLAUDE.md
 *.xml
 /test_photos
+IMPLEMENTATION_STATUS.md
+frontend/DESIGN_TOKENS.md

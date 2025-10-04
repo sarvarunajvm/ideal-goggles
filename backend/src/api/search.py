@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
@@ -606,3 +607,55 @@ async def _execute_face_search(
         results.append(item)
 
     return results
+
+
+@router.get("/photos/{photo_id}/original")
+async def get_original_photo(photo_id: int):
+    """
+    Serve the original photo file.
+
+    Args:
+        photo_id: The database ID of the photo
+
+    Returns:
+        The original photo file
+    """
+    db_manager = get_database_manager()
+
+    # Get photo path from database
+    query = "SELECT path FROM photos WHERE id = ?"
+    rows = db_manager.execute_query(query, (photo_id,))
+
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Photo with ID {photo_id} not found",
+        )
+
+    photo_path = rows[0][0]
+
+    # Check if file exists
+    if not os.path.exists(photo_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Photo file not found at path: {photo_path}",
+        )
+
+    # Detect media type based on file extension
+    file_ext = Path(photo_path).suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+    }
+    media_type = media_types.get(file_ext, "application/octet-stream")
+
+    # Return the file
+    return FileResponse(
+        path=photo_path, media_type=media_type, filename=Path(photo_path).name
+    )

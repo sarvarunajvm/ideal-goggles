@@ -18,15 +18,15 @@ export default function SearchResults({ results }: SearchResultsProps) {
 
   const getBadgeColor = (badge: string) => {
     const colors: Record<string, string> = {
-      text: 'bg-blue-100 text-blue-800',
-      filename: 'bg-green-100 text-green-800',
-      folder: 'bg-purple-100 text-purple-800',
-      metadata: 'bg-orange-100 text-orange-800',
-      semantic: 'bg-pink-100 text-pink-800',
-      visual: 'bg-indigo-100 text-indigo-800',
-      face: 'bg-red-100 text-red-800',
+      text: 'bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary',
+      filename: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+      folder: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+      metadata: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      semantic: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+      visual: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
+      face: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
     }
-    return colors[badge] || 'bg-gray-100 text-gray-800'
+    return colors[badge] || 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800/40 dark:text-neutral-200'
   }
 
   if (total_matches === 0) {
@@ -155,7 +155,7 @@ export default function SearchResults({ results }: SearchResultsProps) {
                     // View full image
                     window.open(`file://${item.path}`, '_blank')
                   }}
-                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                  className="px-3 py-1 text-xs rounded transition-colors bg-primary/15 text-primary hover:bg-primary/25"
                 >
                   👁️ View
                 </button>
@@ -168,7 +168,7 @@ export default function SearchResults({ results }: SearchResultsProps) {
       {/* Load More (if needed) */}
       {items.length < total_matches && (
         <div className="text-center mt-8">
-          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button className="px-6 py-2 rounded-lg transition-colors bg-primary text-primary-foreground hover:bg-primary/90">
             Load More Photos
           </button>
         </div>
