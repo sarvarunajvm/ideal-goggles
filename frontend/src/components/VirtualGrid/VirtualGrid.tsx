@@ -116,7 +116,7 @@ export function VirtualGrid<T extends GridItem>({
                   padding: '0 4px',
                 }}
               >
-                {virtualRow.items.map(({ index, columnIndex }) => {
+                {virtualRow.items.map(({ index }) => {
                   const item = items[index];
                   if (!item) return null;
 

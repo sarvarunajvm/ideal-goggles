@@ -11,13 +11,37 @@ export function Dialog({ open, onOpenChange, children }: { open: boolean; onOpen
   return <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>
 }
 
-export function DialogContent({ className, children }: { className?: string; children: React.ReactNode }) {
+export function DialogContent({ className, children, onInteractOutside, onEscapeKeyDown }: { className?: string; children: React.ReactNode; onInteractOutside?: (e: React.MouseEvent<HTMLDivElement>) => void; onEscapeKeyDown?: (e: KeyboardEvent) => void }) {
   const ctx = React.useContext(DialogContext)
+  const overlayRef = React.useRef<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    if (!ctx?.open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (onEscapeKeyDown) {
+          onEscapeKeyDown(e)
+          if (e.defaultPrevented) return
+        }
+        ctx.onOpenChange?.(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [ctx?.open, onEscapeKeyDown, ctx?.onOpenChange])
+
   if (!ctx?.open) return null
-  const handleOverlayClick = () => ctx.onOpenChange?.(false)
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (onInteractOutside) {
+      onInteractOutside(e)
+      if (e.defaultPrevented) return
+    }
+    ctx.onOpenChange?.(false)
+  }
+
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md" onClick={handleOverlayClick} />
+      <div ref={overlayRef} className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md" onClick={handleOverlayClick} />
       <div className={`fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-card border border-primary/20 p-6 shadow-2xl shadow-primary/20 outline-none ${className ?? ''}`}>{children}</div>
     </>
   )

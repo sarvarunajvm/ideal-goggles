@@ -13,7 +13,7 @@ interface UseVirtualGridOptions {
 export function useVirtualGrid({
   itemCount,
   columnCount,
-  itemWidth,
+  itemWidth: _itemWidth,
   itemHeight,
   gap = 16,
   overscan = 5,

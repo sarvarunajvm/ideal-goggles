@@ -77,6 +77,7 @@ export default function StatusBar() {
     }
   }
 
+  // Map connection state to badge variant
   const getConnectionBadgeVariant = () => {
     switch (healthStatus) {
       case 'connected':
