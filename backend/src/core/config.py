@@ -36,10 +36,6 @@ class Settings(BaseSettings):
         default=Path("./models/arcface-r100.onnx"), env="ARCFACE_MODEL_PATH"
     )
 
-    # OCR configuration
-    TESSERACT_CMD: str = Field(default="tesseract", env="TESSERACT_CMD")
-    OCR_LANGUAGES: list[str] = Field(default=["eng", "tam"], env="OCR_LANGUAGES")
-
     # Performance settings
     MAX_WORKERS: int = Field(default=4, env="MAX_WORKERS")
     BATCH_SIZE: int = Field(default=32, env="BATCH_SIZE")

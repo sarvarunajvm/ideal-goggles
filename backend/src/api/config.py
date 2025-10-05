@@ -20,7 +20,6 @@ class ConfigurationResponse(BaseModel):
     """Configuration response model."""
 
     roots: list[str] = Field(description="Configured root folders")
-    ocr_languages: list[str] = Field(description="OCR languages enabled")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
     semantic_search_enabled: bool = Field(
         description="Whether semantic search is enabled"
@@ -87,7 +86,6 @@ async def get_configuration() -> ConfigurationResponse:
 
         return ConfigurationResponse(
             roots=(config_data.get("roots") or get_default_photo_roots()),
-            ocr_languages=config_data.get("ocr_languages", ["eng", "tam"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
             semantic_search_enabled=config_data.get("semantic_search_enabled", True),
             batch_size=config_data.get("batch_size", 50),
@@ -376,7 +374,7 @@ def _parse_json_setting(key: str, value: str) -> Any:
 
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
-        return {"roots": [], "ocr_languages": ["eng", "tam"]}.get(key, [])
+        return {"roots": []}.get(key, [])
 
 
 def _parse_boolean_setting(value: str) -> bool:
