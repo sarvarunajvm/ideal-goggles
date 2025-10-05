@@ -1,5 +1,6 @@
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { Search, Users, Lock, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function WelcomeStep() {
   const { nextStep, setSkipOnboarding } = useOnboardingStore();
@@ -59,18 +60,18 @@ export function WelcomeStep() {
       </div>
 
       <div className="flex items-center justify-between pt-4">
-        <button
+        <Button
           onClick={handleSkip}
-          className="rounded-lg px-6 py-2 text-sm font-medium [background:var(--gradient-red)] text-white shadow-md shadow-red-500/30 hover:shadow-lg hover:shadow-red-500/40 hover:scale-[1.02] transition-all"
+          className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all"
         >
           Skip setup
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={nextStep}
-          className="rounded-lg px-6 py-2 font-semibold [background:var(--gradient-gold)] text-black shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all"
+          className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all"
         >
           Get Started
-        </button>
+        </Button>
       </div>
     </div>
   );

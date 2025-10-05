@@ -43,10 +43,10 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
   return (
     <div className="h-full w-80 overflow-y-auto bg-card/95 backdrop-blur border-l border-primary/20 p-6 pt-20">
       {/* Photo Details - Combined filename and path */}
-      <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-cyan-400/10 to-teal-400/10 border border-cyan-500/20">
+      <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/10 to-[rgb(var(--cyan-rgb))]/15 border border-[rgb(var(--cyan-rgb))]/20 shadow-[var(--shadow-cyan)]">
         <div className="flex items-center space-x-2 mb-3">
-          <Info className="h-5 w-5 text-cyan-400" />
-          <h3 className="font-semibold text-cyan-400">Photo Details</h3>
+          <Info className="h-5 w-5 text-[var(--neon-cyan)]" />
+          <h3 className="font-semibold text-[var(--neon-cyan)]">Photo Details</h3>
         </div>
         <div className="space-y-3">
           <div>
@@ -64,10 +64,10 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
       {(metadata?.camera_make || metadata?.camera_model) && (
         <div className="mb-6">
           <div className="flex items-center space-x-2 mb-3">
-            <Camera className="h-5 w-5 text-violet-400" />
-            <h3 className="font-semibold text-violet-400">Camera</h3>
+            <Camera className="h-5 w-5 text-[var(--neon-purple)]" />
+            <h3 className="font-semibold text-[var(--neon-purple)]">Camera</h3>
           </div>
-          <div className="space-y-1 p-3 rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
+          <div className="space-y-1 p-3 rounded-lg bg-gradient-to-r from-[rgb(var(--purple-rgb))]/10 to-[rgb(var(--purple-rgb))]/15 border border-[rgb(var(--purple-rgb))]/20 shadow-[var(--shadow-purple)]">
             {metadata.camera_make && (
               <p className="text-sm text-foreground">{metadata.camera_make}</p>
             )}
@@ -85,8 +85,8 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
         metadata?.focal_length) && (
         <div className="mb-6">
           <div className="flex items-center space-x-2 mb-3">
-            <FileText className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Settings</h3>
+            <FileText className="h-5 w-5 text-[var(--gold-primary)]" />
+            <h3 className="font-semibold text-[var(--gold-primary)]">Settings</h3>
           </div>
           <div className="space-y-2">
             <MetadataRow
@@ -139,10 +139,10 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
       {photo.ocr_text && (
         <div className="mb-6">
           <div className="flex items-center space-x-2 mb-3">
-            <FileText className="h-5 w-5 text-amber-400" />
-            <h3 className="font-semibold text-amber-400">Extracted Text</h3>
+            <FileText className="h-5 w-5 text-[var(--gold-light)]" />
+            <h3 className="font-semibold text-[var(--gold-light)]">Extracted Text</h3>
           </div>
-          <div className="p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+          <div className="p-3 rounded-lg bg-gradient-to-r from-[rgb(var(--gold-rgb))]/10 to-[rgb(var(--gold-rgb))]/15 border border-[rgb(var(--gold-rgb))]/20 shadow-[var(--shadow-gold)]">
             <p className="text-sm text-foreground whitespace-pre-wrap font-mono">
               {photo.ocr_text}
             </p>
@@ -154,21 +154,21 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
       {photo.tags && photo.tags.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center space-x-2 mb-3">
-            <Tag className="h-5 w-5 text-purple-400" />
-            <h3 className="font-semibold text-purple-400">Tags</h3>
+            <Tag className="h-5 w-5 text-[var(--neon-purple)]" />
+            <h3 className="font-semibold text-[var(--neon-purple)]">Tags</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {photo.tags.map((tag, index) => {
-              // Different gradient colors for different tag types
+              // Different gradient colors for different tag types using theme colors
               const getTagStyle = (tagName: string) => {
                 if (tagName.toLowerCase().includes('ocr')) {
-                  return 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 text-amber-400';
+                  return 'bg-gradient-to-r from-[rgb(var(--gold-rgb))]/20 to-[rgb(var(--gold-rgb))]/30 border-[rgb(var(--gold-rgb))]/50 text-[var(--gold-light)]';
                 } else if (tagName.toLowerCase().includes('face')) {
-                  return 'bg-gradient-to-r from-pink-500/20 to-rose-500/20 border-pink-500/50 text-pink-400';
+                  return 'bg-gradient-to-r from-[rgb(var(--pink-rgb))]/20 to-[rgb(var(--pink-rgb))]/30 border-[rgb(var(--pink-rgb))]/50 text-[var(--neon-pink)]';
                 } else if (tagName.toLowerCase().includes('exif')) {
-                  return 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-cyan-400';
+                  return 'bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/20 to-[rgb(var(--cyan-rgb))]/30 border-[rgb(var(--cyan-rgb))]/50 text-[var(--neon-cyan)]';
                 } else {
-                  return 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 border-purple-500/50 text-purple-400';
+                  return 'bg-gradient-to-r from-[rgb(var(--purple-rgb))]/20 to-[rgb(var(--purple-rgb))]/30 border-[rgb(var(--purple-rgb))]/50 text-[var(--neon-purple)]';
                 }
               };
 
@@ -188,21 +188,21 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
       {/* Keyboard shortcuts */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 mb-3">
-          <Info className="h-5 w-5 text-green-400" />
-          <h3 className="font-semibold text-green-400">Shortcuts</h3>
+          <Info className="h-5 w-5 text-[var(--neon-green)]" />
+          <h3 className="font-semibold text-[var(--neon-green)]">Shortcuts</h3>
         </div>
-        <div className="text-xs text-muted-foreground space-y-1 p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+        <div className="text-xs text-muted-foreground space-y-1 p-3 rounded-lg bg-gradient-to-r from-[rgb(var(--green-rgb))]/10 to-[rgb(var(--green-rgb))]/15 border border-[rgb(var(--green-rgb))]/20 shadow-[var(--shadow-green)]">
           <div className="flex justify-between">
             <span>Next photo:</span>
-            <span className="font-mono bg-green-500/20 px-2 py-0.5 rounded text-green-400">→</span>
+            <span className="font-mono bg-[rgb(var(--green-rgb))]/20 px-2 py-0.5 rounded text-[var(--neon-green)]">→</span>
           </div>
           <div className="flex justify-between">
             <span>Previous photo:</span>
-            <span className="font-mono bg-green-500/20 px-2 py-0.5 rounded text-green-400">←</span>
+            <span className="font-mono bg-[rgb(var(--green-rgb))]/20 px-2 py-0.5 rounded text-[var(--neon-green)]">←</span>
           </div>
           <div className="flex justify-between">
             <span>Close:</span>
-            <span className="font-mono bg-green-500/20 px-2 py-0.5 rounded text-green-400">Esc</span>
+            <span className="font-mono bg-[rgb(var(--green-rgb))]/20 px-2 py-0.5 rounded text-[var(--neon-green)]">Esc</span>
           </div>
         </div>
       </div>
@@ -210,8 +210,8 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
       {/* Actions - Moved to bottom */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 mb-3">
-          <FileText className="h-5 w-5 text-pink-400" />
-          <h3 className="font-semibold text-pink-400">Actions</h3>
+          <FileText className="h-5 w-5 text-[var(--neon-pink)]" />
+          <h3 className="font-semibold text-[var(--neon-pink)]">Actions</h3>
         </div>
         <div className="space-y-2">
           <Button
@@ -224,7 +224,7 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
             }}
             variant="outline"
             size="sm"
-            className="w-full justify-start border-cyan-500/30 hover:border-cyan-500/50 text-cyan-400 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-teal-500/20 hover:text-cyan-300 hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02] transition-all"
+            className="w-full justify-start border-[rgb(var(--cyan-rgb))]/30 hover:border-[rgb(var(--cyan-rgb))]/50 text-[var(--neon-cyan)] hover:bg-gradient-to-r hover:from-[rgb(var(--cyan-rgb))]/20 hover:to-[rgb(var(--cyan-rgb))]/30 hover:text-[var(--neon-cyan)] hover:shadow-[var(--shadow-cyan)] hover:scale-[1.02] transition-all"
           >
             <FolderOpen className="h-4 w-4 mr-2" />
             Reveal in Folder
@@ -237,7 +237,7 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
             }}
             variant="outline"
             size="sm"
-            className="w-full justify-start border-violet-500/30 hover:border-violet-500/50 text-violet-400 hover:bg-gradient-to-r hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300 hover:shadow-lg hover:shadow-violet-500/20 hover:scale-[1.02] transition-all"
+            className="w-full justify-start border-[rgb(var(--purple-rgb))]/30 hover:border-[rgb(var(--purple-rgb))]/50 text-[var(--neon-purple)] hover:bg-gradient-to-r hover:from-[rgb(var(--purple-rgb))]/20 hover:to-[rgb(var(--purple-rgb))]/30 hover:text-[var(--neon-purple)] hover:shadow-[var(--shadow-purple)] hover:scale-[1.02] transition-all"
           >
             <Copy className="h-4 w-4 mr-2" />
             Copy File Path
@@ -251,7 +251,7 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
             }}
             variant="outline"
             size="sm"
-            className="w-full justify-start border-amber-500/30 hover:border-amber-500/50 text-amber-400 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-300 hover:shadow-lg hover:shadow-amber-500/20 hover:scale-[1.02] transition-all"
+            className="w-full justify-start border-[rgb(var(--gold-rgb))]/30 hover:border-[rgb(var(--gold-rgb))]/50 text-[var(--gold-light)] hover:bg-gradient-to-r hover:from-[rgb(var(--gold-rgb))]/20 hover:to-[rgb(var(--gold-rgb))]/30 hover:text-[var(--gold-light)] hover:shadow-[var(--shadow-gold)] hover:scale-[1.02] transition-all"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Open Original

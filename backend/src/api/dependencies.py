@@ -290,6 +290,7 @@ async def get_dependencies_status() -> DependenciesResponse:
         "image_similarity": clip_installed and torch_installed,
         "face_detection": insightface_installed and cv2_installed,
         "face_recognition": insightface_installed and cv2_installed,
+        "text_recognition": False,  # OCR/Tesseract was removed from the system
     }
 
     # Check if running in frozen environment

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { FolderPlus, X, Folder } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function FolderSelectionStep() {
   const {
@@ -91,13 +92,15 @@ export function FolderSelectionStep() {
                   {folder}
                 </span>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => removeFolder(folder)}
-                className="rounded p-1 text-red-500/70 hover:bg-red-500/10 hover:text-red-500 transition-all"
+                className="h-8 w-8 p-0 !text-[var(--neon-red)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--red-rgb))]/20 hover:!to-[rgb(var(--red-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-red)] !transition-all"
                 aria-label="Remove folder"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           ))
         )}
@@ -120,55 +123,57 @@ export function FolderSelectionStep() {
               placeholder="/path/to/your/photos"
               className="flex-1 px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
-            <button
+            <Button
               onClick={handleManualAdd}
               disabled={!manualPath}
-              className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              size="sm"
+              className="!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
               Add
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setShowManualInput(false);
                 setManualPath('');
               }}
-              className="px-4 py-2 text-sm font-medium rounded-md bg-muted hover:bg-muted/80"
+              size="sm"
+              className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Add folder button */}
       {!showManualInput && (
-        <button
+        <Button
           onClick={handleSelectFolder}
           disabled={isSelecting}
-          className="flex w-full items-center justify-center space-x-2 rounded-lg py-3 font-semibold [background:var(--gradient-gold)] text-black shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="w-full !bg-gradient-to-r !from-[rgb(var(--pink-rgb))] !to-[rgb(var(--pink-rgb))] hover:!from-[rgb(var(--pink-rgb))]/80 hover:!to-[rgb(var(--pink-rgb))]/80 !text-black !border-[rgb(var(--pink-rgb))]/50 !shadow-[var(--shadow-pink)] hover:!shadow-[var(--shadow-pink)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
         >
-          <FolderPlus className="h-5 w-5" />
+          <FolderPlus className="h-5 w-5 mr-2" />
           <span>
             {isSelecting ? 'Selecting...' : 'Add Folder'}
           </span>
-        </button>
+        </Button>
       )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4">
-        <button
+        <Button
           onClick={prevStep}
-          className="rounded-lg px-6 py-2 font-medium [background:var(--gradient-red)] text-white shadow-md shadow-red-500/30 hover:shadow-lg hover:shadow-red-500/40 hover:scale-[1.02] transition-all"
+          className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleNext}
           disabled={selectedFolders.length === 0}
-          className="rounded-lg px-6 py-2 font-semibold [background:var(--gradient-gold)] text-black disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all"
+          className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

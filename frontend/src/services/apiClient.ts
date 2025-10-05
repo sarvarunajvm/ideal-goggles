@@ -3,6 +3,7 @@
  */
 
 import { logger } from '../utils/logger'
+import { mapErrorToUserMessage } from '../utils/errorMessages'
 
 export const getApiBaseUrl = (): string => {
   // In Electron, backend always runs on port 5555
@@ -178,13 +179,22 @@ class ApiService {
           errorText
         )
 
-        const error = new Error(
-          `HTTP error! status: ${response.status}, message: ${errorText}`
-        )
+        const technicalError = `HTTP error! status: ${response.status}, message: ${errorText}`
+        const mappedError = mapErrorToUserMessage(technicalError)
+
+        const error = new Error(mappedError.message)
+        // Attach additional properties for error handling
+        ;(error as any).originalError = technicalError
+        ;(error as any).severity = mappedError.severity
+        ;(error as any).status = response.status
+
         logger.error(`API request failed: ${endpoint}`, error, {
           requestId,
           status: response.status,
           endpoint,
+          originalError: technicalError,
+          userMessage: mappedError.message,
+          severity: mappedError.severity,
         })
         throw error
       }

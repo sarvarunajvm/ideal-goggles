@@ -22,7 +22,7 @@
   --neon-cyan: hsl(180, 100%, 50%);
   --neon-green: hsl(120, 100%, 50%);
   --neon-pink: hsl(330, 100%, 60%);
-  --neon-red: hsl(0, 100%, 50%);
+  --neon-red: hsl(0, 100%, 60%);
 
   /* Background Colors */
   --black-base: hsl(0, 0%, 5%);
@@ -43,7 +43,7 @@
   --shadow-cyan: 0 10px 25px rgba(var(--cyan-rgb), 0.4);
   --shadow-green: 0 10px 25px rgba(var(--green-rgb), 0.4);
   --shadow-pink: 0 10px 25px rgba(var(--pink-rgb), 0.4);
-  --shadow-red: 0 10px 25px rgba(var(--red-rgb), 0.4);
+  --shadow-red: 0 10px 25px rgba(var(--red-rgb), 0.6);
 
   /* Gradient Presets */
   --gradient-gold: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
@@ -51,5 +51,19 @@
   --gradient-cyan: linear-gradient(135deg, var(--neon-cyan), hsl(190, 100%, 60%));
   --gradient-green: linear-gradient(135deg, var(--neon-green), hsl(130, 100%, 60%));
   --gradient-pink: linear-gradient(135deg, var(--neon-pink), hsl(340, 100%, 70%));
-  --gradient-red: linear-gradient(135deg, var(--neon-red), hsl(10, 100%, 60%));
+  --gradient-red: linear-gradient(135deg, var(--neon-red), hsl(0, 100%, 70%));
+}
+
+/* =================================================================
+   LIGHTBOX UTILITY CLASSES
+   ================================================================= */
+
+/* Position close button outside the 320px (20rem) sidebar */
+.lightbox-close-btn {
+  right: 21rem;
+}
+
+/* Position next button outside the 320px (20rem) sidebar */
+.lightbox-next-btn {
+  right: 21rem;
 }

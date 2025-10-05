@@ -67,9 +67,8 @@ export function Lightbox() {
             {/* Close button - positioned to not overlap sidebar */}
             <button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 z-20 rounded-full bg-card/95 backdrop-blur border border-primary/30 p-2 text-primary hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white hover:border-red-500/50 transition-all shadow-lg hover:shadow-red-500/30 hover:scale-110"
+              className="absolute top-4 z-20 rounded-full bg-card/95 backdrop-blur border border-primary/30 p-2 text-primary hover:bg-gradient-to-r hover:from-[rgb(var(--red-rgb))] hover:to-[rgb(var(--pink-rgb))] hover:text-white hover:border-[rgb(var(--red-rgb))]/50 transition-all shadow-lg hover:shadow-[var(--shadow-red)] hover:scale-110 lightbox-close-btn"
               aria-label="Close lightbox"
-              style={{ right: '21rem' }} // Position it outside the 320px (20rem) sidebar
             >
               <X className="h-6 w-6" />
             </button>
@@ -87,7 +86,7 @@ export function Lightbox() {
           </div>
 
           {/* Photo counter */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-card/95 backdrop-blur border border-primary/30 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400/10 to-teal-400/10 text-cyan-400 shadow-lg shadow-cyan-500/20">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-card/95 backdrop-blur border border-[rgb(var(--cyan-rgb))]/30 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/10 to-[rgb(var(--cyan-rgb))]/15 text-[var(--neon-cyan)] shadow-[var(--shadow-cyan)] text-center">
             {currentIndex + 1} / {photos.length}
           </div>
         </motion.div>

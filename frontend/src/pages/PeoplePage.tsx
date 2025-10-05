@@ -170,7 +170,12 @@ export default function PeoplePage() {
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-foreground">People</h1>
-            <Button onClick={openAddForm}>➕ Add Person</Button>
+            <Button
+              onClick={openAddForm}
+              className="h-8 px-3 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-[1.02] !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+            >
+              ➕ Add Person
+            </Button>
           </div>
 
           {/* Search */}
@@ -208,8 +213,7 @@ export default function PeoplePage() {
                     <div className="relative">
                       <Button
                         type="button"
-                        variant="secondary"
-                        className="mr-2"
+                        className="mr-2 !bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 transition-all"
                         onClick={() =>
                           document.getElementById('new-person-file')?.click()
                         }
@@ -240,11 +244,13 @@ export default function PeoplePage() {
                   <Button
                     onClick={savePerson}
                     disabled={!nameInput.trim()}
+                    className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                   >
                     Save Person
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
+                    className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] transition-all"
                     onClick={() => {
                       setShowForm(false)
                       resetForm()
@@ -280,7 +286,7 @@ export default function PeoplePage() {
               <Card
                 key={person.id}
                 data-testid="person-item"
-                className="cursor-pointer border-border/50 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all duration-200 hover:-translate-y-1"
+                className="cursor-pointer border-border/50 hover:shadow-lg hover:shadow-[var(--shadow-gold)] hover:border-[rgb(var(--gold-rgb))]/30 transition-all duration-200 hover:-translate-y-1 bg-card/95 backdrop-blur"
                 onClick={() => setSelectedId(person.id)}
               >
                 <CardHeader className="text-center">
@@ -301,7 +307,10 @@ export default function PeoplePage() {
                 </CardHeader>
                 <CardContent className="text-center">
                   <div className="flex justify-center mb-4">
-                    <Badge variant={person.active ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={person.active ? 'default' : 'secondary'}
+                      className={person.active ? '!bg-gradient-to-r !from-[rgb(var(--purple-rgb))] !to-[rgb(var(--purple-rgb))] !text-white !border-[rgb(var(--purple-rgb))]/50 !shadow-[var(--shadow-purple)]' : ''}
+                    >
                       {person.active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
@@ -314,17 +323,16 @@ export default function PeoplePage() {
                           navigate(`/?face=${person.id}`)
                         }
                       }}
-                      className="w-full"
+                      className="w-full !bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                       size="sm"
                       disabled={!faceSearchEnabled}
                     >
-                      Search Photos of this Person
+                      Find Photos!
                     </Button>
                     <div className="flex space-x-2">
                       <Button
-                        variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all"
                         onClick={e => {
                           e.stopPropagation()
                           setSelectedId(person.id)
@@ -337,9 +345,8 @@ export default function PeoplePage() {
                         Edit
                       </Button>
                       <Button
-                        variant="destructive"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 !bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 transition-all"
                         onClick={e => {
                           e.stopPropagation()
                           setSelectedId(person.id)
@@ -358,7 +365,7 @@ export default function PeoplePage() {
                         <Label>Photos</Label>
                         <div>
                           <Button
-                            variant="secondary"
+                            className="!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 transition-all"
                             onClick={e => {
                               e.stopPropagation()
                               document
@@ -388,7 +395,7 @@ export default function PeoplePage() {
                             }}
                           />
                           <Button
-                            className="ml-2"
+                            className="ml-2 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all"
                             onClick={e => {
                               e.stopPropagation()
                               // The photos have already been added via updateSelected in the file input onChange
@@ -442,10 +449,16 @@ export default function PeoplePage() {
               <CardContent className="pt-4">
                 <div className="font-medium mb-2">Delete {selected.name}?</div>
                 <div className="flex gap-2">
-                  <Button variant="destructive" onClick={deleteSelected}>
+                  <Button
+                    className="bg-gradient-to-r from-[rgb(var(--red-rgb))] to-[rgb(var(--red-rgb))] hover:from-[rgb(var(--red-rgb))]/80 hover:to-[rgb(var(--red-rgb))]/80 text-white border-[rgb(var(--red-rgb))]/50 shadow-[var(--shadow-red)] hover:shadow-[var(--shadow-red)] transition-all"
+                    onClick={deleteSelected}
+                  >
                     Confirm Delete
                   </Button>
-                  <Button variant="ghost" onClick={() => setSelectedId(null)}>
+                  <Button
+                    className="bg-gradient-to-r from-[rgb(var(--cyan-rgb))] to-[rgb(var(--cyan-rgb))] hover:from-[rgb(var(--cyan-rgb))]/80 hover:to-[rgb(var(--cyan-rgb))]/80 text-black border-[rgb(var(--cyan-rgb))]/50 shadow-[var(--shadow-cyan)] hover:shadow-[var(--shadow-cyan)] transition-all"
+                    onClick={() => setSelectedId(null)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -461,13 +474,13 @@ export default function PeoplePage() {
                 <div className="flex gap-2">
                   <Button
                     id="confirm-remove-btn"
-                    variant="destructive"
+                    className="bg-gradient-to-r from-[rgb(var(--red-rgb))] to-[rgb(var(--red-rgb))] hover:from-[rgb(var(--red-rgb))]/80 hover:to-[rgb(var(--red-rgb))]/80 text-white border-[rgb(var(--red-rgb))]/50 shadow-[var(--shadow-red)] hover:shadow-[var(--shadow-red)] transition-all"
                     onClick={confirmRemovePhoto}
                   >
                     Confirm
                   </Button>
                   <Button
-                    variant="ghost"
+                    className="bg-gradient-to-r from-[rgb(var(--cyan-rgb))] to-[rgb(var(--cyan-rgb))] hover:from-[rgb(var(--cyan-rgb))]/80 hover:to-[rgb(var(--cyan-rgb))]/80 text-black border-[rgb(var(--cyan-rgb))]/50 shadow-[var(--shadow-cyan)] hover:shadow-[var(--shadow-cyan)] transition-all"
                     onClick={() => setPhotoToRemove(null)}
                   >
                     Cancel

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,30 @@ class IndexStatus(BaseModel):
     estimated_completion: datetime | None = Field(
         description="Estimated completion time"
     )
+
+
+def _calculate_estimated_completion():
+    """Calculate estimated completion time based on current progress."""
+    if not _indexing_state["started_at"] or _indexing_state["progress"]["total_files"] == 0:
+        return None
+
+    progress = _indexing_state["progress"]
+    current_time = datetime.now()
+    elapsed = (current_time - _indexing_state["started_at"]).total_seconds()
+
+    if progress["processed_files"] == 0:
+        return None
+
+    # Calculate progress percentage
+    progress_ratio = progress["processed_files"] / progress["total_files"]
+    if progress_ratio <= 0:
+        return None
+
+    # Estimate total time needed
+    estimated_total_time = elapsed / progress_ratio
+    remaining_time = estimated_total_time - elapsed
+
+    return current_time + timedelta(seconds=remaining_time)
 
 
 class StartIndexRequest(BaseModel):
@@ -104,8 +128,10 @@ async def start_indexing(
             "task": None,
         }
 
-        # Start indexing in background
-        background_tasks.add_task(_run_indexing_process, request.full)
+        # Start indexing in background and store task for cancellation
+        task = asyncio.create_task(_run_indexing_process(request.full))
+        _indexing_state["task"] = task
+        background_tasks.add_task(_monitor_indexing_task, task)
 
         logger.info(
             "Indexing started successfully",
@@ -140,12 +166,24 @@ async def get_indexing_status() -> IndexStatus:
     Returns:
         Current indexing status and progress
     """
+    # Calculate estimated completion in real-time
+    estimated_completion = None
+    if _indexing_state["status"] == "indexing":
+        estimated_completion = _calculate_estimated_completion()
+
+    # Add percentage to progress
+    progress = dict(_indexing_state["progress"])
+    if progress.get("total_files", 0) > 0:
+        progress["percentage"] = (progress.get("processed_files", 0) / progress["total_files"]) * 100
+    else:
+        progress["percentage"] = 0.0
+
     return IndexStatus(
         status=_indexing_state["status"],
-        progress=_indexing_state["progress"],
+        progress=progress,
         errors=_indexing_state["errors"],
         started_at=_indexing_state["started_at"],
-        estimated_completion=_indexing_state["estimated_completion"],
+        estimated_completion=estimated_completion,
     )
 
 
@@ -331,6 +369,26 @@ async def get_indexing_statistics() -> dict[str, Any]:
         )
 
 
+async def _monitor_indexing_task(task):
+    """Monitor the indexing task and handle completion/cancellation."""
+    global _indexing_state
+    try:
+        await task
+    except asyncio.CancelledError:
+        _indexing_state["status"] = "stopped"
+        _indexing_state["task"] = None
+        logger.info("Indexing task was successfully cancelled")
+    except Exception as e:
+        _indexing_state["status"] = "error"
+        _indexing_state["errors"].append(str(e))
+        _indexing_state["task"] = None
+        logger.error(f"Indexing task failed: {e}")
+    finally:
+        # Clear task reference when done
+        if _indexing_state.get("task") == task:
+            _indexing_state["task"] = None
+
+
 async def _setup_indexing_workers():
     """Setup and import all required workers."""
     from ..workers.crawler import FileCrawler
@@ -348,6 +406,12 @@ async def _setup_indexing_workers():
     }
 
 
+def _check_cancellation():
+    """Check if indexing has been cancelled and raise CancelledError if so."""
+    if _indexing_state["status"] == "stopped":
+        raise asyncio.CancelledError("Indexing was stopped by user request")
+
+
 async def _run_discovery_phase(workers, config, full_reindex):
     """Run file discovery phase."""
     global _indexing_state
@@ -355,6 +419,9 @@ async def _run_discovery_phase(workers, config, full_reindex):
 
     _indexing_state["progress"]["current_phase"] = "discovery"
     logger.info("Phase 1: File discovery")
+
+    # Check for cancellation
+    _check_cancellation()
 
     crawler = workers["FileCrawler"]()
     for root_path in config.get("roots", []):
@@ -415,6 +482,10 @@ async def _run_processing_phases(workers, config, photos_to_process):
     # Phase 2: Metadata extraction
     _indexing_state["progress"]["current_phase"] = "metadata"
     logger.info("Phase 2: EXIF metadata extraction")
+
+    # Check for cancellation
+    _check_cancellation()
+
     try:
         exif_pipeline = workers["EXIFExtractionPipeline"]()
         await asyncio.sleep(0.5)  # Add small delay to show progress
@@ -465,6 +536,10 @@ async def _run_processing_phases(workers, config, photos_to_process):
     # Phase 3: Embedding generation (optional - skip if dependencies missing)
     _indexing_state["progress"]["current_phase"] = "embeddings"
     logger.info("Phase 3: Embedding generation")
+
+    # Check for cancellation
+    _check_cancellation()
+
     await asyncio.sleep(0.5)  # Add small delay to show progress
     try:
         embedding_worker = workers["OptimizedCLIPWorker"]()
@@ -506,6 +581,10 @@ async def _run_processing_phases(workers, config, photos_to_process):
     # Phase 4: Thumbnail generation
     _indexing_state["progress"]["current_phase"] = "thumbnails"
     logger.info("Phase 4: Thumbnail generation")
+
+    # Check for cancellation
+    _check_cancellation()
+
     await asyncio.sleep(0.5)  # Add small delay to show progress
     thumbnail_generator = workers["SmartThumbnailGenerator"](
         cache_root=str(settings.THUMBNAILS_DIR)
@@ -548,6 +627,10 @@ async def _run_processing_phases(workers, config, photos_to_process):
     if config.get("face_search_enabled", False):
         _indexing_state["progress"]["current_phase"] = "faces"
         logger.info("Phase 5: Face detection")
+
+        # Check for cancellation
+        _check_cancellation()
+
         try:
             face_worker = workers["FaceDetectionWorker"]()
             if face_worker.is_available():
@@ -555,31 +638,29 @@ async def _run_processing_phases(workers, config, photos_to_process):
 
                 # Save face detection results to database
                 from ..db.connection import get_database_manager
-                import time
                 db_manager = get_database_manager()
                 saved_face_count = 0
 
-                for face_result in face_results:
-                    if face_result and hasattr(face_result, 'faces'):
-                        for face in face_result.faces:
+                # face_results is a list of face lists, one per photo
+                for i, face_list in enumerate(face_results):
+                    if face_list:  # If this photo has faces
+                        photo = photos_to_process[i]
+                        logger.debug(f"Saving {len(face_list)} faces for photo {photo.id} ({photo.filename})")
+
+                        for face in face_list:
                             try:
+                                # Use the Face object's to_db_params method to get database parameters
+                                params = face.to_db_params()
+
                                 query = """
                                     INSERT INTO faces
                                     (file_id, person_id, box_xyxy, face_vector, confidence, verified)
                                     VALUES (?, ?, ?, ?, ?, ?)
                                 """
-                                params = (
-                                    face_result.file_id,
-                                    face.person_id if hasattr(face, 'person_id') else None,
-                                    face.box_xyxy if hasattr(face, 'box_xyxy') else None,
-                                    face.face_vector if hasattr(face, 'face_vector') else None,
-                                    face.confidence if hasattr(face, 'confidence') else 0.0,
-                                    face.verified if hasattr(face, 'verified') else False,
-                                )
                                 db_manager.execute_update(query, params)
                                 saved_face_count += 1
                             except Exception as e:
-                                logger.warning(f"Failed to save face for file_id {face_result.file_id}: {e}")
+                                logger.warning(f"Failed to save face for photo {photo.id} ({photo.filename}): {e}")
 
                 logger.info(f"Saved {saved_face_count} face records to database")
             else:

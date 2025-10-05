@@ -15,6 +15,7 @@ from src.api import (
     dependencies,
     health,
     indexing,
+    logs,
     people,
     search,
 )
@@ -105,6 +106,7 @@ app.include_router(health.router)
 app.include_router(config.router)
 app.include_router(dependencies.router)
 app.include_router(indexing.router)
+app.include_router(logs.router)
 app.include_router(people.router)
 app.include_router(batch_operations.router)
 app.include_router(search.router)

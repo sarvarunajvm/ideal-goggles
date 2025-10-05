@@ -7,7 +7,7 @@ export const buttonVariants = cva(
       variant: {
         default: '[background:var(--gradient-gold)] text-black font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02]',
         destructive:
-          '[background:var(--gradient-red)] text-white font-semibold shadow-md shadow-red-500/30 hover:shadow-lg hover:shadow-red-500/40 hover:scale-[1.02]',
+          '[background:var(--gradient-red)] text-white font-semibold shadow-lg shadow-red-500/60 hover:shadow-xl hover:shadow-red-500/80 hover:scale-[1.02] border border-red-400/30 hover:border-red-300/50',
         outline:
           'border-2 border-primary/50 bg-transparent text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md hover:shadow-primary/20',
         secondary:

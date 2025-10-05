@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..core.logging_config import get_logger
 from ..core.utils import get_default_photo_roots, validate_path
+from ..db.connection import get_database_manager
 from ..db.utils import DatabaseHelper
 
 logger = get_logger(__name__)
@@ -131,22 +132,22 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
                 # Delete photos from removed root paths
                 delete_query = """
                     DELETE FROM photos
-                    WHERE file_path LIKE ? || '%'
+                    WHERE path LIKE ? || '%'
                 """
                 db_manager.execute_update(delete_query, (removed_root,))
 
                 # Also delete associated faces
                 delete_faces_query = """
                     DELETE FROM faces
-                    WHERE photo_id NOT IN (SELECT id FROM photos)
+                    WHERE file_id NOT IN (SELECT id FROM photos)
                 """
                 db_manager.execute_update(delete_faces_query)
 
             # Reset indexing state if roots changed
-            from ..services.indexing_state import IndexingStateManager
-
-            state_manager = IndexingStateManager()
-            state_manager.reset_state()
+            # Note: IndexingStateManager doesn't exist, state reset not implemented yet
+            import logging
+            temp_logger = logging.getLogger(__name__)
+            temp_logger.info("Root folders changed - indexing state should be reset")
 
         # Update configuration in database
         _update_config_in_db(db_manager, "roots", absolute_roots)

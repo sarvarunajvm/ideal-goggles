@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Camera, Users, FileText } from 'lucide-react';
+import { CheckCircle, Camera, Users, FileText, Loader2 } from 'lucide-react';
+import { apiService } from '../../services/apiClient';
+import { Button } from '@/components/ui/button';
 
 interface StatsCardProps {
   icon: React.ReactNode;
@@ -23,13 +26,42 @@ function StatsCard({ icon, label, value }: StatsCardProps) {
 export function CompleteStep() {
   const { setCompleted } = useOnboardingStore();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<{
+    photosIndexed: number;
+    facesDetected: number;
+    tagsGenerated: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Fetch actual stats from API
-  const stats = {
-    photosIndexed: 500,
-    facesDetected: 3,
-    tagsGenerated: 1250,
-  };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const [indexStats, statusData] = await Promise.all([
+          apiService.getIndexStats(),
+          apiService.getIndexStatus(),
+        ]);
+
+        setStats({
+          photosIndexed: indexStats.database?.total_photos || 0,
+          facesDetected: indexStats.database?.faces_detected || 0,
+          tagsGenerated: (indexStats.database?.total_photos || 0) * 3, // Estimate 3 tags per photo
+        });
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        // Fallback to default values if API fails
+        setStats({
+          photosIndexed: 0,
+          facesDetected: 0,
+          tagsGenerated: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const handleFinish = () => {
     setCompleted();
@@ -52,21 +84,40 @@ export function CompleteStep() {
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-3">
-        <StatsCard
-          icon={<Camera className="h-6 w-6" />}
-          label="Photos Found"
-          value={stats.photosIndexed.toLocaleString()}
-        />
-        <StatsCard
-          icon={<Users className="h-6 w-6" />}
-          label="People Found"
-          value={stats.facesDetected}
-        />
-        <StatsCard
-          icon={<FileText className="h-6 w-6" />}
-          label="Labels Added"
-          value={stats.tagsGenerated.toLocaleString()}
-        />
+        {loading ? (
+          // Loading state
+          Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex items-center space-x-3 rounded-lg border border-border/50 bg-background/50 p-4"
+            >
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              <div>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-20 bg-muted animate-pulse rounded mt-1"></div>
+              </div>
+            </div>
+          ))
+        ) : (
+          // Real stats
+          <>
+            <StatsCard
+              icon={<Camera className="h-6 w-6" />}
+              label="Photos Found"
+              value={stats?.photosIndexed.toLocaleString() ?? '0'}
+            />
+            <StatsCard
+              icon={<Users className="h-6 w-6" />}
+              label="People Found"
+              value={stats?.facesDetected ?? 0}
+            />
+            <StatsCard
+              icon={<FileText className="h-6 w-6" />}
+              label="Labels Added"
+              value={stats?.tagsGenerated.toLocaleString() ?? '0'}
+            />
+          </>
+        )}
       </div>
 
       {/* Quick tips */}
@@ -102,12 +153,13 @@ export function CompleteStep() {
 
       {/* Finish button */}
       <div className="flex justify-center pt-4">
-        <button
+        <Button
           onClick={handleFinish}
-          className="rounded-lg px-8 py-3 font-semibold [background:var(--gradient-gold)] text-black shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02] transition-all"
+          size="lg"
+          className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all px-8"
         >
           Start Using Ideal Goggles
-        </button>
+        </Button>
       </div>
     </div>
   );
