@@ -88,10 +88,46 @@ export interface DependencyStatus {
   description: string
 }
 
+export interface ModelVerificationDetails {
+  functional: boolean
+  error: string | null
+  details: {
+    available_memory_gb: number
+    total_memory_gb: number
+    cuda_available?: boolean
+    device?: string
+    model_name?: string
+    model_loaded?: boolean
+    tesseract_version?: string
+  }
+}
+
 export interface DependenciesResponse {
   core: DependencyStatus[]
   ml: DependencyStatus[]
   features: Record<string, boolean>
+}
+
+export interface DependencyVerificationResponse {
+  summary: {
+    all_functional: boolean
+    issues_found: Array<{
+      model: string
+      error: string
+    }>
+  }
+  models: Record<string, ModelVerificationDetails>
+  system: {
+    memory: {
+      total_gb: number
+      available_gb: number
+      percent_used: number
+    }
+    python_version: string
+    platform: string
+    architecture: string
+  }
+  recommendations: string[]
 }
 
 class ApiService {
@@ -324,6 +360,10 @@ class ApiService {
   // Dependencies endpoints
   async getDependencies(): Promise<DependenciesResponse> {
     return this.request<DependenciesResponse>('/dependencies')
+  }
+
+  async verifyDependencies(): Promise<DependencyVerificationResponse> {
+    return this.request<DependencyVerificationResponse>('/dependencies/verify')
   }
 
   async installDependencies(

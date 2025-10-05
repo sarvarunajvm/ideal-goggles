@@ -7,8 +7,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
-from ..db.connection import get_database_manager
+from ..core.logging_config import get_logger
+from ..core.utils import get_default_photo_roots, validate_path
+from ..db.utils import DatabaseHelper
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -16,8 +19,6 @@ class ConfigurationResponse(BaseModel):
     """Configuration response model."""
 
     roots: list[str] = Field(description="Configured root folders")
-    ocr_enabled: bool = Field(description="Whether OCR text extraction is enabled")
-    ocr_languages: list[str] = Field(description="Enabled OCR languages")
     face_search_enabled: bool = Field(description="Whether face search is enabled")
     semantic_search_enabled: bool = Field(
         description="Whether semantic search is enabled"
@@ -25,31 +26,6 @@ class ConfigurationResponse(BaseModel):
     batch_size: int = Field(description="Batch size for processing")
     thumbnail_size: str = Field(description="Thumbnail size preset")
     index_version: str = Field(description="Current index version")
-
-
-def _compute_default_roots() -> list[str]:
-    """Compute OS-specific default photo roots.
-    - Windows: %USERPROFILE%\\Pictures
-    - macOS/Linux: ~/Pictures
-    Returns only existing directories.
-    """
-    import os
-    import sys
-    from pathlib import Path
-
-    try:
-        if sys.platform.startswith("win"):
-            userprofile = os.environ.get("USERPROFILE") or str(Path.home())
-            candidate = Path(userprofile) / "Pictures"
-        else:
-            candidate = Path.home() / "Pictures"
-        return (
-            [str(candidate.resolve())]
-            if candidate.exists() and candidate.is_dir()
-            else []
-        )
-    except Exception:
-        return []
 
 
 class UpdateRootsRequest(BaseModel):
@@ -63,23 +39,11 @@ class UpdateRootsRequest(BaseModel):
         """Validate root folder paths."""
         validated_roots = []
         for root_path in v:
-            # Check for empty strings
-            if not root_path or not root_path.strip():
-                msg = "Root path cannot be empty"
-                raise ValueError(msg)
-
-            # Expand home directory and resolve path
-            path = Path(root_path).expanduser().resolve()
-
-            if not path.exists():
-                msg = f"Path does not exist: {root_path} (resolved to {path})"
-                raise ValueError(msg)
-            if not path.is_dir():
-                msg = f"Path is not a directory: {root_path} (resolved to {path})"
-                raise ValueError(msg)
-
-            # Store the expanded/resolved path
-            validated_roots.append(str(path))
+            try:
+                path = validate_path(root_path, must_exist=True, must_be_dir=True)
+                validated_roots.append(str(path))
+            except ValueError as e:
+                raise ValueError(f"Invalid root path: {e}")
 
         return validated_roots
 
@@ -87,10 +51,6 @@ class UpdateRootsRequest(BaseModel):
 class UpdateConfigRequest(BaseModel):
     """Request model for updating configuration."""
 
-    ocr_enabled: bool | None = Field(
-        None, description="Enable/disable OCR text extraction"
-    )
-    ocr_languages: list[str] | None = Field(None, description="OCR languages to enable")
     face_search_enabled: bool | None = Field(
         None, description="Enable/disable face search"
     )
@@ -106,21 +66,6 @@ class UpdateConfigRequest(BaseModel):
     thumbnail_quality: int | None = Field(
         None, ge=50, le=100, description="Thumbnail quality"
     )
-
-    @field_validator("ocr_languages")
-    @classmethod
-    def validate_ocr_languages(cls, v):
-        """Validate OCR language codes."""
-        if v is not None:
-            valid_languages = [
-                "eng",
-                "tam",
-            ]
-            for lang in v:
-                if lang not in valid_languages:
-                    msg = f"Unsupported OCR language: {lang}"
-                    raise ValueError(msg)
-        return v
 
 
 @router.get("/config", response_model=ConfigurationResponse)
@@ -139,8 +84,6 @@ async def get_configuration() -> ConfigurationResponse:
 
         return ConfigurationResponse(
             roots=(config_data.get("roots") or _compute_default_roots()),
-            ocr_enabled=config_data.get("ocr_enabled", False),  # Default to False
-            ocr_languages=config_data.get("ocr_languages", ["eng"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
             semantic_search_enabled=config_data.get("semantic_search_enabled", True),
             batch_size=config_data.get("batch_size", 50),
@@ -247,16 +190,6 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
         db_manager = get_database_manager()
         updated_fields = []
 
-        # Update OCR enabled setting if provided
-        if request.ocr_enabled is not None:
-            _update_config_in_db(db_manager, "ocr_enabled", request.ocr_enabled)
-            updated_fields.append("ocr_enabled")
-
-        # Update OCR languages if provided
-        if request.ocr_languages is not None:
-            _update_config_in_db(db_manager, "ocr_languages", request.ocr_languages)
-            updated_fields.append("ocr_languages")
-
         # Update face search setting if provided
         if request.face_search_enabled is not None:
             _update_config_in_db(
@@ -327,18 +260,12 @@ async def get_default_configuration() -> dict[str, Any]:
     """
     return {
         "roots": [],
-        "ocr_enabled": False,  # Default to off
-        "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
         "semantic_search_enabled": True,
         "batch_size": 50,
         "thumbnail_size": "medium",
         "thumbnail_quality": 85,
         "index_version": "1",
-        "supported_ocr_languages": [
-            "eng",
-            "tam",
-        ],
         "supported_image_formats": [".jpg", ".jpeg", ".png", ".tiff", ".tif"],
         "thumbnail_size_options": ["small", "medium", "large"],
         "max_batch_size": 500,
@@ -409,8 +336,6 @@ async def reset_configuration() -> dict[str, Any]:
         # Reset to default values
         default_config = {
             "roots": [],
-            "ocr_enabled": False,  # Default to off
-            "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
             "semantic_search_enabled": True,
             "thumbnail_size": "medium",
@@ -446,7 +371,7 @@ def _parse_json_setting(key: str, value: str) -> Any:
 
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
-        return {"roots": [], "ocr_languages": ["eng", "tam"]}.get(key, [])
+        return {"roots": []}.get(key, [])
 
 
 def _parse_boolean_setting(value: str) -> bool:
@@ -466,12 +391,12 @@ def _parse_int_setting(key: str, value: str) -> int:
 
 def _parse_setting_value(key: str, value: str) -> Any:
     """Parse setting value based on key type."""
-    if key in ["roots", "ocr_languages"]:
+    if key == "roots":
         parsed = _parse_json_setting(key, value)
         if key == "roots" and (not isinstance(parsed, list) or not parsed):
             return _compute_default_roots()
         return parsed
-    if key in ["face_search_enabled", "ocr_enabled", "semantic_search_enabled"]:
+    if key in ["face_search_enabled", "semantic_search_enabled"]:
         return _parse_boolean_setting(value)
     if key in ["thumbnail_quality", "batch_size"]:
         return _parse_int_setting(key, value)
@@ -483,9 +408,7 @@ def _parse_setting_value(key: str, value: str) -> Any:
 def _get_config_defaults() -> dict[str, Any]:
     """Get default configuration values."""
     return {
-        "roots": _compute_default_roots(),
-        "ocr_enabled": False,  # Default to off
-        "ocr_languages": ["eng", "tam"],
+        "roots": get_default_photo_roots(),
         "face_search_enabled": False,
         "semantic_search_enabled": True,
         "batch_size": 50,
@@ -528,7 +451,6 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         # Return defaults on error
         return {
             "roots": _compute_default_roots(),
-            "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
             "thumbnail_size": "medium",
             "thumbnail_quality": 85,

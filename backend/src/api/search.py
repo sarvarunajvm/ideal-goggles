@@ -13,7 +13,14 @@ from pydantic import BaseModel, Field
 
 from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
 from ..core.middleware import get_request_id
+from ..core.utils import (
+    DependencyChecker,
+    calculate_execution_time,
+    handle_internal_error,
+    handle_service_unavailable,
+)
 from ..db.connection import get_database_manager
+from ..db.utils import DatabaseHelper
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -167,14 +174,9 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
 
     try:
         # Check if CLIP dependencies are available
-        try:
-            import clip
-            import torch
-        except ImportError as e:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Semantic search unavailable: CLIP dependencies not installed ({e})",
-            )
+        clip_available, error_msg = DependencyChecker.check_clip()
+        if not clip_available:
+            handle_service_unavailable("Semantic search", error_msg)
 
         # Import embedding worker here to avoid circular imports
         from ..workers.embedding_worker import CLIPEmbeddingWorker
@@ -207,13 +209,13 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
         )
 
         # Calculate execution time
-        execution_time = (datetime.now() - start_time).total_seconds() * 1000
+        execution_time = calculate_execution_time(start_time)
 
         return SearchResults(
             query=request.text,
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time),
+            took_ms=execution_time,
         )
 
     except HTTPException:
@@ -412,21 +414,12 @@ async def _execute_text_search(
             "e.camera_model LIKE ?",
         ]
 
-        # Add OCR search if available
-        ocr_condition = """
-            p.id IN (
-                SELECT file_id FROM ocr WHERE ocr MATCH ?
-            )
-        """
-        text_conditions.append(ocr_condition)
-
         # Combine text conditions with OR
         where_conditions.append(f"({' OR '.join(text_conditions)})")
 
         # Add parameters for each condition
         search_pattern = f"%{query}%"
         params.extend([search_pattern] * 4)  # For LIKE conditions
-        params.append(query)  # For FTS match
 
     # Add date filter
     if from_date or to_date:

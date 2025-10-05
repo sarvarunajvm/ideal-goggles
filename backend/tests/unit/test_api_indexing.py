@@ -14,7 +14,6 @@ from src.api.indexing import (
     StartIndexRequest,
     _get_config_from_db,
     _get_indexed_photo_count,
-    _get_ocr_photo_count,
     _get_photos_for_processing,
     _indexing_state,
     _run_discovery_phase,
@@ -324,22 +323,6 @@ class TestHelperFunctions:
         db_manager.execute_query = MagicMock(side_effect=Exception("Query error"))
 
         count = _get_indexed_photo_count(db_manager)
-
-        assert count == 0
-
-    def test_get_ocr_photo_count_success(self, mock_db_manager, db_manager):
-        """Test getting OCR photo count."""
-        db_manager.execute_query = MagicMock(return_value=[[25]])
-
-        count = _get_ocr_photo_count(db_manager)
-
-        assert count == 25
-
-    def test_get_ocr_photo_count_error(self, mock_db_manager, db_manager):
-        """Test getting OCR photo count with error."""
-        db_manager.execute_query = MagicMock(side_effect=Exception("Query error"))
-
-        count = _get_ocr_photo_count(db_manager)
 
         assert count == 0
 

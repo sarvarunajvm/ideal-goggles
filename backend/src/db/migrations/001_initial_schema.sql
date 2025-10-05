@@ -37,16 +37,6 @@ CREATE TABLE exif (
   FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
 );
 
--- OCR text with full-text search
-CREATE VIRTUAL TABLE ocr USING fts5(
-  text,
-  file_id UNINDEXED,
-  language UNINDEXED,
-  confidence UNINDEXED,
-  processed_at UNINDEXED,
-  content=''
-);
-
 -- Vector embeddings
 CREATE TABLE embeddings (
   file_id INTEGER PRIMARY KEY,
