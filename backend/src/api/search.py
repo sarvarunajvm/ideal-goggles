@@ -171,7 +171,9 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
         Search results based on semantic similarity
     """
     start_time = datetime.now()
-    logger.info(f"Semantic search started for query: '{request.text}' with top_k: {request.top_k}")
+    logger.info(
+        f"Semantic search started for query: '{request.text}' with top_k: {request.top_k}"
+    )
 
     try:
         # Check if CLIP dependencies are available
@@ -205,7 +207,9 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
             )
 
         # Search for similar images
-        logger.info(f"Calling _execute_semantic_search with embedding shape: {query_embedding.shape if hasattr(query_embedding, 'shape') else 'unknown'}")
+        logger.info(
+            f"Calling _execute_semantic_search with embedding shape: {query_embedding.shape if hasattr(query_embedding, 'shape') else 'unknown'}"
+        )
         search_results = await _execute_semantic_search(
             db_manager, query_embedding, request.top_k
         )
@@ -515,7 +519,7 @@ async def _execute_semantic_search(
         WHERE p.indexed_at IS NOT NULL
     """
 
-    logger.info(f"Executing embeddings query for semantic search")
+    logger.info("Executing embeddings query for semantic search")
     rows = db_manager.execute_query(embeddings_query)
     logger.info(f"Query returned {len(rows)} rows")
 
@@ -544,7 +548,9 @@ async def _execute_semantic_search(
 
             # Check dimensions match
             if len(query_flat) != len(stored_flat):
-                logger.warning(f"Embedding dimension mismatch: query={len(query_flat)}, stored={len(stored_flat)} for file_id {row[0]}")
+                logger.warning(
+                    f"Embedding dimension mismatch: query={len(query_flat)}, stored={len(stored_flat)} for file_id {row[0]}"
+                )
                 continue
 
             # Normalize both vectors (important for cosine similarity)
@@ -561,10 +567,12 @@ async def _execute_semantic_search(
 
             # Log first few similarities for debugging
             if i < 5:
-                logger.info(f"Similarity {i}: {similarity:.4f} for file_id {row[0]} (query_dim: {len(query_flat)}, stored_dim: {len(stored_flat)})")
+                logger.info(
+                    f"Similarity {i}: {similarity:.4f} for file_id {row[0]} (query_dim: {len(query_flat)}, stored_dim: {len(stored_flat)})"
+                )
 
         except Exception as e:
-            logger.error(f"Failed to process embedding for file_id {row[0]}: {e}")
+            logger.exception(f"Failed to process embedding for file_id {row[0]}: {e}")
             continue
 
     # Sort by similarity and take top results

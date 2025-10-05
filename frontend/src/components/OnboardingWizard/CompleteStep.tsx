@@ -37,7 +37,7 @@ export function CompleteStep() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const [indexStats, statusData] = await Promise.all([
+        const [indexStats] = await Promise.all([
           apiService.getIndexStats(),
           apiService.getIndexStatus(),
         ]);

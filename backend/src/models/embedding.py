@@ -168,7 +168,8 @@ class Embedding:
         """Convert numpy array to blob for database storage."""
         # Ensure we have a 1D float32 array
         if not isinstance(vector, np.ndarray):
-            raise ValueError(f"Expected numpy array, got {type(vector)}")
+            msg = f"Expected numpy array, got {type(vector)}"
+            raise TypeError(msg)
 
         # Flatten if necessary and convert to float32
         flat_vector = vector.flatten().astype(np.float32)
@@ -176,12 +177,13 @@ class Embedding:
 
         # Debug: log dimension and vector info
         if dimension not in [512, 768, 1024]:  # Common CLIP dimensions
-            print(f"WARNING: Unusual embedding dimension: {dimension}, vector shape: {vector.shape}, dtype: {vector.dtype}")
+            pass
 
         # Simple format: just store the float32 data directly
         # We know CLIP ViT-B/32 embeddings are always 512 dimensions
         if dimension != 512:
-            raise ValueError(f"Expected 512-dimensional embedding, got {dimension}")
+            msg = f"Expected 512-dimensional embedding, got {dimension}"
+            raise ValueError(msg)
 
         return flat_vector.tobytes()
 

@@ -18,7 +18,7 @@ class DependencyChecker:
     _cache = {}
 
     @classmethod
-    def check_clip(cls) -> tuple[bool, Optional[str]]:
+    def check_clip(cls) -> tuple[bool, str | None]:
         """Check if CLIP dependencies are available.
 
         Returns:
@@ -30,6 +30,7 @@ class DependencyChecker:
         try:
             import clip
             import torch
+
             cls._cache["clip"] = (True, None)
             return (True, None)
         except ImportError as e:
@@ -38,7 +39,7 @@ class DependencyChecker:
             return (False, error_msg)
 
     @classmethod
-    def check_face_recognition(cls) -> tuple[bool, Optional[str]]:
+    def check_face_recognition(cls) -> tuple[bool, str | None]:
         """Check if face recognition dependencies are available.
 
         Returns:
@@ -49,6 +50,7 @@ class DependencyChecker:
 
         try:
             import face_recognition
+
             cls._cache["face_recognition"] = (True, None)
             return (True, None)
         except ImportError as e:
@@ -57,7 +59,7 @@ class DependencyChecker:
             return (False, error_msg)
 
     @classmethod
-    def check_tesseract(cls) -> tuple[bool, Optional[str]]:
+    def check_tesseract(cls) -> tuple[bool, str | None]:
         """Check if Tesseract OCR is available.
 
         Returns:
@@ -68,6 +70,7 @@ class DependencyChecker:
 
         try:
             import pytesseract
+
             pytesseract.get_tesseract_version()
             cls._cache["tesseract"] = (True, None)
             return (True, None)
@@ -90,7 +93,7 @@ def handle_service_unavailable(service_name: str, error_msg: str) -> None:
     logger.warning(f"{service_name} unavailable: {error_msg}")
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=f"{service_name} unavailable: {error_msg}"
+        detail=f"{service_name} unavailable: {error_msg}",
     )
 
 
@@ -108,11 +111,13 @@ def handle_internal_error(operation: str, error: Exception, **context) -> None:
     logger.exception(f"{operation} failed: {error}", extra=context)
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"{operation} failed: {str(error)}"
+        detail=f"{operation} failed: {error!s}",
     )
 
 
-def validate_path(path_str: str, must_exist: bool = True, must_be_dir: bool = False) -> Path:
+def validate_path(
+    path_str: str, must_exist: bool = True, must_be_dir: bool = False
+) -> Path:
     """Validate and resolve a path string.
 
     Args:
@@ -127,15 +132,18 @@ def validate_path(path_str: str, must_exist: bool = True, must_be_dir: bool = Fa
         ValueError: If validation fails
     """
     if not path_str or not path_str.strip():
-        raise ValueError("Path cannot be empty")
+        msg = "Path cannot be empty"
+        raise ValueError(msg)
 
     path = Path(path_str).expanduser().resolve()
 
     if must_exist and not path.exists():
-        raise ValueError(f"Path does not exist: {path}")
+        msg = f"Path does not exist: {path}"
+        raise ValueError(msg)
 
     if must_be_dir and path.exists() and not path.is_dir():
-        raise ValueError(f"Path is not a directory: {path}")
+        msg = f"Path is not a directory: {path}"
+        raise ValueError(msg)
 
     return path
 
@@ -151,6 +159,7 @@ def get_default_photo_roots() -> list[str]:
     try:
         if sys.platform.startswith("win"):
             import os
+
             userprofile = os.environ.get("USERPROFILE", str(Path.home()))
             candidate = Path(userprofile) / "Pictures"
         else:
@@ -202,10 +211,11 @@ def sanitize_filename(filename: str) -> str:
         str: Sanitized filename
     """
     import re
+
     # Remove or replace invalid characters
-    sanitized = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    sanitized = re.sub(r'[<>:"/\\|?*]', "_", filename)
     # Remove leading/trailing dots and spaces
-    sanitized = sanitized.strip('. ')
+    sanitized = sanitized.strip(". ")
     # Ensure it's not empty
     if not sanitized:
         sanitized = "unnamed"
@@ -223,7 +233,7 @@ def batch_items(items: list, batch_size: int):
         List slices of batch_size
     """
     for i in range(0, len(items), batch_size):
-        yield items[i:i + batch_size]
+        yield items[i : i + batch_size]
 
 
 def safe_json_response(data: Any, default: Any = None) -> Any:
@@ -242,9 +252,9 @@ def safe_json_response(data: Any, default: Any = None) -> Any:
     def json_encoder(obj):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
-        elif isinstance(obj, Path):
+        if isinstance(obj, Path):
             return str(obj)
-        elif hasattr(obj, "__dict__"):
+        if hasattr(obj, "__dict__"):
             return obj.__dict__
         return str(obj)
 
@@ -254,4 +264,6 @@ def safe_json_response(data: Any, default: Any = None) -> Any:
         return data
     except (TypeError, ValueError) as e:
         logger.warning(f"Data not JSON serializable: {e}")
-        return default if default is not None else {"error": "Data serialization failed"}
+        return (
+            default if default is not None else {"error": "Data serialization failed"}
+        )

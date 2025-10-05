@@ -49,7 +49,7 @@ async def submit_client_logs(log_entry: LogEntry) -> None:
     """
     try:
         # Parse timestamp
-        timestamp = datetime.fromisoformat(log_entry.timestamp.replace("Z", "+00:00"))
+        datetime.fromisoformat(log_entry.timestamp)
 
         # Format log message for backend logger
         context_str = f" | Context: {log_entry.context}" if log_entry.context else ""
@@ -76,7 +76,7 @@ async def submit_client_logs(log_entry: LogEntry) -> None:
 
     except Exception as e:
         # Don't fail client requests due to logging issues
-        logger.error(f"Failed to process client log: {e}")
+        logger.exception(f"Failed to process client log: {e}")
 
 
 @router.post("/logs/errors", status_code=status.HTTP_204_NO_CONTENT)
@@ -92,12 +92,18 @@ async def submit_error_report(error_report: ErrorReport) -> None:
     """
     try:
         # Parse timestamp
-        timestamp = datetime.fromisoformat(error_report.timestamp.replace("Z", "+00:00"))
+        datetime.fromisoformat(error_report.timestamp)
 
         # Format error report for backend logger
-        component_str = f" | Component: {error_report.componentName}" if error_report.componentName else ""
+        component_str = (
+            f" | Component: {error_report.componentName}"
+            if error_report.componentName
+            else ""
+        )
         url_str = f" | URL: {error_report.url}" if error_report.url else ""
-        user_agent_str = f" | UA: {error_report.userAgent}" if error_report.userAgent else ""
+        user_agent_str = (
+            f" | UA: {error_report.userAgent}" if error_report.userAgent else ""
+        )
 
         formatted_message = (
             f"[CLIENT-ERROR] {error_report.message}"
@@ -116,4 +122,4 @@ async def submit_error_report(error_report: ErrorReport) -> None:
 
     except Exception as e:
         # Don't fail client requests due to logging issues
-        logger.error(f"Failed to process error report: {e}")
+        logger.exception(f"Failed to process error report: {e}")

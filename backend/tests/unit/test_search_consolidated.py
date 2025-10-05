@@ -58,17 +58,14 @@ class TestTextSearch:
                 "q": "photo",
                 "from": "2024-01-01",
                 "to": "2024-12-31",
-                "folder": "/Photos/2024"
-            }
+                "folder": "/Photos/2024",
+            },
         )
         assert response.status_code == status.HTTP_200_OK
 
     def test_search_pagination(self):
         """Test search pagination."""
-        response = client.get(
-            "/search",
-            params={"limit": 10, "offset": 20}
-        )
+        response = client.get("/search", params={"limit": 10, "offset": 20})
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["items"]) <= 10
@@ -77,6 +74,7 @@ class TestTextSearch:
     def test_search_performance(self):
         """Test search meets performance requirements."""
         import time
+
         start = time.time()
         response = client.get("/search", params={"q": "test"})
         duration = time.time() - start
@@ -91,8 +89,7 @@ class TestSemanticSearch:
     def test_semantic_search_basic(self):
         """Test basic semantic search."""
         response = client.post(
-            "/search/semantic",
-            json={"text": "beach sunset", "top_k": 20}
+            "/search/semantic", json={"text": "beach sunset", "top_k": 20}
         )
 
         # May return 503 if CLIP not installed
@@ -111,10 +108,7 @@ class TestSemanticSearch:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
         # Invalid top_k
-        response = client.post(
-            "/search/semantic",
-            json={"text": "test", "top_k": 500}
-        )
+        response = client.post("/search/semantic", json={"text": "test", "top_k": 500})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -124,17 +118,17 @@ class TestImageSearch:
     def test_image_search_valid(self):
         """Test image search with valid image."""
         # Create test image
-        img = Image.new('RGB', (100, 100), color='red')
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
-            img.save(tmp.name, format='JPEG')
+        img = Image.new("RGB", (100, 100), color="red")
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            img.save(tmp.name, format="JPEG")
             tmp_path = tmp.name
 
         try:
-            with open(tmp_path, 'rb') as f:
+            with open(tmp_path, "rb") as f:
                 response = client.post(
                     "/search/image",
                     files={"file": ("test.jpg", f, "image/jpeg")},
-                    data={"top_k": 25}
+                    data={"top_k": 25},
                 )
 
             # May return 503 if CLIP not installed
@@ -153,7 +147,7 @@ class TestImageSearch:
         response = client.post(
             "/search/image",
             files={"file": ("test.txt", b"not an image", "text/plain")},
-            data={"top_k": 50}
+            data={"top_k": 50},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -166,10 +160,7 @@ class TestFaceSearch:
         """Test face search when disabled."""
         mock_config.return_value = {"face_search_enabled": False}
 
-        response = client.post(
-            "/search/faces",
-            json={"person_id": 1, "top_k": 50}
-        )
+        response = client.post("/search/faces", json={"person_id": 1, "top_k": 50})
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -195,8 +186,8 @@ class TestPhotoRetrieval:
 
         # Create temporary test image
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-            img = Image.new('RGB', (100, 100))
-            img.save(tmp.name, format='JPEG')
+            img = Image.new("RGB", (100, 100))
+            img.save(tmp.name, format="JPEG")
             tmp_path = tmp.name
 
         try:

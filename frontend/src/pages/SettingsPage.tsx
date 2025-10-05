@@ -370,16 +370,16 @@ export default function SettingsPage() {
                             <div className="text-sm font-medium capitalize">
                               Phase: {indexStatus.progress.current_phase}
                             </div>
-                            {indexStatus.progress.percentage !== undefined && (
+                            {indexStatus.progress.total_files > 0 && (
                               <div className="text-sm text-muted-foreground">
-                                {Math.round(indexStatus.progress.percentage)}%
+                                {Math.round((indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100)}%
                               </div>
                             )}
                           </div>
                           {indexStatus.progress.total_files > 0 ? (
                             <>
                               <Progress
-                                value={indexStatus.progress.percentage || 0}
+                                value={indexStatus.progress.total_files > 0 ? (indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100 : 0}
                                 className="h-2"
                               />
                               <div className="flex items-center justify-between text-xs text-muted-foreground">

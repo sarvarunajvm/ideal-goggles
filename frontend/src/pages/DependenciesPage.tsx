@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   apiService,
   DependenciesResponse,
-  DependencyVerificationResponse,
-  ModelVerificationDetails
+  DependencyVerificationResponse
 } from '../services/apiClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,14 +18,11 @@ import {
   Download,
   Loader2,
   Cpu,
-  Type,
   RefreshCw,
   Database,
   Image,
   Search,
   Users,
-  AlertTriangle,
-  Info,
   Shield,
   Brain,
   Zap,
@@ -233,19 +229,6 @@ export default function DependenciesPage() {
         return <Image className="h-5 w-5" />
       default:
         return <Package className="h-5 w-5" />
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-green-400" />
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-400" />
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-400" />
-      default:
-        return <Info className="h-4 w-4 text-blue-400" />
     }
   }
 

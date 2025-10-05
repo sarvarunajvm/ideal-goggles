@@ -12,7 +12,7 @@ class DatabaseHelper:
     """Helper class for common database operations."""
 
     @staticmethod
-    def get_config(key: Optional[str] = None) -> dict[str, Any]:
+    def get_config(key: str | None = None) -> dict[str, Any]:
         """Get configuration from database.
 
         Args:
@@ -28,6 +28,7 @@ class DatabaseHelper:
             rows = db_manager.execute_query(query, (key,))
             if rows:
                 import json
+
                 return json.loads(rows[0][0])
             return {}
 
@@ -38,6 +39,7 @@ class DatabaseHelper:
         config = {}
         for row in rows:
             import json
+
             try:
                 config[row[0]] = json.loads(row[1])
             except (json.JSONDecodeError, TypeError):
@@ -110,7 +112,7 @@ class DatabaseHelper:
             ("thumbnails", "photos_with_thumbnails"),
             ("embeddings", "photos_with_embeddings"),
             ("faces", "total_faces"),
-            ("people", "enrolled_people")
+            ("people", "enrolled_people"),
         ]
 
         for table, stat_name in tables:
@@ -124,20 +126,23 @@ class DatabaseHelper:
         stats["indexed_photos"] = rows[0][0] if rows else 0
 
         # Database file size
-        import os
-        db_path = db_manager.db_path if hasattr(db_manager, 'db_path') else None
-        if db_path and os.path.exists(db_path):
-            stats["database_size_bytes"] = os.path.getsize(db_path)
-            stats["database_size_mb"] = round(stats["database_size_bytes"] / (1024 * 1024), 2)
+        from pathlib import Path
+
+        db_path = db_manager.db_path if hasattr(db_manager, "db_path") else None
+        if db_path and Path(db_path).exists():
+            stats["database_size_bytes"] = Path(db_path).stat().st_size
+            stats["database_size_mb"] = round(
+                stats["database_size_bytes"] / (1024 * 1024), 2
+            )
 
         return stats
 
     @staticmethod
     def search_photos_basic(
-        query: Optional[str] = None,
-        folder: Optional[str] = None,
+        query: str | None = None,
+        folder: str | None = None,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> list[dict]:
         """Basic photo search without complex dependencies.
 
@@ -184,9 +189,8 @@ class DatabaseHelper:
         params.extend([limit, offset])
         rows = db_manager.execute_query(query, params)
 
-        results = []
-        for row in rows:
-            results.append({
+        return [
+            {
                 "file_id": row[0],
                 "path": row[1],
                 "folder": row[2],
@@ -196,10 +200,10 @@ class DatabaseHelper:
                 "modified_ts": row[6],
                 "indexed_at": row[7],
                 "thumb_path": row[8],
-                "shot_dt": row[9]
-            })
-
-        return results
+                "shot_dt": row[9],
+            }
+            for row in rows
+        ]
 
     @staticmethod
     def cleanup_orphaned_records() -> dict[str, int]:
@@ -217,7 +221,7 @@ class DatabaseHelper:
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
         result = db_manager.execute_write(query)
-        cleaned["thumbnails"] = result.rowcount if hasattr(result, 'rowcount') else 0
+        cleaned["thumbnails"] = result.rowcount if hasattr(result, "rowcount") else 0
 
         # Clean orphaned EXIF
         query = """
@@ -225,7 +229,7 @@ class DatabaseHelper:
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
         result = db_manager.execute_write(query)
-        cleaned["exif"] = result.rowcount if hasattr(result, 'rowcount') else 0
+        cleaned["exif"] = result.rowcount if hasattr(result, "rowcount") else 0
 
         # Clean orphaned embeddings
         query = """
@@ -233,7 +237,7 @@ class DatabaseHelper:
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
         result = db_manager.execute_write(query)
-        cleaned["embeddings"] = result.rowcount if hasattr(result, 'rowcount') else 0
+        cleaned["embeddings"] = result.rowcount if hasattr(result, "rowcount") else 0
 
         # Clean orphaned faces
         query = """
@@ -241,7 +245,7 @@ class DatabaseHelper:
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
         result = db_manager.execute_write(query)
-        cleaned["faces"] = result.rowcount if hasattr(result, 'rowcount') else 0
+        cleaned["faces"] = result.rowcount if hasattr(result, "rowcount") else 0
 
         logger.info(f"Cleaned orphaned records: {cleaned}")
         return cleaned

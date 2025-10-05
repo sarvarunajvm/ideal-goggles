@@ -81,6 +81,17 @@ export interface IndexStatus {
   estimated_completion: string | null
 }
 
+export interface IndexStats {
+  database?: {
+    total_photos: number
+    faces_detected: number
+    indexed_photos: number
+    database_size_mb: number
+  }
+  models?: Record<string, unknown>
+  thumbnails?: Record<string, unknown>
+}
+
 export interface DependencyStatus {
   name: string
   installed: boolean
@@ -335,7 +346,7 @@ class ApiService {
     })
   }
 
-  async getIndexStats(): Promise<Record<string, unknown>> {
+  async getIndexStats(): Promise<IndexStats> {
     return this.request('/index/stats')
   }
 

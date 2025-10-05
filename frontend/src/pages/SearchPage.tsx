@@ -203,9 +203,9 @@ function CompactSearchBar({
             </Button>
             <Button
               type="button"
-              variant={searchMode === 'image' ? 'default' : 'ghost'}
+              variant={(searchMode as string) === 'image' ? 'default' : 'ghost'}
               size="icon"
-              className={`h-7 w-7 ${searchMode === 'image' ? '!bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] !shadow-[var(--shadow-cyan)] !text-black' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--cyan-rgb))]/20 !hover:to-[rgb(var(--cyan-rgb))]/30 !hover:shadow-[var(--shadow-cyan)] !hover:text-[var(--neon-cyan)] transition-all'}`}
+              className={`h-7 w-7 ${(searchMode as string) === 'image' ? '!bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] !shadow-[var(--shadow-cyan)] !text-black' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--cyan-rgb))]/20 !hover:to-[rgb(var(--cyan-rgb))]/30 !hover:shadow-[var(--shadow-cyan)] !hover:text-[var(--neon-cyan)] transition-all'}`}
               onClick={() => onSearchModeChange('image')}
               title="Similar Photos - Find visually similar images"
               aria-label="Similar Photos - Find visually similar images"

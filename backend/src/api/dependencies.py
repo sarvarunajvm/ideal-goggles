@@ -108,11 +108,7 @@ def verify_model_functionality(model_type: str) -> dict[str, Any]:
     """
     import psutil
 
-    result = {
-        "functional": False,
-        "error": None,
-        "details": {}
-    }
+    result = {"functional": False, "error": None, "details": {}}
 
     # Check available memory first
     memory = psutil.virtual_memory()
@@ -121,8 +117,8 @@ def verify_model_functionality(model_type: str) -> dict[str, Any]:
 
     if model_type == "clip":
         try:
-            import torch
             import clip
+            import torch
 
             # Check if CUDA is available
             result["details"]["cuda_available"] = torch.cuda.is_available()
@@ -329,26 +325,24 @@ async def verify_dependencies() -> dict[str, Any]:
     - Actual errors if any
     """
     verification_results = {
-        "summary": {
-            "all_functional": True,
-            "issues_found": []
-        },
+        "summary": {"all_functional": True, "issues_found": []},
         "models": {},
-        "system": {}
+        "system": {},
     }
 
     # Get system information
     import psutil
+
     memory = psutil.virtual_memory()
     verification_results["system"] = {
         "memory": {
             "total_gb": round(memory.total / (1024**3), 2),
             "available_gb": round(memory.available / (1024**3), 2),
-            "percent_used": memory.percent
+            "percent_used": memory.percent,
         },
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         "platform": platform.system(),
-        "architecture": platform.machine()
+        "architecture": platform.machine(),
     }
 
     # Verify each model
@@ -358,33 +352,46 @@ async def verify_dependencies() -> dict[str, Any]:
 
         if not result["functional"]:
             verification_results["summary"]["all_functional"] = False
-            verification_results["summary"]["issues_found"].append({
-                "model": model_type,
-                "error": result["error"]
-            })
+            verification_results["summary"]["issues_found"].append(
+                {"model": model_type, "error": result["error"]}
+            )
 
     # Add recommendations based on issues
     recommendations = []
     if verification_results["system"]["memory"]["available_gb"] < 2:
-        recommendations.append("Low memory available. Close other applications to free up memory.")
+        recommendations.append(
+            "Low memory available. Close other applications to free up memory."
+        )
 
     for issue in verification_results["summary"]["issues_found"]:
         error_str = str(issue.get("error", "")).lower()
-        model = issue['model']
+        model = issue["model"]
 
         if "cuda" in error_str:
-            recommendations.append(f"{model}: CUDA error detected. Model will use CPU instead.")
+            recommendations.append(
+                f"{model}: CUDA error detected. Model will use CPU instead."
+            )
         elif "import" in error_str or "module" in error_str or "not found" in error_str:
             if model == "clip":
-                recommendations.append(f"{model}: CLIP model not installed. Run: pip install torch torchvision ftfy regex git+https://github.com/openai/CLIP.git")
+                recommendations.append(
+                    f"{model}: CLIP model not installed. Run: pip install torch torchvision ftfy regex git+https://github.com/openai/CLIP.git"
+                )
             elif model == "face":
-                recommendations.append(f"{model}: Face detection not installed. Run: pip install insightface opencv-python onnxruntime")
+                recommendations.append(
+                    f"{model}: Face detection not installed. Run: pip install insightface opencv-python onnxruntime"
+                )
             else:
-                recommendations.append(f"{model}: Model not installed. Run dependency installation.")
+                recommendations.append(
+                    f"{model}: Model not installed. Run dependency installation."
+                )
         elif "memory" in error_str:
-            recommendations.append(f"{model}: Insufficient memory. Consider using a smaller model or closing other applications.")
+            recommendations.append(
+                f"{model}: Insufficient memory. Consider using a smaller model or closing other applications."
+            )
         else:
-            recommendations.append(f"{model}: Check error details and ensure all dependencies are properly installed.")
+            recommendations.append(
+                f"{model}: Check error details and ensure all dependencies are properly installed."
+            )
 
     verification_results["recommendations"] = recommendations
 
@@ -394,7 +401,9 @@ async def verify_dependencies() -> dict[str, Any]:
 class InstallRequest(BaseModel):
     """Request model for dependency installation."""
 
-    components: list[str] = Field(default=["all"], description="Components to install (clip, face, all)")
+    components: list[str] = Field(
+        default=["all"], description="Components to install (clip, face, all)"
+    )
 
 
 @router.post("/dependencies/install")
@@ -475,9 +484,7 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
         outputs = []
         errors = []
         components_to_install = (
-            request.components
-            if "all" not in request.components
-            else ["clip", "face"]
+            request.components if "all" not in request.components else ["clip", "face"]
         )
 
         # Install Python packages

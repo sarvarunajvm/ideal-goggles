@@ -44,7 +44,8 @@ class UpdateRootsRequest(BaseModel):
                 path = validate_path(root_path, must_exist=True, must_be_dir=True)
                 validated_roots.append(str(path))
             except ValueError as e:
-                raise ValueError(f"Invalid root path: {e}")
+                error_msg = f"Invalid root path: {e}"
+                raise ValueError(error_msg)
 
         return validated_roots
 
@@ -84,7 +85,7 @@ async def get_configuration() -> ConfigurationResponse:
         config_data = _get_config_from_db(db_manager)
 
         return ConfigurationResponse(
-            roots=(config_data.get("roots") or _compute_default_roots()),
+            roots=(config_data.get("roots") or get_default_photo_roots()),
             face_search_enabled=config_data.get("face_search_enabled", False),
             semantic_search_enabled=config_data.get("semantic_search_enabled", True),
             batch_size=config_data.get("batch_size", 50),
@@ -146,6 +147,7 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
             # Reset indexing state if roots changed
             # Note: IndexingStateManager doesn't exist, state reset not implemented yet
             import logging
+
             temp_logger = logging.getLogger(__name__)
             temp_logger.info("Root folders changed - indexing state should be reset")
 
@@ -395,7 +397,7 @@ def _parse_setting_value(key: str, value: str) -> Any:
     if key == "roots":
         parsed = _parse_json_setting(key, value)
         if key == "roots" and (not isinstance(parsed, list) or not parsed):
-            return _compute_default_roots()
+            return get_default_photo_roots()
         return parsed
     if key in ["face_search_enabled", "semantic_search_enabled"]:
         return _parse_boolean_setting(value)
@@ -451,7 +453,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
 
         # Return defaults on error
         return {
-            "roots": _compute_default_roots(),
+            "roots": get_default_photo_roots(),
             "face_search_enabled": False,
             "thumbnail_size": "medium",
             "thumbnail_quality": 85,
