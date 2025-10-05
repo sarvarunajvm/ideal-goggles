@@ -19,7 +19,9 @@ class LogEntry(BaseModel):
     message: str = Field(description="Log message")
     context: dict[str, Any] | None = Field(None, description="Additional context")
     timestamp: str = Field(description="ISO timestamp")
-    userAgent: str | None = Field(None, description="User agent string")
+    user_agent: str | None = Field(
+        None, alias="userAgent", description="User agent string"
+    )
     url: str | None = Field(None, description="Current URL")
     error: dict[str, Any] | None = Field(None, description="Error details")
 
@@ -29,10 +31,16 @@ class ErrorReport(BaseModel):
 
     message: str = Field(description="Error message")
     stack: str | None = Field(None, description="Error stack trace")
-    componentStack: str | None = Field(None, description="React component stack")
-    componentName: str | None = Field(None, description="Component name")
+    component_stack: str | None = Field(
+        None, alias="componentStack", description="React component stack"
+    )
+    component_name: str | None = Field(
+        None, alias="componentName", description="Component name"
+    )
     timestamp: str = Field(description="ISO timestamp")
-    userAgent: str | None = Field(None, description="User agent string")
+    user_agent: str | None = Field(
+        None, alias="userAgent", description="User agent string"
+    )
     url: str | None = Field(None, description="Current URL")
 
 
@@ -54,7 +62,9 @@ async def submit_client_logs(log_entry: LogEntry) -> None:
         # Format log message for backend logger
         context_str = f" | Context: {log_entry.context}" if log_entry.context else ""
         url_str = f" | URL: {log_entry.url}" if log_entry.url else ""
-        user_agent_str = f" | UA: {log_entry.userAgent}" if log_entry.userAgent else ""
+        user_agent_str = (
+            f" | UA: {log_entry.user_agent}" if log_entry.user_agent else ""
+        )
         error_str = f" | Error: {log_entry.error}" if log_entry.error else ""
 
         formatted_message = (
@@ -96,13 +106,13 @@ async def submit_error_report(error_report: ErrorReport) -> None:
 
         # Format error report for backend logger
         component_str = (
-            f" | Component: {error_report.componentName}"
-            if error_report.componentName
+            f" | Component: {error_report.component_name}"
+            if error_report.component_name
             else ""
         )
         url_str = f" | URL: {error_report.url}" if error_report.url else ""
         user_agent_str = (
-            f" | UA: {error_report.userAgent}" if error_report.userAgent else ""
+            f" | UA: {error_report.user_agent}" if error_report.user_agent else ""
         )
 
         formatted_message = (
@@ -117,8 +127,8 @@ async def submit_error_report(error_report: ErrorReport) -> None:
         if error_report.stack:
             logger.error(f"[CLIENT-ERROR-STACK] {error_report.stack}")
 
-        if error_report.componentStack:
-            logger.error(f"[CLIENT-COMPONENT-STACK] {error_report.componentStack}")
+        if error_report.component_stack:
+            logger.error(f"[CLIENT-COMPONENT-STACK] {error_report.component_stack}")
 
     except Exception as e:
         # Don't fail client requests due to logging issues
