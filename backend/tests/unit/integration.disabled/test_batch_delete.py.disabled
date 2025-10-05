@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.db.connection import get_session
+from src.db.connection import get_database_manager
 from src.models.photo import Photo
 from src.workers.batch_worker import BatchJob, BatchJobStatus, BatchWorker
 

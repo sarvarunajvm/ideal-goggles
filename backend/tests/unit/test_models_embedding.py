@@ -310,8 +310,8 @@ class TestEmbeddingModel:
 
     def test_from_db_row(self):
         """Test creating Embedding from database row."""
-        # Use a normalized vector since post_init normalizes
-        vector = np.array([0.6, 0.8, 0.0, 0.0], dtype=np.float32)
+        # Use a normalized 512-dimensional vector since post_init normalizes
+        vector = np.array([0.6, 0.8] + [0.0] * 510, dtype=np.float32)
         blob = Embedding._numpy_to_blob(vector)
 
         row = {
@@ -331,7 +331,7 @@ class TestEmbeddingModel:
 
     def test_to_db_params(self):
         """Test converting to database parameters."""
-        vector = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        vector = np.array([0.1, 0.2, 0.3] + [0.1] * 509, dtype=np.float32)
         embedding = Embedding(
             file_id=1,
             clip_vector=vector,
@@ -500,7 +500,7 @@ class TestEmbeddingModel:
         embedding = Embedding(file_id=1, clip_vector=vector, embedding_model="test")
 
         # Should remain normalized
-        assert embedding.is_normalized() is True
+        assert embedding.is_normalized()
 
     def test_normalize(self):
         """Test normalize method."""
@@ -514,7 +514,7 @@ class TestEmbeddingModel:
         # Manually normalize
         embedding.normalize()
 
-        assert embedding.is_normalized() is True
+        assert embedding.is_normalized()
         assert embedding.clip_vector[0] == pytest.approx(0.6)
         assert embedding.clip_vector[1] == pytest.approx(0.8)
 
@@ -535,15 +535,15 @@ class TestEmbeddingModel:
 
     def test_numpy_to_blob(self):
         """Test _numpy_to_blob method."""
-        vector = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        vector = np.array([0.1, 0.2, 0.3] + [0.1] * 509, dtype=np.float32)
         blob = Embedding._numpy_to_blob(vector)
 
         assert isinstance(blob, bytes)
-        assert len(blob) > 4  # At least dimension (4 bytes) + data
+        assert len(blob) == 2048  # 512 floats * 4 bytes each
 
     def test_blob_to_numpy(self):
         """Test _blob_to_numpy method."""
-        original = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        original = np.array([0.1, 0.2, 0.3] + [0.1] * 509, dtype=np.float32)
         blob = Embedding._numpy_to_blob(original)
         restored = Embedding._blob_to_numpy(blob)
 
@@ -551,7 +551,7 @@ class TestEmbeddingModel:
 
     def test_blob_to_numpy_too_short(self):
         """Test _blob_to_numpy with invalid blob."""
-        with pytest.raises(ValueError, match="Invalid blob: too short"):
+        with pytest.raises(ValueError, match="Invalid blob size"):
             Embedding._blob_to_numpy(b"abc")
 
     def test_blob_to_numpy_wrong_size(self):
@@ -569,13 +569,12 @@ class TestEmbeddingModel:
         """Test _blob_to_numpy with dimension mismatch."""
         import struct
 
-        # Create blob with dimension 2 and actual 3 floats
-        # First create proper blob with 3 floats
-        blob = struct.pack("<I", 2)  # Says dimension is 2
-        blob += struct.pack("<fff", 0.1, 0.2, 0.3)  # But has 3 floats
+        # Create blob with wrong size (not 512 floats)
+        # Create blob with only 4 floats (16 bytes) instead of 512
+        blob = struct.pack("<ffff", 0.1, 0.2, 0.3, 0.4)
 
-        # This should raise ValueError for dimension mismatch
-        with pytest.raises(ValueError, match="Dimension mismatch"):
+        # This should raise ValueError for invalid blob size
+        with pytest.raises(ValueError, match="Invalid blob size"):
             Embedding._blob_to_numpy(blob)
 
     def test_batch_cosine_similarity(self):
