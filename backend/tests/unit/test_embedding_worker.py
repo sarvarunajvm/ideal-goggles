@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -21,21 +22,37 @@ from src.workers.embedding_worker import (
 @pytest.fixture
 def mock_clip():
     """Mock CLIP module."""
-    with patch("src.workers.embedding_worker.clip") as mock_clip:
-        mock_model = Mock()
-        mock_preprocess = Mock()
-        mock_clip.load.return_value = (mock_model, mock_preprocess)
-        yield mock_clip
+    # Create mock objects
+    mock_model = Mock()
+    mock_model.eval = Mock()
+    mock_model.encode_image = Mock()
+    mock_model.encode_text = Mock()
+    mock_preprocess = Mock()
+
+    # Patch at the builtins level to catch dynamic imports
+    mock_clip_module = Mock()
+    mock_clip_module.load = Mock(return_value=(mock_model, mock_preprocess))
+
+    with patch.dict('sys.modules', {'clip': mock_clip_module}):
+        yield mock_clip_module
 
 
 @pytest.fixture
 def mock_torch():
     """Mock torch module."""
-    with patch("src.workers.embedding_worker.torch") as mock_torch:
-        mock_torch.cuda.is_available.return_value = False
-        mock_torch.no_grad.return_value.__enter__ = Mock()
-        mock_torch.no_grad.return_value.__exit__ = Mock()
-        yield mock_torch
+    # Create mock torch module
+    mock_torch_module = Mock()
+    mock_torch_module.cuda.is_available = Mock(return_value=False)
+    mock_torch_module.no_grad = Mock()
+    mock_torch_module.no_grad.return_value.__enter__ = Mock()
+    mock_torch_module.no_grad.return_value.__exit__ = Mock()
+
+    # Mock tensor operations
+    mock_torch_module.tensor = Mock()
+    mock_torch_module.from_numpy = Mock()
+
+    with patch.dict('sys.modules', {'torch': mock_torch_module}):
+        yield mock_torch_module
 
 
 @pytest.fixture
@@ -126,11 +143,17 @@ class TestCLIPEmbeddingWorkerInitialization:
 
     def test_initialization_uses_cuda_if_available(self, mock_clip):
         """Test worker uses CUDA when available."""
-        with patch("src.workers.embedding_worker.torch") as mock_torch:
-            mock_torch.cuda.is_available.return_value = True
+        # Create mock torch module with CUDA available
+        mock_torch_cuda = Mock()
+        mock_torch_cuda.cuda.is_available = Mock(return_value=True)
+        mock_torch_cuda.no_grad = Mock()
+        mock_torch_cuda.no_grad.return_value.__enter__ = Mock()
+        mock_torch_cuda.no_grad.return_value.__exit__ = Mock()
+        mock_torch_cuda.tensor = Mock()
+        mock_torch_cuda.from_numpy = Mock()
 
+        with patch.dict('sys.modules', {'torch': mock_torch_cuda}):
             worker = CLIPEmbeddingWorker()
-
             assert worker.device == "cuda"
 
     def test_initialization_uses_cpu_when_cuda_unavailable(self, mock_clip, mock_torch):
@@ -141,11 +164,27 @@ class TestCLIPEmbeddingWorkerInitialization:
 
     def test_initialization_clip_import_error(self, mock_torch):
         """Test initialization handles CLIP import error."""
-        with patch("src.workers.embedding_worker.clip") as mock_clip:
-            mock_clip.load.side_effect = ImportError("CLIP not installed")
+        # Simulate CLIP not being available - remove it from sys.modules
+        original_clip = sys.modules.get('clip')
+        if 'clip' in sys.modules:
+            del sys.modules['clip']
 
+        # Mock the import to raise ImportError
+        import builtins
+        original_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == 'clip':
+                raise ImportError("CLIP not installed")
+            return original_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=mock_import):
             with pytest.raises(RuntimeError, match="CLIP dependencies not installed"):
                 CLIPEmbeddingWorker()
+
+        # Restore original state
+        if original_clip is not None:
+            sys.modules['clip'] = original_clip
 
     def test_initialization_model_load_error(self, mock_clip, mock_torch):
         """Test initialization handles model load error."""
@@ -224,28 +263,32 @@ class TestGenerateEmbeddingSync:
 
     def test_generate_embedding_sync_success(self, mock_clip, mock_torch, test_photo):
         """Test synchronous embedding generation."""
-        worker = CLIPEmbeddingWorker()
-
-        # Mock PIL Image and torch operations
+        # Mock PIL Image module
+        mock_pil_module = Mock()
         mock_image = Mock()
         mock_image.mode = "RGB"
+        mock_pil_module.open = Mock()
+        mock_pil_module.open.return_value.__enter__ = Mock(return_value=mock_image)
+        mock_pil_module.open.return_value.__exit__ = Mock()
 
-        mock_tensor = Mock()
-        mock_features = Mock()
-        mock_features.norm.return_value = Mock()
-        mock_features.cpu.return_value.numpy.return_value.flatten.return_value = (
-            np.random.randn(512).astype(np.float32)
-        )
+        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+            worker = CLIPEmbeddingWorker()
 
-        worker.preprocess.return_value.unsqueeze.return_value.to.return_value = (
-            mock_tensor
-        )
-        worker.model.encode_image.return_value = mock_features
-        mock_features.__truediv__.return_value = mock_features
+            # Setup mock chain for preprocessing and encoding
+            mock_tensor = Mock()
+            mock_features = MagicMock()  # Use MagicMock to support __truediv__
+            mock_norm = Mock()
+            mock_features.norm.return_value = mock_norm
 
-        with patch("src.workers.embedding_worker.Image") as mock_pil:
-            mock_pil.open.return_value.__enter__ = Mock(return_value=mock_image)
-            mock_pil.open.return_value.__exit__ = Mock()
+            # Setup the division operation result
+            mock_normalized = Mock()
+            mock_normalized.cpu.return_value.numpy.return_value.flatten.return_value = (
+                np.random.randn(512).astype(np.float32)
+            )
+            mock_features.__truediv__.return_value = mock_normalized
+
+            worker.preprocess.return_value.unsqueeze.return_value.to.return_value = mock_tensor
+            worker.model.encode_image.return_value = mock_features
 
             result = worker._generate_embedding_sync(test_photo.path)
 
@@ -257,30 +300,34 @@ class TestGenerateEmbeddingSync:
         self, mock_clip, mock_torch, test_photo
     ):
         """Test that non-RGB images are converted."""
-        worker = CLIPEmbeddingWorker()
-
+        # Mock PIL Image module
+        mock_pil_module = Mock()
         mock_image = Mock()
         mock_image.mode = "L"  # Grayscale
         mock_rgb_image = Mock()
         mock_rgb_image.mode = "RGB"
         mock_image.convert.return_value = mock_rgb_image
+        mock_pil_module.open = Mock()
+        mock_pil_module.open.return_value.__enter__ = Mock(return_value=mock_image)
+        mock_pil_module.open.return_value.__exit__ = Mock()
 
-        mock_tensor = Mock()
-        mock_features = Mock()
-        mock_features.norm.return_value = Mock()
-        mock_features.cpu.return_value.numpy.return_value.flatten.return_value = (
-            np.random.randn(512).astype(np.float32)
-        )
+        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+            worker = CLIPEmbeddingWorker()
 
-        worker.preprocess.return_value.unsqueeze.return_value.to.return_value = (
-            mock_tensor
-        )
-        worker.model.encode_image.return_value = mock_features
-        mock_features.__truediv__.return_value = mock_features
+            # Setup mock chain
+            mock_tensor = Mock()
+            mock_features = MagicMock()  # Use MagicMock to support __truediv__
+            mock_norm = Mock()
+            mock_features.norm.return_value = mock_norm
 
-        with patch("src.workers.embedding_worker.Image") as mock_pil:
-            mock_pil.open.return_value.__enter__ = Mock(return_value=mock_image)
-            mock_pil.open.return_value.__exit__ = Mock()
+            mock_normalized = Mock()
+            mock_normalized.cpu.return_value.numpy.return_value.flatten.return_value = (
+                np.random.randn(512).astype(np.float32)
+            )
+            mock_features.__truediv__.return_value = mock_normalized
+
+            worker.preprocess.return_value.unsqueeze.return_value.to.return_value = mock_tensor
+            worker.model.encode_image.return_value = mock_features
 
             result = worker._generate_embedding_sync(test_photo.path)
 
@@ -291,13 +338,12 @@ class TestGenerateEmbeddingSync:
         self, mock_clip, mock_torch, test_photo
     ):
         """Test error handling in sync embedding generation."""
-        worker = CLIPEmbeddingWorker()
+        # Mock PIL Image module to raise error
+        mock_pil_module = Mock()
+        mock_pil_module.open.side_effect = Exception("Image load error")
 
-        with (
-            patch("src.workers.embedding_worker.Image") as mock_pil,
-            patch.object(worker.model, "encode_image") as mock_encode,
-        ):
-            mock_pil.open.side_effect = Exception("Image load error")
+        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+            worker = CLIPEmbeddingWorker()
 
             result = worker._generate_embedding_sync(test_photo.path)
 
@@ -341,15 +387,19 @@ class TestGenerateTextEmbeddingSync:
         worker = CLIPEmbeddingWorker()
 
         mock_tokens = Mock()
-        mock_features = Mock()
-        mock_features.norm.return_value = Mock()
-        mock_features.cpu.return_value.numpy.return_value.flatten.return_value = (
+        mock_features = MagicMock()  # Use MagicMock to support __truediv__
+        mock_norm = Mock()
+        mock_features.norm.return_value = mock_norm
+
+        # Setup the division operation result
+        mock_normalized = Mock()
+        mock_normalized.cpu.return_value.numpy.return_value.flatten.return_value = (
             np.random.randn(512).astype(np.float32)
         )
+        mock_features.__truediv__.return_value = mock_normalized
 
         mock_clip.tokenize.return_value.to.return_value = mock_tokens
         worker.model.encode_text.return_value = mock_features
-        mock_features.__truediv__.return_value = mock_features
 
         result = worker._generate_text_embedding_sync("test query")
 
@@ -474,14 +524,21 @@ class TestWorkerShutdown:
 
     def test_shutdown_with_cuda(self, mock_clip):
         """Test shutdown with CUDA."""
-        with patch("src.workers.embedding_worker.torch") as mock_torch:
-            mock_torch.cuda.is_available.return_value = True
-            mock_torch.cuda.empty_cache = Mock()
+        # Create mock torch module with CUDA available
+        mock_torch_cuda = Mock()
+        mock_torch_cuda.cuda.is_available = Mock(return_value=True)
+        mock_torch_cuda.cuda.empty_cache = Mock()
+        mock_torch_cuda.no_grad = Mock()
+        mock_torch_cuda.no_grad.return_value.__enter__ = Mock()
+        mock_torch_cuda.no_grad.return_value.__exit__ = Mock()
+        mock_torch_cuda.tensor = Mock()
+        mock_torch_cuda.from_numpy = Mock()
 
+        with patch.dict('sys.modules', {'torch': mock_torch_cuda}):
             worker = CLIPEmbeddingWorker()
             worker.shutdown()
 
-            mock_torch.cuda.empty_cache.assert_called_once()
+            mock_torch_cuda.cuda.empty_cache.assert_called_once()
 
 
 class TestOptimizedCLIPWorker:

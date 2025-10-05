@@ -15,7 +15,7 @@ INITIAL_SCHEMA = """
 BEGIN TRANSACTION;
 
 -- Core photo metadata
-CREATE TABLE photos (
+CREATE TABLE IF NOT EXISTS photos (
   id INTEGER PRIMARY KEY,
   path TEXT UNIQUE NOT NULL,
   folder TEXT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE photos (
 );
 
 -- EXIF metadata
-CREATE TABLE exif (
+CREATE TABLE IF NOT EXISTS exif (
   file_id INTEGER PRIMARY KEY,
   shot_dt TEXT,
   camera_make TEXT,
@@ -48,7 +48,7 @@ CREATE TABLE exif (
 );
 
 -- Vector embeddings
-CREATE TABLE embeddings (
+CREATE TABLE IF NOT EXISTS embeddings (
   file_id INTEGER PRIMARY KEY,
   clip_vector BLOB NOT NULL,
   embedding_model TEXT NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE embeddings (
 );
 
 -- Enrolled people
-CREATE TABLE people (
+CREATE TABLE IF NOT EXISTS people (
   id INTEGER PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   face_vector BLOB NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE people (
 );
 
 -- Face detections
-CREATE TABLE faces (
+CREATE TABLE IF NOT EXISTS faces (
   id INTEGER PRIMARY KEY,
   file_id INTEGER NOT NULL,
   person_id INTEGER,
@@ -81,7 +81,7 @@ CREATE TABLE faces (
 );
 
 -- Thumbnail cache
-CREATE TABLE thumbnails (
+CREATE TABLE IF NOT EXISTS thumbnails (
   file_id INTEGER PRIMARY KEY,
   thumb_path TEXT NOT NULL,
   width INTEGER NOT NULL,
@@ -92,14 +92,14 @@ CREATE TABLE thumbnails (
 );
 
 -- Configuration and settings
-CREATE TABLE settings (
+CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_at REAL NOT NULL
 );
 
 -- Drive alias mappings
-CREATE TABLE drive_aliases (
+CREATE TABLE IF NOT EXISTS drive_aliases (
   device_id TEXT PRIMARY KEY,
   alias TEXT NOT NULL,
   mount_point TEXT,
@@ -107,14 +107,14 @@ CREATE TABLE drive_aliases (
 );
 
 -- Essential indexes for search performance
-CREATE INDEX idx_photos_sha1 ON photos(sha1);
-CREATE INDEX idx_photos_folder ON photos(folder);
-CREATE INDEX idx_photos_ext ON photos(ext);
-CREATE INDEX idx_photos_indexed_at ON photos(indexed_at);
-CREATE INDEX idx_exif_shot_dt ON exif(shot_dt);
-CREATE INDEX idx_faces_person_id ON faces(person_id);
-CREATE INDEX idx_faces_confidence ON faces(confidence);
-CREATE INDEX idx_thumbnails_format ON thumbnails(format);
+CREATE INDEX IF NOT EXISTS idx_photos_sha1 ON photos(sha1);
+CREATE INDEX IF NOT EXISTS idx_photos_folder ON photos(folder);
+CREATE INDEX IF NOT EXISTS idx_photos_ext ON photos(ext);
+CREATE INDEX IF NOT EXISTS idx_photos_indexed_at ON photos(indexed_at);
+CREATE INDEX IF NOT EXISTS idx_exif_shot_dt ON exif(shot_dt);
+CREATE INDEX IF NOT EXISTS idx_faces_person_id ON faces(person_id);
+CREATE INDEX IF NOT EXISTS idx_faces_confidence ON faces(confidence);
+CREATE INDEX IF NOT EXISTS idx_thumbnails_format ON thumbnails(format);
 
 -- Schema version tracking
 INSERT INTO settings (key, value, updated_at) VALUES ('schema_version', '1', datetime('now'));

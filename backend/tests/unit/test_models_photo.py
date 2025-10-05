@@ -419,26 +419,33 @@ class TestPhotoModel:
         """Test calculating perceptual hash successfully."""
         photo = Photo(path="/test/photo.jpg")
 
+        # Mock imagehash module
+        mock_imagehash = Mock()
+        mock_imagehash.average_hash = Mock(return_value="1234567890abcdef")
+
         # Create a mock image
-        with patch("src.models.photo.Image.open") as mock_open:
+        with patch("PIL.Image.open") as mock_open:
             mock_img = Mock()
             mock_img.mode = "RGB"
             mock_img.__enter__ = Mock(return_value=mock_img)
             mock_img.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_img
 
-            with patch("src.models.photo.imagehash.average_hash") as mock_hash:
-                mock_hash.return_value = "1234567890abcdef"
+            with patch.dict("sys.modules", {"imagehash": mock_imagehash}):
                 result = photo.calculate_perceptual_hash()
 
                 assert result == "1234567890abcdef"
-                mock_hash.assert_called_once_with(mock_img, hash_size=8)
+                mock_imagehash.average_hash.assert_called_once_with(mock_img, hash_size=8)
 
     def test_calculate_perceptual_hash_convert_mode(self):
         """Test perceptual hash with image mode conversion."""
         photo = Photo(path="/test/photo.jpg")
 
-        with patch("src.models.photo.Image.open") as mock_open:
+        # Mock imagehash module
+        mock_imagehash = Mock()
+        mock_imagehash.average_hash = Mock(return_value="abcdef1234567890")
+
+        with patch("PIL.Image.open") as mock_open:
             mock_img = Mock()
             mock_img.mode = "CMYK"  # Non-RGB mode
             mock_converted = Mock()
@@ -448,20 +455,19 @@ class TestPhotoModel:
             mock_img.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_img
 
-            with patch("src.models.photo.imagehash.average_hash") as mock_hash:
-                mock_hash.return_value = "abcdef1234567890"
+            with patch.dict("sys.modules", {"imagehash": mock_imagehash}):
                 result = photo.calculate_perceptual_hash()
 
                 assert result == "abcdef1234567890"
                 mock_img.convert.assert_called_once_with("RGB")
                 # Hash should be called on converted image
-                mock_hash.assert_called_once_with(mock_converted, hash_size=8)
+                mock_imagehash.average_hash.assert_called_once_with(mock_converted, hash_size=8)
 
     def test_calculate_perceptual_hash_error(self):
         """Test perceptual hash handles errors gracefully."""
         photo = Photo(path="/test/photo.jpg")
 
-        with patch("src.models.photo.Image.open") as mock_open:
+        with patch("PIL.Image.open") as mock_open:
             mock_open.side_effect = Exception("Image loading failed")
             result = photo.calculate_perceptual_hash()
 

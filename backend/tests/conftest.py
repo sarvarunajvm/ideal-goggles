@@ -12,6 +12,25 @@ from fastapi.testclient import TestClient
 # They will be updated to use real implementations once T026-T047 are complete
 
 
+@pytest.fixture(autouse=True)
+def reset_database_settings():
+    """Reset database settings before each test."""
+    from src.db.connection import _db_manager
+
+    # Only reset if database manager already exists
+    if _db_manager is not None:
+        # Clear settings table to ensure tests start with defaults
+        with contextlib.suppress(Exception):
+            _db_manager.execute_update("DELETE FROM settings WHERE key != 'schema_version'")
+
+    yield
+
+    # Cleanup after test
+    if _db_manager is not None:
+        with contextlib.suppress(Exception):
+            _db_manager.execute_update("DELETE FROM settings WHERE key != 'schema_version'")
+
+
 @pytest.fixture
 def client() -> TestClient:
     """Create a test client for the FastAPI application."""

@@ -70,7 +70,17 @@ class TestRequestLoggingMiddleware:
         # Mock time to simulate slow request (>1000ms)
         import time
 
-        with patch.object(time, "time", side_effect=[0.0, 1.5]):  # 1500ms duration
+        # Provide enough values for all time.time() calls (start, end, and any intermediates)
+        # Use a lambda to always return the right value instead of a list
+        time_values = [0.0, 1.5]
+        time_index = [0]
+
+        def mock_time():
+            idx = time_index[0]
+            time_index[0] += 1
+            return time_values[min(idx, len(time_values) - 1)]
+
+        with patch.object(time, "time", side_effect=mock_time):
             response = await middleware.dispatch(mock_request, mock_call_next)
 
         assert response.status_code == 200

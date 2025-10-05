@@ -209,8 +209,10 @@ class TestSetupLogging:
 
             # Only test on non-Windows platforms
             if sys.platform != "win32":
-                # Mock syslog handler to succeed
-                with patch("logging.handlers.SysLogHandler"):
+                # Mock syslog handler to succeed - create a proper mock with level attribute
+                mock_handler = MagicMock()
+                mock_handler.level = logging.WARNING
+                with patch("logging.handlers.SysLogHandler", return_value=mock_handler):
                     setup_logging(
                         log_level="INFO",
                         log_dir=log_dir,
