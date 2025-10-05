@@ -1,16 +1,19 @@
 """
-Tests for search endpoints.
+Tests for search endpoints - comprehensive test suite.
 """
 
 import base64
+import concurrent.futures
 import os
 import sys
-from unittest.mock import MagicMock, patch
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
 from src.main import app
 
@@ -49,6 +52,7 @@ class TestSearchEndpoints:
             },
         ]
 
+    # Text Search Tests
     def test_text_search(self, client):
         """Test text-based search endpoint."""
         response = client.get("/search", params={"q": "vacation photos", "limit": 10})
@@ -61,6 +65,7 @@ class TestSearchEndpoints:
         assert "query" in data
         assert data["query"] == "vacation photos"
         assert isinstance(data["items"], list)
+        assert "took_ms" in data
 
     def test_text_search_with_offset(self, client):
         """Test text search with pagination."""
@@ -76,9 +81,90 @@ class TestSearchEndpoints:
             # Service unavailable
             data = response.json()
             assert "detail" in data
-        # offset not in response model
-        # offset not tracked in response
 
+    def test_search_with_filters(self, client):
+        """Test search with date and folder filters."""
+        response = client.get(
+            "/search",
+            params={
+                "q": "family",
+                "from": "2024-01-01",
+                "to": "2024-12-31",
+                "folder": "/photos/family",
+                "limit": 30,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "query" in data
+
+    def test_search_pagination(self, client):
+        """Test search result pagination."""
+        # First page
+        response1 = client.get(
+            "/search", params={"q": "nature", "limit": 10, "offset": 0}
+        )
+        assert response1.status_code == 200
+        data1 = response1.json()
+
+        # Second page
+        response2 = client.get(
+            "/search", params={"q": "nature", "limit": 10, "offset": 10}
+        )
+        assert response2.status_code == 200
+        data2 = response2.json()
+
+        # Both should have the structure
+        assert "items" in data1
+        assert "items" in data2
+
+    def test_search_empty_query(self, client):
+        """Test search with empty query."""
+        response = client.get("/search", params={"q": ""})
+        # Should still work but return empty or all results
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+
+    def test_search_response_structure(self, client):
+        """Test that search response follows expected structure."""
+        response = client.get("/search", params={"q": "test query", "limit": 5})
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check top-level structure
+        assert "items" in data
+        assert "total_matches" in data
+        assert "query" in data
+
+        # Check results structure if any results
+        if data["items"]:
+            result = data["items"][0]
+            assert "photo_id" in result
+            assert "file_path" in result
+            assert "score" in result
+
+    @patch("src.api.search.get_database_manager")
+    def test_search_with_mock_results(
+        self, mock_db_manager, client, mock_search_results
+    ):
+        """Test search with mocked database results."""
+        mock_db = MagicMock()
+        mock_db.search_photos.return_value = mock_search_results
+        mock_db.count_search_results.return_value = len(mock_search_results)
+        mock_db_manager.return_value = mock_db
+
+        response = client.get("/search", params={"q": "mocked search", "limit": 10})
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data["items"]) <= len(mock_search_results)
+        assert data["total_matches"] >= 0
+
+    # Semantic Search Tests
     def test_semantic_search(self, client):
         """Test semantic search endpoint."""
         response = client.post(
@@ -107,6 +193,24 @@ class TestSearchEndpoints:
         # Should handle gracefully or service unavailable
         assert response.status_code in [200, 400, 422, 503]
 
+    def test_semantic_search_with_filters(self, client):
+        """Test semantic search with different parameters."""
+        response = client.post(
+            "/search/semantic", json={"text": "sunset photos", "top_k": 10}
+        )
+
+        # Service might not be available
+        assert response.status_code in [200, 503]
+
+        if response.status_code == 200:
+            data = response.json()
+            assert "items" in data
+        else:
+            # Service unavailable
+            data = response.json()
+            assert "detail" in data
+
+    # Image Search Tests
     def test_image_search(self, client):
         """Test image-based search endpoint."""
         # Create a minimal valid PNG image
@@ -147,6 +251,7 @@ class TestSearchEndpoints:
         # Should return an error or handle gracefully or service unavailable
         assert response.status_code in [200, 400, 422, 500, 503]
 
+    # Face Search Tests
     def test_face_search(self, client):
         """Test face-based search endpoint."""
         response = client.post("/search/faces", json={"person_id": 1, "top_k": 10})
@@ -164,78 +269,35 @@ class TestSearchEndpoints:
             data = response.json()
             assert "detail" in data
 
-    def test_search_with_invalid_limit(self, client):
+    # Hybrid Search Tests
+    def test_hybrid_search(self, client):
+        """Test hybrid search combining text and semantic."""
+        # Regular search can act as hybrid
+        response = client.get("/search", params={"q": "beach vacation", "limit": 20})
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert isinstance(data["items"], list)
+
+    # Validation Tests
+    def test_search_invalid_limit(self, client):
         """Test search with invalid limit values."""
-        # Negative limit
+        # Negative
         response = client.get("/search", params={"q": "test", "limit": -1})
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
 
         # Zero limit
         response = client.get("/search", params={"q": "test", "limit": 0})
         assert response.status_code in [400, 422]
 
-        # Too large limit
+        # Too large
         response = client.get("/search", params={"q": "test", "limit": 10000})
-        # Should either accept or limit it
-        assert response.status_code in [200, 400, 422]
+        # Should either cap it or return error
+        assert response.status_code in [200, 422]
 
-    def test_search_response_structure(self, client):
-        """Test that search response follows expected structure."""
-        response = client.get("/search", params={"q": "test query", "limit": 5})
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Check top-level structure
-        assert "items" in data
-        assert "total_matches" in data
-        assert "query" in data
-
-        # Check results structure if any results
-        if data["items"]:
-            result = data["items"][0]
-            assert "photo_id" in result
-            assert "file_path" in result
-            assert "score" in result
-
-    @patch("src.api.search.get_database_manager")
-    def test_search_with_mock_results(
-        self, mock_db_manager, client, mock_search_results
-    ):
-        """Test search with mocked database results."""
-        mock_db = MagicMock()
-        mock_db.search_photos.return_value = mock_search_results
-        mock_db.count_search_results.return_value = len(mock_search_results)
-        mock_db_manager.return_value = mock_db
-
-        response = client.get("/search", params={"q": "mocked search", "limit": 10})
-
-        assert response.status_code == 200
-        data = response.json()
-
-        assert len(data["items"]) <= len(mock_search_results)
-        assert data["total_matches"] >= 0
-
-    def test_semantic_search_with_filters(self, client):
-        """Test semantic search with different parameters."""
-        response = client.post(
-            "/search/semantic", json={"text": "sunset photos", "top_k": 10}
-        )
-
-        # Service might not be available
-        assert response.status_code in [200, 503]
-
-        if response.status_code == 200:
-            data = response.json()
-            assert "items" in data
-        else:
-            # Service unavailable
-            data = response.json()
-            assert "detail" in data
-
+    # Concurrency Tests
     def test_concurrent_search_requests(self, client):
         """Test handling of concurrent search requests."""
-        import concurrent.futures
 
         def make_search_request(query):
             return client.get("/search", params={"q": query, "limit": 5})
@@ -249,3 +311,20 @@ class TestSearchEndpoints:
         # All requests should succeed
         for result in results:
             assert result.status_code == 200
+
+    # Performance Tests
+    @pytest.mark.skip(reason="Performance test - run separately")
+    def test_search_performance(self, client):
+        """Test search response time."""
+        start = time.time()
+        response = client.get("/search", params={"q": "performance test", "limit": 100})
+        elapsed = time.time() - start
+
+        assert response.status_code == 200
+        # Should respond within 2 seconds
+        assert elapsed < 2.0
+
+        data = response.json()
+        # Check that took_ms is reported
+        assert "took_ms" in data
+        assert data["took_ms"] < 2000

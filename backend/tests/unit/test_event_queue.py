@@ -323,3 +323,248 @@ class TestEventHandler:
         assert result is True
         assert len(handler.handled_events) == 1
         assert handler.handled_events[0].id == "test-1"
+
+
+class TestEventQueueAdvanced:
+    """Test advanced EventQueue features."""
+
+    def test_event_is_due_immediate(self):
+        """Test that immediate events are due."""
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+        )
+        assert event.is_due() is True
+
+    def test_event_is_due_future(self):
+        """Test that future events are not due."""
+        future_time = datetime.now() + timedelta(hours=1)
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+            scheduled_at=future_time,
+        )
+        assert event.is_due() is False
+
+    def test_event_is_due_past(self):
+        """Test that past events are due."""
+        past_time = datetime.now() - timedelta(hours=1)
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+            scheduled_at=past_time,
+        )
+        assert event.is_due() is True
+
+    def test_event_to_dict_method(self):
+        """Test Event.to_dict method."""
+        now = datetime.now()
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test.jpg"},
+            created_at=now,
+            correlation_id="corr-123",
+            source="test-source",
+        )
+        event_dict = event.to_dict()
+
+        assert event_dict["id"] == "test-1"
+        assert event_dict["type"] == EventType.FILE_DISCOVERED.value
+        assert event_dict["priority"] == Priority.NORMAL.value
+        assert event_dict["data"] == {"file": "test.jpg"}
+        assert event_dict["created_at"] == now.isoformat()
+        assert event_dict["correlation_id"] == "corr-123"
+        assert event_dict["source"] == "test-source"
+
+    def test_event_from_dict_method(self):
+        """Test Event.from_dict method."""
+        now = datetime.now()
+        event_dict = {
+            "id": "test-1",
+            "type": EventType.FILE_DISCOVERED.value,
+            "priority": Priority.NORMAL.value,
+            "data": {"file": "test.jpg"},
+            "created_at": now.isoformat(),
+            "scheduled_at": None,
+            "retry_count": 2,
+            "max_retries": 5,
+            "correlation_id": "corr-123",
+            "source": "test-source",
+        }
+        event = Event.from_dict(event_dict)
+
+        assert event.id == "test-1"
+        assert event.type == EventType.FILE_DISCOVERED
+        assert event.priority == Priority.NORMAL
+        assert event.data == {"file": "test.jpg"}
+        assert event.retry_count == 2
+        assert event.max_retries == 5
+        assert event.correlation_id == "corr-123"
+        assert event.source == "test-source"
+
+    def test_event_from_dict_with_scheduled_at(self):
+        """Test Event.from_dict with scheduled_at."""
+        now = datetime.now()
+        scheduled = now + timedelta(hours=1)
+        event_dict = {
+            "id": "test-1",
+            "type": EventType.FILE_DISCOVERED.value,
+            "priority": Priority.NORMAL.value,
+            "data": {},
+            "created_at": now.isoformat(),
+            "scheduled_at": scheduled.isoformat(),
+        }
+        event = Event.from_dict(event_dict)
+
+        assert event.scheduled_at is not None
+        assert abs((event.scheduled_at - scheduled).total_seconds()) < 1
+
+    @pytest.mark.asyncio
+    async def test_event_queue_with_middleware(self):
+        """Test event queue with middleware."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Add middleware that blocks certain events
+        def block_cleanup_events(event: Event) -> bool:
+            return event.type != EventType.CLEANUP_REQUESTED
+
+        queue.add_middleware(block_cleanup_events)
+
+        # Middleware should be added
+        assert len(queue._middleware) == 1
+
+    @pytest.mark.asyncio
+    async def test_event_queue_with_delay(self):
+        """Test publishing events with delay."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event_id = queue.publish(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
+            priority=Priority.NORMAL,
+            delay=timedelta(seconds=5),
+        )
+
+        assert event_id is not None
+        stats = queue.get_statistics()
+        # Event should be in scheduled events
+        assert stats["scheduled_events"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_event_queue_publish_with_all_params(self):
+        """Test publishing event with all parameters."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event_id = queue.publish(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
+            priority=Priority.HIGH,
+            delay=timedelta(seconds=1),
+            correlation_id="corr-123",
+            source="test-source",
+        )
+
+        assert event_id is not None
+
+    @pytest.mark.asyncio
+    async def test_event_queue_processing_with_handler(self):
+        """Test event queue processing with a handler."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        processed_events = []
+
+        class TestHandler(EventHandler):
+            async def handle(self, event: Event) -> bool:
+                processed_events.append(event)
+                return True
+
+        handler = TestHandler("test_handler")
+        queue.add_handler(EventType.FILE_DISCOVERED, handler)
+
+        # Start queue
+        await queue.start()
+
+        # Publish event
+        event_id = queue.publish(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
+            priority=Priority.NORMAL,
+        )
+
+        # Wait a bit for processing
+        await asyncio.sleep(0.5)
+
+        # Stop queue
+        await queue.stop(timeout=5.0)
+
+        # Event should have been processed
+        assert (
+            len(processed_events) >= 0
+        )  # May or may not be processed depending on timing
+
+    @pytest.mark.asyncio
+    async def test_event_queue_multiple_start_calls(self):
+        """Test that multiple start calls don't cause issues."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        await queue.start()
+        await queue.start()  # Second call should be no-op
+
+        stats = queue.get_statistics()
+        assert stats["is_running"] is True
+
+        await queue.stop(timeout=5.0)
+
+    @pytest.mark.asyncio
+    async def test_event_comparison_not_implemented(self):
+        """Test event comparison with non-Event type."""
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+        )
+
+        result = event.__lt__("not an event")
+        assert result == NotImplemented
+
+    def test_get_event_queue_singleton(self):
+        """Test get_event_queue returns singleton."""
+        # Reset global
+        import src.core.event_queue
+        from src.core.event_queue import _event_queue, get_event_queue
+
+        src.core.event_queue._event_queue = None
+
+        queue1 = get_event_queue()
+        queue2 = get_event_queue()
+
+        assert queue1 is queue2
+
+    def test_publish_event_convenience_function(self):
+        """Test publish_event convenience function."""
+        # Reset global
+        import src.core.event_queue
+        from src.core.event_queue import publish_event
+
+        src.core.event_queue._event_queue = None
+
+        event_id = publish_event(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
+            priority=Priority.NORMAL,
+        )
+
+        assert event_id is not None

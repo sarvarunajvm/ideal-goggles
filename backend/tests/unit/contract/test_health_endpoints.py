@@ -1,16 +1,17 @@
 """
-Tests for health check endpoints.
+Tests for health check endpoints - comprehensive test suite.
 """
 
 import os
 import sys
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 # Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
 from src.main import app
 
@@ -23,6 +24,7 @@ class TestHealthEndpoints:
         """Create test client."""
         return TestClient(app)
 
+    # Basic Health Checks
     def test_basic_health_check(self, client):
         """Test the basic /health endpoint."""
         response = client.get("/health")
@@ -37,6 +39,41 @@ class TestHealthEndpoints:
         assert "system" in data
         assert "database" in data
         assert "dependencies" in data
+
+    @pytest.mark.contract
+    def test_health_endpoint_returns_200(self, client: TestClient) -> None:
+        """Test that health endpoint returns 200 status code."""
+        response = client.get("/health")
+        assert response.status_code == 200
+
+    def test_health_endpoint_response_schema(self, client: TestClient) -> None:
+        """Test that health endpoint returns correct schema."""
+        response = client.get("/health")
+        data = response.json()
+
+        # Validate required fields exist
+        assert "status" in data
+        assert "timestamp" in data
+
+        # Validate field types and values
+        assert data["status"] == "healthy"
+        assert isinstance(data["timestamp"], str)
+
+        # Validate timestamp is valid ISO format
+        datetime.fromisoformat(data["timestamp"])
+
+    def test_health_endpoint_content_type(self, client: TestClient) -> None:
+        """Test that health endpoint returns JSON content type."""
+        response = client.get("/health")
+        assert response.headers["content-type"] == "application/json"
+
+    def test_health_endpoint_no_authentication_required(
+        self, client: TestClient
+    ) -> None:
+        """Test that health endpoint works without authentication."""
+        # This endpoint should always be accessible
+        response = client.get("/health")
+        assert response.status_code == 200
 
     def test_detailed_health_check(self, client):
         """Test the /health/detailed endpoint."""
@@ -132,3 +169,16 @@ class TestHealthEndpoints:
         # These should be available in test environment
         assert deps_info["PIL"]["available"] is True
         assert deps_info["numpy"]["available"] is True
+
+    # Performance Tests
+    @pytest.mark.performance
+    def test_health_endpoint_response_time(self, client: TestClient) -> None:
+        """Test that health endpoint responds quickly."""
+        import time
+
+        start_time = time.time()
+        response = client.get("/health")
+        end_time = time.time()
+
+        assert response.status_code == 200
+        assert (end_time - start_time) < 0.1  # Should respond in < 100ms
