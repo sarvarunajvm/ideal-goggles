@@ -4,7 +4,7 @@ import os
 import pickle
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import numpy as np
 import pytest

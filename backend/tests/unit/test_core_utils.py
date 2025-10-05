@@ -11,15 +11,15 @@ from fastapi import HTTPException
 
 from src.core.utils import (
     DependencyChecker,
-    handle_service_unavailable,
-    handle_internal_error,
-    validate_path,
-    get_default_photo_roots,
-    format_file_size,
-    calculate_execution_time,
-    sanitize_filename,
     batch_items,
+    calculate_execution_time,
+    format_file_size,
+    get_default_photo_roots,
+    handle_internal_error,
+    handle_service_unavailable,
     safe_json_response,
+    sanitize_filename,
+    validate_path,
 )
 
 
@@ -31,7 +31,7 @@ class TestDependencyChecker:
         # Clear cache
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__') as mock_import:
+        with patch("builtins.__import__") as mock_import:
             # Mock successful imports
             mock_import.return_value = MagicMock()
 
@@ -44,7 +44,7 @@ class TestDependencyChecker:
         """Test checking CLIP when not installed."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'clip'")):
+        with patch("builtins.__import__", side_effect=ImportError("No module named 'clip'")):
             available, error = DependencyChecker.check_clip()
 
             assert available is False
@@ -66,7 +66,7 @@ class TestDependencyChecker:
         """Test checking face recognition when available."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__') as mock_import:
+        with patch("builtins.__import__") as mock_import:
             mock_import.return_value = MagicMock()
 
             available, error = DependencyChecker.check_face_recognition()
@@ -78,7 +78,7 @@ class TestDependencyChecker:
         """Test checking face recognition when not available."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__', side_effect=ImportError("No module")):
+        with patch("builtins.__import__", side_effect=ImportError("No module")):
             available, error = DependencyChecker.check_face_recognition()
 
             assert available is False
@@ -98,7 +98,7 @@ class TestDependencyChecker:
         """Test checking Tesseract when available."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__') as mock_import:
+        with patch("builtins.__import__") as mock_import:
             mock_pytesseract = MagicMock()
             mock_pytesseract.get_tesseract_version.return_value = "5.0.0"
             mock_import.return_value = mock_pytesseract
@@ -112,7 +112,7 @@ class TestDependencyChecker:
         """Test checking Tesseract when not available."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__') as mock_import:
+        with patch("builtins.__import__") as mock_import:
             mock_pytesseract = MagicMock()
             mock_pytesseract.get_tesseract_version.side_effect = Exception("Not found")
             mock_import.return_value = mock_pytesseract
@@ -158,7 +158,7 @@ class TestHandleServiceUnavailable:
 
     def test_logs_warning(self):
         """Test that warning is logged."""
-        with patch('src.core.utils.logger') as mock_logger:
+        with patch("src.core.utils.logger") as mock_logger:
             with pytest.raises(HTTPException):
                 handle_service_unavailable("Service", "Error")
 
@@ -199,7 +199,7 @@ class TestHandleInternalError:
         """Test that exception is logged with context."""
         error = ValueError("Error")
 
-        with patch('src.core.utils.logger') as mock_logger:
+        with patch("src.core.utils.logger") as mock_logger:
             with pytest.raises(HTTPException):
                 handle_internal_error("Op", error, user_id="user123", request_id="req456")
 
@@ -295,10 +295,10 @@ class TestGetDefaultPhotoRoots:
 
     def test_get_default_on_windows(self):
         """Test getting default roots on Windows."""
-        with patch('sys.platform', 'win32'):
-            with patch('os.environ.get', return_value="C:\\Users\\TestUser"):
-                with patch('pathlib.Path.exists', return_value=True):
-                    with patch('pathlib.Path.is_dir', return_value=True):
+        with patch("sys.platform", "win32"):
+            with patch("os.environ.get", return_value="C:\\Users\\TestUser"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch("pathlib.Path.is_dir", return_value=True):
                         roots = get_default_photo_roots()
 
                         assert len(roots) > 0
@@ -306,24 +306,24 @@ class TestGetDefaultPhotoRoots:
 
     def test_get_default_on_unix(self):
         """Test getting default roots on Unix systems."""
-        with patch('sys.platform', 'linux'):
-            with patch('pathlib.Path.home', return_value=Path("/home/testuser")):
-                with patch('pathlib.Path.exists', return_value=True):
-                    with patch('pathlib.Path.is_dir', return_value=True):
+        with patch("sys.platform", "linux"):
+            with patch("pathlib.Path.home", return_value=Path("/home/testuser")):
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch("pathlib.Path.is_dir", return_value=True):
                         roots = get_default_photo_roots()
 
                         assert len(roots) > 0
 
     def test_get_default_directory_not_exists(self):
         """Test when default directory doesn't exist."""
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch("pathlib.Path.exists", return_value=False):
             roots = get_default_photo_roots()
 
             assert roots == []
 
     def test_get_default_handles_exception(self):
         """Test handling of exceptions."""
-        with patch('sys.platform', side_effect=Exception("Error")):
+        with patch("sys.platform", side_effect=Exception("Error")):
             roots = get_default_photo_roots()
 
             # Should return empty list, not crash
@@ -372,7 +372,7 @@ class TestFormatFileSize:
         """Test formatting zero bytes."""
         result = format_file_size(0)
 
-        assert "0.00 B" == result
+        assert result == "0.00 B"
 
 
 class TestCalculateExecutionTime:
@@ -594,7 +594,7 @@ class TestUtilsEdgeCases:
         """Test multiple dependency checks in sequence."""
         DependencyChecker._cache.clear()
 
-        with patch('builtins.__import__', side_effect=ImportError()):
+        with patch("builtins.__import__", side_effect=ImportError()):
             clip_result = DependencyChecker.check_clip()
             face_result = DependencyChecker.check_face_recognition()
             tess_result = DependencyChecker.check_tesseract()

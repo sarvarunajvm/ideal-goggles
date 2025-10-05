@@ -88,7 +88,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
-    "S105", "S106", "S107",  # test data may include secrets-like strings
+    "S105", "S106", "S107", "S108",  # test data may include secrets-like strings and temp paths
     "PLR2004",                  # allow magic values in tests
     "SLF001",                   # private member access in tests
     "PT",                       # allow unittest-style assertions in tests
@@ -99,8 +99,13 @@ ignore = [
     "F841",                     # allow unused local variables in tests
     "SIM117",                   # allow nested with statements in tests
     "TRY002",                   # allow raising Exception in tests
+    "TRY003",                   # allow long exception messages in tests
+    "EM101",                    # allow string literals in exceptions in tests
     "DTZ001",                   # allow naive datetime in tests
     "ERA001",                   # allow commented-out code in tests
+    "B017",                     # allow assert Exception in tests
+    "SIM105",                   # allow try-except-pass in tests
+    "RUF059",                   # allow unused unpacked variables in tests
 ]
 
 [tool.black]

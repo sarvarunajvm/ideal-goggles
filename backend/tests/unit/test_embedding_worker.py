@@ -33,7 +33,7 @@ def mock_clip():
     mock_clip_module = Mock()
     mock_clip_module.load = Mock(return_value=(mock_model, mock_preprocess))
 
-    with patch.dict('sys.modules', {'clip': mock_clip_module}):
+    with patch.dict("sys.modules", {"clip": mock_clip_module}):
         yield mock_clip_module
 
 
@@ -51,7 +51,7 @@ def mock_torch():
     mock_torch_module.tensor = Mock()
     mock_torch_module.from_numpy = Mock()
 
-    with patch.dict('sys.modules', {'torch': mock_torch_module}):
+    with patch.dict("sys.modules", {"torch": mock_torch_module}):
         yield mock_torch_module
 
 
@@ -152,7 +152,7 @@ class TestCLIPEmbeddingWorkerInitialization:
         mock_torch_cuda.tensor = Mock()
         mock_torch_cuda.from_numpy = Mock()
 
-        with patch.dict('sys.modules', {'torch': mock_torch_cuda}):
+        with patch.dict("sys.modules", {"torch": mock_torch_cuda}):
             worker = CLIPEmbeddingWorker()
             assert worker.device == "cuda"
 
@@ -165,26 +165,26 @@ class TestCLIPEmbeddingWorkerInitialization:
     def test_initialization_clip_import_error(self, mock_torch):
         """Test initialization handles CLIP import error."""
         # Simulate CLIP not being available - remove it from sys.modules
-        original_clip = sys.modules.get('clip')
-        if 'clip' in sys.modules:
-            del sys.modules['clip']
+        original_clip = sys.modules.get("clip")
+        if "clip" in sys.modules:
+            del sys.modules["clip"]
 
         # Mock the import to raise ImportError
         import builtins
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
-            if name == 'clip':
+            if name == "clip":
                 raise ImportError("CLIP not installed")
             return original_import(name, *args, **kwargs)
 
-        with patch('builtins.__import__', side_effect=mock_import):
+        with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(RuntimeError, match="CLIP dependencies not installed"):
                 CLIPEmbeddingWorker()
 
         # Restore original state
         if original_clip is not None:
-            sys.modules['clip'] = original_clip
+            sys.modules["clip"] = original_clip
 
     def test_initialization_model_load_error(self, mock_clip, mock_torch):
         """Test initialization handles model load error."""
@@ -271,7 +271,7 @@ class TestGenerateEmbeddingSync:
         mock_pil_module.open.return_value.__enter__ = Mock(return_value=mock_image)
         mock_pil_module.open.return_value.__exit__ = Mock()
 
-        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+        with patch.dict("sys.modules", {"PIL.Image": mock_pil_module}):
             worker = CLIPEmbeddingWorker()
 
             # Setup mock chain for preprocessing and encoding
@@ -333,7 +333,7 @@ class TestGenerateEmbeddingSync:
         mock_pil_module = Mock()
         mock_pil_module.open.side_effect = Exception("Image load error")
 
-        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+        with patch.dict("sys.modules", {"PIL.Image": mock_pil_module}):
             worker = CLIPEmbeddingWorker()
 
             result = worker._generate_embedding_sync(test_photo.path)
@@ -525,7 +525,7 @@ class TestWorkerShutdown:
         mock_torch_cuda.tensor = Mock()
         mock_torch_cuda.from_numpy = Mock()
 
-        with patch.dict('sys.modules', {'torch': mock_torch_cuda}):
+        with patch.dict("sys.modules", {"torch": mock_torch_cuda}):
             worker = CLIPEmbeddingWorker()
             worker.shutdown()
 
@@ -641,7 +641,7 @@ class TestOptimizedCLIPWorker:
         mock_torch_local.no_grad.return_value.__enter__ = Mock()
         mock_torch_local.no_grad.return_value.__exit__ = Mock()
 
-        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module, 'torch': mock_torch_local}):
+        with patch.dict("sys.modules", {"PIL.Image": mock_pil_module, "torch": mock_torch_local}):
             worker = OptimizedCLIPWorker()
 
             mock_batch_features = MagicMock()  # Use MagicMock to support __truediv__
@@ -671,7 +671,7 @@ class TestOptimizedCLIPWorker:
         mock_pil_module = Mock()
         mock_pil_module.open.side_effect = Exception("Image error")
 
-        with patch.dict('sys.modules', {'PIL.Image': mock_pil_module}):
+        with patch.dict("sys.modules", {"PIL.Image": mock_pil_module}):
             worker = OptimizedCLIPWorker()
 
             file_paths = [photo.path for photo in test_photos]

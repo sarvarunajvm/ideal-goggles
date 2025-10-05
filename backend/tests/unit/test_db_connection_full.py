@@ -3,16 +3,16 @@
 import sqlite3
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch, mock_open
+from unittest.mock import MagicMock, Mock, call, mock_open, patch
 
 import pytest
 
 from src.db.connection import (
+    INITIAL_SCHEMA,
     DatabaseManager,
+    get_database,
     get_database_manager,
     init_database,
-    get_database,
-    INITIAL_SCHEMA,
 )
 
 
@@ -31,7 +31,7 @@ class TestDatabaseManagerInit:
     def test_init_with_none_creates_default_path(self):
         """Test initialization with None creates default path."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.db.connection.Path') as mock_path:
+            with patch("src.db.connection.Path") as mock_path:
                 # Mock the path resolution to use temp directory
                 mock_backend_dir = Path(temp_dir)
                 mock_path.return_value.resolve.return_value.parent.parent.parent = mock_backend_dir
@@ -443,7 +443,7 @@ class TestDatabaseManagerMigrations:
     def test_get_latest_migration_version_no_migrations_dir(self):
         """Test getting latest migration version when directory doesn't exist."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.db.connection.Path') as mock_path:
+            with patch("src.db.connection.Path") as mock_path:
                 mock_migrations_dir = MagicMock()
                 mock_migrations_dir.exists.return_value = False
 
@@ -506,7 +506,7 @@ class TestGlobalDatabaseManager:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = str(Path(temp_dir) / "singleton.db")
 
-            with patch('src.core.config.get_settings') as mock_settings:
+            with patch("src.core.config.get_settings") as mock_settings:
                 mock_settings.return_value.DATA_DIR = temp_dir
 
                 db1 = get_database_manager()
@@ -543,7 +543,7 @@ class TestGlobalDatabaseManager:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = str(Path(temp_dir) / "context.db")
 
-            with patch('src.core.config.get_settings') as mock_settings:
+            with patch("src.core.config.get_settings") as mock_settings:
                 mock_settings.return_value.DATA_DIR = temp_dir
 
                 init_database(db_path)

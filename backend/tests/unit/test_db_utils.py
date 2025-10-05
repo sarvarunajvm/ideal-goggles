@@ -3,12 +3,12 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
-from src.db.utils import DatabaseHelper
 from src.db.connection import DatabaseManager
+from src.db.utils import DatabaseHelper
 
 
 class TestDatabaseHelperGetConfig:
@@ -34,7 +34,7 @@ class TestDatabaseHelperGetConfig:
                 )
                 conn.commit()
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 result = DatabaseHelper.get_config("test_key")
 
                 assert result == {"setting": "value"}
@@ -55,7 +55,7 @@ class TestDatabaseHelperGetConfig:
                 """)
                 conn.commit()
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 result = DatabaseHelper.get_config("nonexistent")
 
                 assert result == {}
@@ -84,7 +84,7 @@ class TestDatabaseHelperGetConfig:
                 )
                 conn.commit()
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 result = DatabaseHelper.get_config()
 
                 assert "key1" in result
@@ -112,7 +112,7 @@ class TestDatabaseHelperGetConfig:
                 )
                 conn.commit()
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 result = DatabaseHelper.get_config()
 
                 # Should return raw value when JSON parsing fails
@@ -141,7 +141,7 @@ class TestDatabaseHelperUpdateConfig:
             # Mock execute_write method
             db_manager.execute_write = MagicMock(return_value=None)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 DatabaseHelper.update_config({"new_key": {"data": "value"}})
 
                 # Verify execute_write was called
@@ -165,7 +165,7 @@ class TestDatabaseHelperUpdateConfig:
 
             db_manager.execute_write = MagicMock(return_value=None)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 updates = {
                     "key1": {"value": 1},
                     "key2": {"value": 2},
@@ -195,7 +195,7 @@ class TestDatabaseHelperUpdateConfig:
 
             db_manager.execute_write = MagicMock(return_value=None)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 DatabaseHelper.update_config({"test": {"nested": {"data": [1, 2, 3]}}})
 
                 # Check that JSON was serialized
@@ -221,7 +221,7 @@ class TestDatabaseHelperGetPhotoCount:
                     (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"sha{i}")
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 count = DatabaseHelper.get_photo_count(indexed_only=False)
 
                 assert count == 5
@@ -240,7 +240,7 @@ class TestDatabaseHelperGetPhotoCount:
                     (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"sha{i}", indexed_at)
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 count = DatabaseHelper.get_photo_count(indexed_only=True)
 
                 assert count == 3
@@ -250,7 +250,7 @@ class TestDatabaseHelperGetPhotoCount:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 count = DatabaseHelper.get_photo_count()
 
                 assert count == 0
@@ -271,7 +271,7 @@ class TestDatabaseHelperGetDatabaseStats:
                 ("/test.jpg", "/", "test.jpg", ".jpg", 1024, 1.0, 1.0, "stats123", 1234567890.0)
             )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 stats = DatabaseHelper.get_database_stats()
 
                 assert "total_photos" in stats
@@ -295,7 +295,7 @@ class TestDatabaseHelperGetDatabaseStats:
                     (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"stat{i}", 1234567890.0)
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 stats = DatabaseHelper.get_database_stats()
 
                 assert stats["total_photos"] == 3
@@ -307,7 +307,7 @@ class TestDatabaseHelperGetDatabaseStats:
             db_path = Path(temp_dir) / "test.db"
             db_manager = DatabaseManager(str(db_path))
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 stats = DatabaseHelper.get_database_stats()
 
                 assert "database_size_bytes" in stats
@@ -331,7 +331,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                     (f"/folder/photo{i}.jpg", "/folder", f"photo{i}.jpg", ".jpg", 1024, 1.0, float(i), f"search{i}")
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic()
 
                 assert len(results) <= 50  # Default limit
@@ -354,7 +354,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                 ("/folder/work.jpg", "/folder", "work.jpg", ".jpg", 1024, 1.0, 1.0, "search2")
             )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic(query="vacation")
 
                 assert len(results) == 1
@@ -377,7 +377,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                 ("/photos/2024/photo.jpg", "/photos/2024", "photo.jpg", ".jpg", 1024, 1.0, 1.0, "search2")
             )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic(folder="/photos/2023")
 
                 assert len(results) == 1
@@ -396,7 +396,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                     (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"limit{i}")
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic(limit=3)
 
                 assert len(results) == 3
@@ -414,7 +414,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                     (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, float(5-i), f"offset{i}")
                 )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic(limit=50, offset=2)
 
                 assert len(results) == 3
@@ -448,7 +448,7 @@ class TestDatabaseHelperSearchPhotosBasic:
                 (photo_id, "2023-01-01 12:00:00")
             )
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 results = DatabaseHelper.search_photos_basic()
 
                 assert len(results) == 1
@@ -476,7 +476,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             mock_result.rowcount = 1
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "thumbnails" in cleaned
@@ -497,7 +497,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             mock_result.rowcount = 1
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "exif" in cleaned
@@ -511,7 +511,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             mock_result.rowcount = 0
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "embeddings" in cleaned
@@ -525,7 +525,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             mock_result.rowcount = 0
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "faces" in cleaned
@@ -555,7 +555,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             mock_result.rowcount = 0
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert all(count == 0 for count in cleaned.values())
@@ -570,7 +570,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             del mock_result.rowcount
             db_manager.execute_write = MagicMock(return_value=mock_result)
 
-            with patch('src.db.utils.get_database_manager', return_value=db_manager):
+            with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 # Should handle missing rowcount gracefully

@@ -5,19 +5,19 @@ import logging.handlers
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
 from src.core.logging_config import (
-    ProductionFormatter,
     PerformanceFilter,
+    ProductionFormatter,
     RequestContextFilter,
-    setup_logging,
     configure_module_loggers,
-    log_slow_operation,
-    log_error_with_context,
     get_logger,
+    log_error_with_context,
+    log_slow_operation,
+    setup_logging,
 )
 
 
@@ -213,7 +213,7 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_dir = Path(temp_dir)
 
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -230,7 +230,7 @@ class TestSetupLogging:
     def test_setup_logging_sets_log_level(self):
         """Test that setup_logging sets correct log level."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(log_level="DEBUG", log_dir=Path(temp_dir), enable_file_logging=False)
@@ -245,7 +245,7 @@ class TestSetupLogging:
 
             assert not log_dir.exists()
 
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -262,7 +262,7 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_dir = Path(temp_dir)
 
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -283,7 +283,7 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_dir = Path(temp_dir)
 
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -301,7 +301,7 @@ class TestSetupLogging:
     def test_setup_logging_console_handler(self):
         """Test console handler is created when enabled."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -318,7 +318,7 @@ class TestSetupLogging:
     def test_setup_logging_no_console_handler(self):
         """Test console handler not created when disabled."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 # Clear existing handlers
@@ -337,10 +337,10 @@ class TestSetupLogging:
 
     def test_setup_logging_default_log_dir(self):
         """Test default log directory creation."""
-        with patch('src.core.logging_config.settings') as mock_settings:
+        with patch("src.core.logging_config.settings") as mock_settings:
             mock_settings.DEBUG = False
 
-            with patch('pathlib.Path.cwd') as mock_cwd:
+            with patch("pathlib.Path.cwd") as mock_cwd:
                 mock_cwd.return_value = Path(tempfile.gettempdir())
 
                 setup_logging(
@@ -356,12 +356,12 @@ class TestSetupLogging:
     def test_setup_logging_syslog_unix(self):
         """Test syslog handler on Unix systems."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
-                with patch('sys.platform', 'linux'):
+                with patch("sys.platform", "linux"):
                     # Mock SysLogHandler to avoid needing actual syslog
-                    with patch('logging.handlers.SysLogHandler'):
+                    with patch("logging.handlers.SysLogHandler"):
                         setup_logging(
                             log_level="INFO",
                             log_dir=Path(temp_dir),
@@ -373,10 +373,10 @@ class TestSetupLogging:
     def test_setup_logging_syslog_windows_skipped(self):
         """Test syslog handler skipped on Windows."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
-                with patch('sys.platform', 'win32'):
+                with patch("sys.platform", "win32"):
                     setup_logging(
                         log_level="INFO",
                         log_dir=Path(temp_dir),
@@ -398,7 +398,7 @@ class TestSetupLogging:
         assert len(root_logger.handlers) > 0
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(
@@ -587,7 +587,7 @@ class TestLoggingEdgeCases:
     def test_setup_logging_with_invalid_level(self):
         """Test setup_logging with invalid log level."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 # Should handle invalid level gracefully or raise
@@ -604,7 +604,7 @@ class TestLoggingEdgeCases:
     def test_setup_logging_with_max_bytes(self):
         """Test setup_logging with custom max_bytes."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            with patch('src.core.logging_config.settings') as mock_settings:
+            with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
                 setup_logging(

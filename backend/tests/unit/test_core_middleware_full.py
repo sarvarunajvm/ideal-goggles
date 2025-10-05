@@ -3,16 +3,16 @@
 import asyncio
 import json
 import time
-from unittest.mock import MagicMock, Mock, AsyncMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import pytest
 from fastapi import Request, Response
 from starlette.datastructures import Headers
 
 from src.core.middleware import (
-    RequestLoggingMiddleware,
     ErrorLoggingMiddleware,
     PerformanceMonitoringMiddleware,
+    RequestLoggingMiddleware,
     get_request_id,
     request_id_var,
 )
@@ -56,7 +56,7 @@ class TestRequestLoggingMiddleware:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             result = await middleware.dispatch(request, call_next)
 
             # Should log request start
@@ -76,7 +76,7 @@ class TestRequestLoggingMiddleware:
             await asyncio.sleep(0.01)
             return response
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             result = await middleware.dispatch(request, call_next)
 
             # Should log completion
@@ -97,7 +97,7 @@ class TestRequestLoggingMiddleware:
             assert req_id != "no-request"
             return response
 
-        with patch('src.core.middleware.logger'):
+        with patch("src.core.middleware.logger"):
             await middleware.dispatch(request, call_next)
 
     @pytest.mark.asyncio
@@ -111,7 +111,7 @@ class TestRequestLoggingMiddleware:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger'):
+        with patch("src.core.middleware.logger"):
             result = await middleware.dispatch(request, call_next)
 
             assert "X-Request-ID" in result.headers
@@ -128,8 +128,8 @@ class TestRequestLoggingMiddleware:
             await asyncio.sleep(1.1)  # Simulate slow request
             return response
 
-        with patch('src.core.middleware.logger') as mock_logger:
-            with patch('time.time', side_effect=[0, 1.5]):  # Simulate 1500ms duration
+        with patch("src.core.middleware.logger") as mock_logger:
+            with patch("time.time", side_effect=[0, 1.5]):  # Simulate 1500ms duration
                 await middleware.dispatch(request, call_next)
 
                 # Should log warning for slow request
@@ -151,7 +151,7 @@ class TestRequestLoggingMiddleware:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             await middleware.dispatch(request, call_next)
 
             # Check that extra fields are logged
@@ -168,7 +168,7 @@ class TestRequestLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Test error")
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             with pytest.raises(ValueError):
                 await middleware.dispatch(request, call_next)
 
@@ -186,7 +186,7 @@ class TestRequestLoggingMiddleware:
             await asyncio.sleep(0.1)
             raise RuntimeError("Error")
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             with pytest.raises(RuntimeError):
                 await middleware.dispatch(request, call_next)
 
@@ -206,7 +206,7 @@ class TestRequestLoggingMiddleware:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger'):
+        with patch("src.core.middleware.logger"):
             # Should not raise error
             result = await middleware.dispatch(request, call_next)
             assert result is not None
@@ -240,7 +240,7 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Test exception")
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             with pytest.raises(ValueError):
                 await middleware.dispatch(request, call_next)
 
@@ -260,10 +260,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise RuntimeError("Delete failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-test-123"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(RuntimeError):
                     await middleware.dispatch(request, call_next)
 
@@ -284,10 +284,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Create failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-body-test"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(ValueError):
                     await middleware.dispatch(request, call_next)
 
@@ -306,10 +306,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Upload failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-binary-test"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(ValueError):
                     await middleware.dispatch(request, call_next)
 
@@ -327,10 +327,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Upload failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-large-test"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(ValueError):
                     await middleware.dispatch(request, call_next)
 
@@ -346,10 +346,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Get failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-get-test"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(ValueError):
                     await middleware.dispatch(request, call_next)
 
@@ -370,10 +370,10 @@ class TestErrorLoggingMiddleware:
         async def call_next(req):
             raise ValueError("Request failed")
 
-        with patch('src.core.middleware.request_id_var') as mock_req_id:
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
             mock_req_id.get.return_value = "req-body-error"
 
-            with patch('src.core.middleware.logger') as mock_logger:
+            with patch("src.core.middleware.logger") as mock_logger:
                 with pytest.raises(ValueError):
                     await middleware.dispatch(request, call_next)
 
@@ -480,7 +480,7 @@ class TestPerformanceMonitoringMiddleware:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger') as mock_logger:
+        with patch("src.core.middleware.logger") as mock_logger:
             # Make 100 requests
             for _ in range(100):
                 await middleware.dispatch(request, call_next)
@@ -575,7 +575,7 @@ class TestMiddlewareIntegration:
         async def call_next(req):
             return response
 
-        with patch('src.core.middleware.logger'):
+        with patch("src.core.middleware.logger"):
             # Process through both middleware
             result = await logging_middleware.dispatch(request, call_next)
             assert result is not None
@@ -595,7 +595,7 @@ class TestMiddlewareIntegration:
             captured_id = request_id_var.get()
             return response
 
-        with patch('src.core.middleware.logger'):
+        with patch("src.core.middleware.logger"):
             await middleware.dispatch(request, call_next)
 
             assert captured_id is not None
