@@ -65,6 +65,7 @@ async def process_batch_export(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 rows = db_manager.execute_query(
@@ -73,6 +74,7 @@ async def process_batch_export(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 photo = Photo.from_db_row(rows[0])
@@ -81,6 +83,7 @@ async def process_batch_export(
                 if not source_path.exists():
                     logger.warning(f"Source file not found: {source_path}")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 # Determine output filename
@@ -162,6 +165,7 @@ async def process_batch_delete(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 rows = db_manager.execute_query(
@@ -170,6 +174,7 @@ async def process_batch_delete(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 photo = Photo.from_db_row(rows[0])
@@ -276,6 +281,7 @@ async def process_batch_tag(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 rows = db_manager.execute_query(
@@ -285,6 +291,7 @@ async def process_batch_tag(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 row = rows[0]
@@ -305,6 +312,7 @@ async def process_batch_tag(
                 else:
                     logger.warning(f"Invalid operation: {operation}")
                     failed += 1
+                    job["failed_items"] = failed
                     continue
 
                 # Update photo tags (store as comma-separated string)
