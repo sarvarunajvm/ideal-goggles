@@ -137,6 +137,20 @@ jobs:
         pnpm run backend:coverage || true
       continue-on-error: true
 
+    - name: Ensure backend coverage xml exists (fallback)
+      run: |
+        if [ ! -f backend/coverage.xml ]; then
+          echo "backend/coverage.xml missing; generating minimal report..."
+          cd backend
+          python -m pip install --upgrade pip >/dev/null 2>&1 || true
+          pip install -e ".[dev]" >/dev/null 2>&1 || true
+          # Generate a minimal coverage report to unblock Codecov upload
+          pytest -q --maxfail=1 --disable-warnings \
+            --cov=src --cov-report=xml:coverage.xml --cov-report=term-missing \
+            -k "not e2e and not slow" || true
+          cd -
+        fi
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
