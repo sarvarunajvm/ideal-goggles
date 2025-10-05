@@ -29,11 +29,15 @@ class TestFAISSVectorSearchService:
             mock_index.d = 512
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path, dimension=512)
+            service = FAISSVectorSearchService(
+                index_path=temp_index_path, dimension=512
+            )
 
             assert service.dimension == 512
             assert service.index_path == temp_index_path
-            assert service.metadata_path == temp_index_path.replace(".bin", "_metadata.pkl")
+            assert service.metadata_path == temp_index_path.replace(
+                ".bin", "_metadata.pkl"
+            )
             assert service.index is not None
             assert service.id_to_file_id == {}
             assert service.file_id_to_index == {}
@@ -65,7 +69,9 @@ class TestFAISSVectorSearchService:
 
     def test_initialization_no_faiss(self, temp_index_path):
         """Test initialization when FAISS is not available."""
-        with patch("builtins.__import__", side_effect=ImportError("No module named 'faiss'")):
+        with patch(
+            "builtins.__import__", side_effect=ImportError("No module named 'faiss'")
+        ):
             with pytest.raises(RuntimeError, match="FAISS not available"):
                 FAISSVectorSearchService(index_path=temp_index_path)
 
@@ -76,7 +82,9 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path, dimension=512)
+            service = FAISSVectorSearchService(
+                index_path=temp_index_path, dimension=512
+            )
             mock_ip.assert_called_with(512)
 
     def test_create_new_index_other_dimension(self, temp_index_path):
@@ -86,7 +94,9 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_l2.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path, dimension=256)
+            service = FAISSVectorSearchService(
+                index_path=temp_index_path, dimension=256
+            )
             mock_l2.assert_called_with(256)
 
     def test_add_single_vector(self, temp_index_path):
@@ -207,7 +217,10 @@ class TestFAISSVectorSearchService:
 
     def test_save_index(self, temp_index_path):
         """Test saving index to disk."""
-        with patch("faiss.IndexFlatIP") as mock_ip, patch("faiss.write_index") as mock_write:
+        with (
+            patch("faiss.IndexFlatIP") as mock_ip,
+            patch("faiss.write_index") as mock_write,
+        ):
             mock_index = Mock()
             mock_index.ntotal = 5
             mock_ip.return_value = mock_index
@@ -296,7 +309,9 @@ class TestFAISSVectorSearchService:
                     errors.append(e)
 
             # Run multiple threads
-            threads = [threading.Thread(target=add_vectors, args=(i,)) for i in range(3)]
+            threads = [
+                threading.Thread(target=add_vectors, args=(i,)) for i in range(3)
+            ]
             for t in threads:
                 t.start()
             for t in threads:
@@ -330,8 +345,10 @@ class TestFAISSVectorSearchService:
 
     def test_rebuild_index(self, temp_index_path):
         """Test rebuilding index to remove deleted entries."""
-        with patch("faiss.IndexFlatIP") as mock_ip, \
-             patch("faiss.write_index") as mock_write:
+        with (
+            patch("faiss.IndexFlatIP") as mock_ip,
+            patch("faiss.write_index") as mock_write,
+        ):
             # First mock for initial creation
             initial_index = Mock()
             initial_index.ntotal = 3

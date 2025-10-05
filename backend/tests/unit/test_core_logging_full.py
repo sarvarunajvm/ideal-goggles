@@ -27,8 +27,7 @@ class TestProductionFormatter:
     def test_format_basic_message(self):
         """Test formatting basic log message."""
         formatter = ProductionFormatter(
-            fmt="%(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d"
+            fmt="%(levelname)s - %(message)s", datefmt="%Y-%m-%d"
         )
 
         record = logging.LogRecord(
@@ -38,7 +37,7 @@ class TestProductionFormatter:
             lineno=1,
             msg="Test message",
             args=(),
-            exc_info=None
+            exc_info=None,
         )
 
         result = formatter.format(record)
@@ -51,8 +50,13 @@ class TestProductionFormatter:
         formatter = ProductionFormatter(fmt="%(message)s")
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.request_id = "req-123"
 
@@ -65,8 +69,13 @@ class TestProductionFormatter:
         formatter = ProductionFormatter(fmt="%(message)s")
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.user_id = "user-456"
 
@@ -79,8 +88,13 @@ class TestProductionFormatter:
         formatter = ProductionFormatter(fmt="%(message)s")
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.duration_ms = 123.45
 
@@ -93,8 +107,13 @@ class TestProductionFormatter:
         formatter = ProductionFormatter(fmt="%(message)s")
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.request_id = "req-789"
         record.user_id = "user-101"
@@ -111,8 +130,13 @@ class TestProductionFormatter:
         formatter = ProductionFormatter(fmt="%(message)s")
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test message", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
         )
 
         result = formatter.format(record)
@@ -129,8 +153,13 @@ class TestPerformanceFilter:
         filter_obj = PerformanceFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.duration_ms = 100.0
 
@@ -141,8 +170,13 @@ class TestPerformanceFilter:
         filter_obj = PerformanceFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
 
         assert filter_obj.filter(record) is False
@@ -156,8 +190,13 @@ class TestRequestContextFilter:
         filter_obj = RequestContextFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
 
         filter_obj.filter(record)
@@ -170,8 +209,13 @@ class TestRequestContextFilter:
         filter_obj = RequestContextFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
 
         filter_obj.filter(record)
@@ -184,8 +228,13 @@ class TestRequestContextFilter:
         filter_obj = RequestContextFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
         record.request_id = "existing-req"
 
@@ -198,8 +247,13 @@ class TestRequestContextFilter:
         filter_obj = RequestContextFilter()
 
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="Test", args=(), exc_info=None
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
         )
 
         assert filter_obj.filter(record) is True
@@ -221,7 +275,7 @@ class TestSetupLogging:
                     log_dir=log_dir,
                     enable_file_logging=True,
                     enable_console_logging=True,
-                    enable_syslog=False
+                    enable_syslog=False,
                 )
 
                 root_logger = logging.getLogger()
@@ -233,7 +287,9 @@ class TestSetupLogging:
             with patch("src.core.logging_config.settings") as mock_settings:
                 mock_settings.DEBUG = False
 
-                setup_logging(log_level="DEBUG", log_dir=Path(temp_dir), enable_file_logging=False)
+                setup_logging(
+                    log_level="DEBUG", log_dir=Path(temp_dir), enable_file_logging=False
+                )
 
                 root_logger = logging.getLogger()
                 assert root_logger.level == logging.DEBUG
@@ -252,7 +308,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=log_dir,
                     enable_file_logging=True,
-                    enable_console_logging=False
+                    enable_console_logging=False,
                 )
 
                 assert log_dir.exists()
@@ -270,7 +326,7 @@ class TestSetupLogging:
                     log_dir=log_dir,
                     enable_file_logging=True,
                     enable_console_logging=False,
-                    app_name="test-app"
+                    app_name="test-app",
                 )
 
                 app_log = log_dir / "test-app.log"
@@ -290,7 +346,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=log_dir,
                     enable_file_logging=True,
-                    enable_console_logging=False
+                    enable_console_logging=False,
                 )
 
                 # Check that handlers were created
@@ -308,7 +364,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=Path(temp_dir),
                     enable_file_logging=False,
-                    enable_console_logging=True
+                    enable_console_logging=True,
                 )
 
                 root_logger = logging.getLogger()
@@ -329,7 +385,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=Path(temp_dir),
                     enable_file_logging=False,
-                    enable_console_logging=False
+                    enable_console_logging=False,
                 )
 
                 # Should have no handlers
@@ -347,7 +403,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=None,
                     enable_file_logging=True,
-                    enable_console_logging=False
+                    enable_console_logging=False,
                 )
 
                 # Should use current directory / logs
@@ -367,7 +423,7 @@ class TestSetupLogging:
                             log_dir=Path(temp_dir),
                             enable_file_logging=False,
                             enable_console_logging=False,
-                            enable_syslog=True
+                            enable_syslog=True,
                         )
 
     def test_setup_logging_syslog_windows_skipped(self):
@@ -382,7 +438,7 @@ class TestSetupLogging:
                         log_dir=Path(temp_dir),
                         enable_file_logging=False,
                         enable_console_logging=False,
-                        enable_syslog=True
+                        enable_syslog=True,
                     )
 
                     # Should not crash
@@ -405,7 +461,7 @@ class TestSetupLogging:
                     log_level="INFO",
                     log_dir=Path(temp_dir),
                     enable_file_logging=False,
-                    enable_console_logging=False
+                    enable_console_logging=False,
                 )
 
                 # Dummy handler should be removed
@@ -443,10 +499,7 @@ class TestLogSlowOperation:
         logger.warning = MagicMock()
 
         log_slow_operation(
-            logger,
-            operation="test_op",
-            duration_ms=1500.0,
-            threshold_ms=1000.0
+            logger, operation="test_op", duration_ms=1500.0, threshold_ms=1000.0
         )
 
         logger.warning.assert_called_once()
@@ -460,10 +513,7 @@ class TestLogSlowOperation:
         logger.warning = MagicMock()
 
         log_slow_operation(
-            logger,
-            operation="fast_op",
-            duration_ms=500.0,
-            threshold_ms=1000.0
+            logger, operation="fast_op", duration_ms=500.0, threshold_ms=1000.0
         )
 
         logger.warning.assert_not_called()
@@ -479,7 +529,7 @@ class TestLogSlowOperation:
             duration_ms=2000.0,
             threshold_ms=1000.0,
             user_id="user-123",
-            request_id="req-456"
+            request_id="req-456",
         )
 
         logger.warning.assert_called_once()
@@ -494,10 +544,7 @@ class TestLogSlowOperation:
         logger.warning = MagicMock()
 
         log_slow_operation(
-            logger,
-            operation="threshold_op",
-            duration_ms=1000.0,
-            threshold_ms=1000.0
+            logger, operation="threshold_op", duration_ms=1000.0, threshold_ms=1000.0
         )
 
         logger.warning.assert_not_called()
@@ -528,11 +575,7 @@ class TestLogErrorWithContext:
         error = RuntimeError("Runtime error")
 
         log_error_with_context(
-            logger,
-            error,
-            "complex_operation",
-            user_id="user-789",
-            request_id="req-012"
+            logger, error, "complex_operation", user_id="user-789", request_id="req-012"
         )
 
         logger.exception.assert_called_once()
@@ -595,7 +638,7 @@ class TestLoggingEdgeCases:
                     setup_logging(
                         log_level="INVALID",
                         log_dir=Path(temp_dir),
-                        enable_file_logging=False
+                        enable_file_logging=False,
                     )
                 except (ValueError, AttributeError):
                     # Expected behavior
@@ -613,7 +656,7 @@ class TestLoggingEdgeCases:
                     enable_file_logging=True,
                     enable_console_logging=False,
                     max_bytes=5_000_000,
-                    backup_count=5
+                    backup_count=5,
                 )
 
                 # Verify no errors
@@ -626,11 +669,17 @@ class TestLoggingEdgeCases:
             raise ValueError("Test exception")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
 
             record = logging.LogRecord(
-                name="test", level=logging.ERROR, pathname="test.py",
-                lineno=1, msg="Error occurred", args=(), exc_info=exc_info
+                name="test",
+                level=logging.ERROR,
+                pathname="test.py",
+                lineno=1,
+                msg="Error occurred",
+                args=(),
+                exc_info=exc_info,
             )
 
             result = formatter.format(record)

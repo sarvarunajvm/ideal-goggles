@@ -21,16 +21,18 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                    ("test_key", json.dumps({"setting": "value"}))
+                    ("test_key", json.dumps({"setting": "value"})),
                 )
                 conn.commit()
 
@@ -46,13 +48,15 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.commit()
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -67,20 +71,22 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table with multiple entries
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
-                conn.execute(
-                    "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                    ("key1", json.dumps({"value": 1}))
+                """
                 )
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                    ("key2", json.dumps({"value": 2}))
+                    ("key1", json.dumps({"value": 1})),
+                )
+                conn.execute(
+                    "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+                    ("key2", json.dumps({"value": 2})),
                 )
                 conn.commit()
 
@@ -99,16 +105,18 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table with invalid JSON
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-                    ("bad_json", "not valid json")
+                    ("bad_json", "not valid json"),
                 )
                 conn.commit()
 
@@ -129,13 +137,15 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.commit()
 
             # Mock execute_write method
@@ -154,13 +164,15 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.commit()
 
             db_manager.execute_write = MagicMock(return_value=None)
@@ -169,7 +181,7 @@ class TestDatabaseHelperUpdateConfig:
                 updates = {
                     "key1": {"value": 1},
                     "key2": {"value": 2},
-                    "key3": "simple string"
+                    "key3": "simple string",
                 }
 
                 DatabaseHelper.update_config(updates)
@@ -184,13 +196,15 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """)
+                """
+                )
                 conn.commit()
 
             db_manager.execute_write = MagicMock(return_value=None)
@@ -218,7 +232,16 @@ class TestDatabaseHelperGetPhotoCount:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"sha{i}")
+                    (
+                        f"/photo{i}.jpg",
+                        "/",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        1.0,
+                        f"sha{i}",
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -237,7 +260,17 @@ class TestDatabaseHelperGetPhotoCount:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1, indexed_at) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"sha{i}", indexed_at)
+                    (
+                        f"/photo{i}.jpg",
+                        "/",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        1.0,
+                        f"sha{i}",
+                        indexed_at,
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -268,7 +301,17 @@ class TestDatabaseHelperGetDatabaseStats:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1, indexed_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/test.jpg", "/", "test.jpg", ".jpg", 1024, 1.0, 1.0, "stats123", 1234567890.0)
+                (
+                    "/test.jpg",
+                    "/",
+                    "test.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "stats123",
+                    1234567890.0,
+                ),
             )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -292,7 +335,17 @@ class TestDatabaseHelperGetDatabaseStats:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1, indexed_at) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"stat{i}", 1234567890.0)
+                    (
+                        f"/photo{i}.jpg",
+                        "/",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        1.0,
+                        f"stat{i}",
+                        1234567890.0,
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -328,7 +381,16 @@ class TestDatabaseHelperSearchPhotosBasic:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/folder/photo{i}.jpg", "/folder", f"photo{i}.jpg", ".jpg", 1024, 1.0, float(i), f"search{i}")
+                    (
+                        f"/folder/photo{i}.jpg",
+                        "/folder",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        float(i),
+                        f"search{i}",
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -346,12 +408,30 @@ class TestDatabaseHelperSearchPhotosBasic:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/folder/vacation.jpg", "/folder", "vacation.jpg", ".jpg", 1024, 1.0, 1.0, "search1")
+                (
+                    "/folder/vacation.jpg",
+                    "/folder",
+                    "vacation.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "search1",
+                ),
             )
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/folder/work.jpg", "/folder", "work.jpg", ".jpg", 1024, 1.0, 1.0, "search2")
+                (
+                    "/folder/work.jpg",
+                    "/folder",
+                    "work.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "search2",
+                ),
             )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -369,12 +449,30 @@ class TestDatabaseHelperSearchPhotosBasic:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/photos/2023/photo.jpg", "/photos/2023", "photo.jpg", ".jpg", 1024, 1.0, 1.0, "search1")
+                (
+                    "/photos/2023/photo.jpg",
+                    "/photos/2023",
+                    "photo.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "search1",
+                ),
             )
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/photos/2024/photo.jpg", "/photos/2024", "photo.jpg", ".jpg", 1024, 1.0, 1.0, "search2")
+                (
+                    "/photos/2024/photo.jpg",
+                    "/photos/2024",
+                    "photo.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "search2",
+                ),
             )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -393,7 +491,16 @@ class TestDatabaseHelperSearchPhotosBasic:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, 1.0, f"limit{i}")
+                    (
+                        f"/photo{i}.jpg",
+                        "/",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        1.0,
+                        f"limit{i}",
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -411,7 +518,16 @@ class TestDatabaseHelperSearchPhotosBasic:
                 db_manager.execute_update(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (f"/photo{i}.jpg", "/", f"photo{i}.jpg", ".jpg", 1024, 1.0, float(5-i), f"offset{i}")
+                    (
+                        f"/photo{i}.jpg",
+                        "/",
+                        f"photo{i}.jpg",
+                        ".jpg",
+                        1024,
+                        1.0,
+                        float(5 - i),
+                        f"offset{i}",
+                    ),
                 )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -428,24 +544,26 @@ class TestDatabaseHelperSearchPhotosBasic:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/joined.jpg", "/", "joined.jpg", ".jpg", 1024, 1.0, 1.0, "join123")
+                ("/joined.jpg", "/", "joined.jpg", ".jpg", 1024, 1.0, 1.0, "join123"),
             )
 
             # Get photo ID
-            result = db_manager.execute_query("SELECT id FROM photos WHERE sha1 = ?", ("join123",))
+            result = db_manager.execute_query(
+                "SELECT id FROM photos WHERE sha1 = ?", ("join123",)
+            )
             photo_id = result[0][0]
 
             # Add thumbnail
             db_manager.execute_update(
                 "INSERT INTO thumbnails (file_id, thumb_path, width, height, format, generated_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
-                (photo_id, "/thumbs/joined.jpg", 200, 200, "JPEG", 1234567890.0)
+                (photo_id, "/thumbs/joined.jpg", 200, 200, "JPEG", 1234567890.0),
             )
 
             # Add EXIF
             db_manager.execute_update(
                 "INSERT INTO exif (file_id, shot_dt) VALUES (?, ?)",
-                (photo_id, "2023-01-01 12:00:00")
+                (photo_id, "2023-01-01 12:00:00"),
             )
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -468,7 +586,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             db_manager.execute_update(
                 "INSERT INTO thumbnails (file_id, thumb_path, width, height, format, generated_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
-                (99999, "/orphan.jpg", 200, 200, "JPEG", 1234567890.0)
+                (99999, "/orphan.jpg", 200, 200, "JPEG", 1234567890.0),
             )
 
             # Mock execute_write to return rowcount
@@ -490,7 +608,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             # Add orphaned EXIF
             db_manager.execute_update(
                 "INSERT INTO exif (file_id, shot_dt) VALUES (?, ?)",
-                (99999, "2023-01-01")
+                (99999, "2023-01-01"),
             )
 
             mock_result = MagicMock()
@@ -539,16 +657,18 @@ class TestDatabaseHelperCleanupOrphanedRecords:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/valid.jpg", "/", "valid.jpg", ".jpg", 1024, 1.0, 1.0, "valid123")
+                ("/valid.jpg", "/", "valid.jpg", ".jpg", 1024, 1.0, 1.0, "valid123"),
             )
 
-            result = db_manager.execute_query("SELECT id FROM photos WHERE sha1 = ?", ("valid123",))
+            result = db_manager.execute_query(
+                "SELECT id FROM photos WHERE sha1 = ?", ("valid123",)
+            )
             photo_id = result[0][0]
 
             db_manager.execute_update(
                 "INSERT INTO thumbnails (file_id, thumb_path, width, height, format, generated_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
-                (photo_id, "/valid_thumb.jpg", 200, 200, "JPEG", 1234567890.0)
+                (photo_id, "/valid_thumb.jpg", 200, 200, "JPEG", 1234567890.0),
             )
 
             mock_result = MagicMock()

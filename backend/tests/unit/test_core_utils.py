@@ -44,7 +44,9 @@ class TestDependencyChecker:
         """Test checking CLIP when not installed."""
         DependencyChecker._cache.clear()
 
-        with patch("builtins.__import__", side_effect=ImportError("No module named 'clip'")):
+        with patch(
+            "builtins.__import__", side_effect=ImportError("No module named 'clip'")
+        ):
             available, error = DependencyChecker.check_clip()
 
             assert available is False
@@ -201,7 +203,9 @@ class TestHandleInternalError:
 
         with patch("src.core.utils.logger") as mock_logger:
             with pytest.raises(HTTPException):
-                handle_internal_error("Op", error, user_id="user123", request_id="req456")
+                handle_internal_error(
+                    "Op", error, user_id="user123", request_id="req456"
+                )
 
             mock_logger.exception.assert_called_once()
             call_kwargs = mock_logger.exception.call_args[1]
@@ -383,6 +387,7 @@ class TestCalculateExecutionTime:
         start = datetime.now()
         # Simulate some time passing
         import time
+
         time.sleep(0.1)
 
         result = calculate_execution_time(start)
@@ -539,7 +544,7 @@ class TestSafeJsonResponse:
         data = {
             "list": [1, 2, 3],
             "nested": {"inner": "value"},
-            "mixed": [{"a": 1}, {"b": 2}]
+            "mixed": [{"a": 1}, {"b": 2}],
         }
 
         result = safe_json_response(data)
@@ -548,6 +553,7 @@ class TestSafeJsonResponse:
 
     def test_safe_json_handles_non_serializable(self):
         """Test handling of non-serializable data."""
+
         # Create a non-serializable object
         class NonSerializable:
             pass
@@ -561,6 +567,7 @@ class TestSafeJsonResponse:
 
     def test_safe_json_with_default(self):
         """Test using default value on error."""
+
         # Force an error scenario
         class BadObject:
             def __repr__(self):
@@ -575,6 +582,7 @@ class TestSafeJsonResponse:
 
     def test_safe_json_with_custom_object(self):
         """Test with custom object having __dict__."""
+
         class CustomObject:
             def __init__(self):
                 self.attr1 = "value1"

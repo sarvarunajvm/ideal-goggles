@@ -21,14 +21,18 @@ def reset_database_settings():
     if _db_manager is not None:
         # Clear settings table to ensure tests start with defaults
         with contextlib.suppress(Exception):
-            _db_manager.execute_update("DELETE FROM settings WHERE key != 'schema_version'")
+            _db_manager.execute_update(
+                "DELETE FROM settings WHERE key != 'schema_version'"
+            )
 
     yield
 
     # Cleanup after test
     if _db_manager is not None:
         with contextlib.suppress(Exception):
-            _db_manager.execute_update("DELETE FROM settings WHERE key != 'schema_version'")
+            _db_manager.execute_update(
+                "DELETE FROM settings WHERE key != 'schema_version'"
+            )
 
 
 @pytest.fixture

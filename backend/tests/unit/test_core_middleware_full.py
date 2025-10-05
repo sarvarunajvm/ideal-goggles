@@ -21,7 +21,9 @@ from src.core.middleware import (
 class MockRequest:
     """Mock FastAPI Request for testing."""
 
-    def __init__(self, method="GET", path="/test", query_params=None, client_host="127.0.0.1"):
+    def __init__(
+        self, method="GET", path="/test", query_params=None, client_host="127.0.0.1"
+    ):
         self.method = method
         self.url = MagicMock()
         self.url.path = path
@@ -144,7 +146,7 @@ class TestRequestLoggingMiddleware:
             method="PUT",
             path="/api/update/123",
             query_params={"key": "value"},
-            client_host="192.168.1.1"
+            client_host="192.168.1.1",
         )
         response = MockResponse()
 
@@ -252,9 +254,7 @@ class TestErrorLoggingMiddleware:
         middleware = ErrorLoggingMiddleware(app=MagicMock())
 
         request = MockRequest(
-            method="DELETE",
-            path="/api/delete/456",
-            query_params={"confirm": "true"}
+            method="DELETE", path="/api/delete/456", query_params={"confirm": "true"}
         )
 
         async def call_next(req):

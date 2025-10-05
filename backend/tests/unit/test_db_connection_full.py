@@ -34,7 +34,9 @@ class TestDatabaseManagerInit:
             with patch("src.db.connection.Path") as mock_path:
                 # Mock the path resolution to use temp directory
                 mock_backend_dir = Path(temp_dir)
-                mock_path.return_value.resolve.return_value.parent.parent.parent = mock_backend_dir
+                mock_path.return_value.resolve.return_value.parent.parent.parent = (
+                    mock_backend_dir
+                )
 
                 db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
                 assert db_manager.db_path is not None
@@ -75,7 +77,9 @@ class TestDatabaseManagerInit:
             assert db2.db_path.exists()
 
             with db2.get_connection() as conn:
-                cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
                 tables = [row[0] for row in cursor.fetchall()]
 
             assert "photos" in tables
@@ -188,11 +192,13 @@ class TestDatabaseManagerTransaction:
                 conn.execute(
                     "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    ("/test.jpg", "/", "test.jpg", ".jpg", 1024, 1.0, 1.0, "abc123")
+                    ("/test.jpg", "/", "test.jpg", ".jpg", 1024, 1.0, 1.0, "abc123"),
                 )
 
             # Verify data was committed
-            results = db_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("abc123",))
+            results = db_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("abc123",)
+            )
             assert len(results) == 1
 
     def test_get_transaction_rolls_back_on_error(self):
@@ -205,7 +211,16 @@ class TestDatabaseManagerTransaction:
                     conn.execute(
                         "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        ("/test2.jpg", "/", "test2.jpg", ".jpg", 1024, 1.0, 1.0, "xyz789")
+                        (
+                            "/test2.jpg",
+                            "/",
+                            "test2.jpg",
+                            ".jpg",
+                            1024,
+                            1.0,
+                            1.0,
+                            "xyz789",
+                        ),
                     )
                     # Force an error
                     raise ValueError("Test error")
@@ -213,7 +228,9 @@ class TestDatabaseManagerTransaction:
                 pass
 
             # Verify data was rolled back
-            results = db_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("xyz789",))
+            results = db_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("xyz789",)
+            )
             assert len(results) == 0
 
 
@@ -229,11 +246,22 @@ class TestDatabaseManagerQueries:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/query_test.jpg", "/", "query_test.jpg", ".jpg", 2048, 1.0, 1.0, "qry123")
+                (
+                    "/query_test.jpg",
+                    "/",
+                    "query_test.jpg",
+                    ".jpg",
+                    2048,
+                    1.0,
+                    1.0,
+                    "qry123",
+                ),
             )
 
             # Query
-            results = db_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("qry123",))
+            results = db_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("qry123",)
+            )
 
             assert len(results) == 1
             assert results[0]["filename"] == "query_test.jpg"
@@ -243,7 +271,9 @@ class TestDatabaseManagerQueries:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
 
-            results = db_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("nonexistent",))
+            results = db_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("nonexistent",)
+            )
 
             assert len(results) == 0
 
@@ -255,7 +285,16 @@ class TestDatabaseManagerQueries:
             rowcount = db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/update_test.jpg", "/", "update_test.jpg", ".jpg", 3072, 1.0, 1.0, "upd123")
+                (
+                    "/update_test.jpg",
+                    "/",
+                    "update_test.jpg",
+                    ".jpg",
+                    3072,
+                    1.0,
+                    1.0,
+                    "upd123",
+                ),
             )
 
             assert rowcount == 1
@@ -269,13 +308,21 @@ class TestDatabaseManagerQueries:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/original.jpg", "/", "original.jpg", ".jpg", 1024, 1.0, 1.0, "orig123")
+                (
+                    "/original.jpg",
+                    "/",
+                    "original.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "orig123",
+                ),
             )
 
             # Update
             rowcount = db_manager.execute_update(
-                "UPDATE photos SET size = ? WHERE sha1 = ?",
-                (2048, "orig123")
+                "UPDATE photos SET size = ? WHERE sha1 = ?", (2048, "orig123")
             )
 
             assert rowcount == 1
@@ -289,11 +336,22 @@ class TestDatabaseManagerQueries:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/delete_me.jpg", "/", "delete_me.jpg", ".jpg", 1024, 1.0, 1.0, "del123")
+                (
+                    "/delete_me.jpg",
+                    "/",
+                    "delete_me.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "del123",
+                ),
             )
 
             # Delete
-            rowcount = db_manager.execute_update("DELETE FROM photos WHERE sha1 = ?", ("del123",))
+            rowcount = db_manager.execute_update(
+                "DELETE FROM photos WHERE sha1 = ?", ("del123",)
+            )
 
             assert rowcount == 1
 
@@ -311,7 +369,7 @@ class TestDatabaseManagerQueries:
             rowcount = db_manager.execute_many(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                params_list
+                params_list,
             )
 
             assert rowcount == 3
@@ -332,7 +390,16 @@ class TestDatabaseManagerBackup:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/backup_test.jpg", "/", "backup_test.jpg", ".jpg", 1024, 1.0, 1.0, "bkp123")
+                (
+                    "/backup_test.jpg",
+                    "/",
+                    "backup_test.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "bkp123",
+                ),
             )
 
             # Backup
@@ -342,7 +409,9 @@ class TestDatabaseManagerBackup:
 
             # Verify backup contains data
             backup_manager = DatabaseManager(str(backup_path))
-            results = backup_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("bkp123",))
+            results = backup_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("bkp123",)
+            )
             assert len(results) == 1
 
     def test_backup_creates_parent_directories(self):
@@ -395,7 +464,16 @@ class TestDatabaseManagerInfo:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/info_test.jpg", "/", "info_test.jpg", ".jpg", 1024, 1.0, 1.0, "info123")
+                (
+                    "/info_test.jpg",
+                    "/",
+                    "info_test.jpg",
+                    ".jpg",
+                    1024,
+                    1.0,
+                    1.0,
+                    "info123",
+                ),
             )
 
             info = db_manager.get_database_info()
@@ -487,7 +565,9 @@ class TestDatabaseManagerMigrations:
 
             # Verify tables were created
             with db_manager.get_connection() as conn:
-                cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
                 tables = [row[0] for row in cursor.fetchall()]
 
             assert "photos" in tables
@@ -501,6 +581,7 @@ class TestGlobalDatabaseManager:
         """Test that get_database_manager creates singleton instance."""
         # Reset global
         import src.db.connection as conn_module
+
         conn_module._db_manager = None
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -521,6 +602,7 @@ class TestGlobalDatabaseManager:
         """Test init_database function."""
         # Reset global
         import src.db.connection as conn_module
+
         conn_module._db_manager = None
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -538,6 +620,7 @@ class TestGlobalDatabaseManager:
         """Test get_database context manager."""
         # Reset global
         import src.db.connection as conn_module
+
         conn_module._db_manager = None
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -583,10 +666,12 @@ class TestDatabaseManagerEdgeCases:
             db_manager.execute_update(
                 "INSERT INTO photos (path, folder, filename, ext, size, created_ts, modified_ts, sha1) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("/named.jpg", "/", "named.jpg", ".jpg", 1024, 1.0, 1.0, "named123")
+                ("/named.jpg", "/", "named.jpg", ".jpg", 1024, 1.0, 1.0, "named123"),
             )
 
-            results = db_manager.execute_query("SELECT * FROM photos WHERE sha1 = ?", ("named123",))
+            results = db_manager.execute_query(
+                "SELECT * FROM photos WHERE sha1 = ?", ("named123",)
+            )
 
             # Should support both index and name access
             assert results[0]["filename"] == "named.jpg"

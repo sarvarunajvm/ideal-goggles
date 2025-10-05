@@ -435,7 +435,9 @@ class TestPhotoModel:
                 result = photo.calculate_perceptual_hash()
 
                 assert result == "1234567890abcdef"
-                mock_imagehash.average_hash.assert_called_once_with(mock_img, hash_size=8)
+                mock_imagehash.average_hash.assert_called_once_with(
+                    mock_img, hash_size=8
+                )
 
     def test_calculate_perceptual_hash_convert_mode(self):
         """Test perceptual hash with image mode conversion."""
@@ -461,7 +463,9 @@ class TestPhotoModel:
                 assert result == "abcdef1234567890"
                 mock_img.convert.assert_called_once_with("RGB")
                 # Hash should be called on converted image
-                mock_imagehash.average_hash.assert_called_once_with(mock_converted, hash_size=8)
+                mock_imagehash.average_hash.assert_called_once_with(
+                    mock_converted, hash_size=8
+                )
 
     def test_calculate_perceptual_hash_error(self):
         """Test perceptual hash handles errors gracefully."""

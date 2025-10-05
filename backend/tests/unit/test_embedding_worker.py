@@ -171,6 +171,7 @@ class TestCLIPEmbeddingWorkerInitialization:
 
         # Mock the import to raise ImportError
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -287,7 +288,9 @@ class TestGenerateEmbeddingSync:
             )
             mock_features.__truediv__.return_value = mock_normalized
 
-            worker.preprocess.return_value.unsqueeze.return_value.to.return_value = mock_tensor
+            worker.preprocess.return_value.unsqueeze.return_value.to.return_value = (
+                mock_tensor
+            )
             worker.model.encode_image.return_value = mock_features
 
             result = worker._generate_embedding_sync(test_photo.path)
@@ -316,7 +319,9 @@ class TestGenerateEmbeddingSync:
         )
         mock_features.__truediv__.return_value = mock_normalized
 
-        worker.preprocess.return_value.unsqueeze.return_value.to.return_value = mock_tensor
+        worker.preprocess.return_value.unsqueeze.return_value.to.return_value = (
+            mock_tensor
+        )
         worker.model.encode_image.return_value = mock_features
 
         result = worker._generate_embedding_sync(test_photo.path)
@@ -641,7 +646,9 @@ class TestOptimizedCLIPWorker:
         mock_torch_local.no_grad.return_value.__enter__ = Mock()
         mock_torch_local.no_grad.return_value.__exit__ = Mock()
 
-        with patch.dict("sys.modules", {"PIL.Image": mock_pil_module, "torch": mock_torch_local}):
+        with patch.dict(
+            "sys.modules", {"PIL.Image": mock_pil_module, "torch": mock_torch_local}
+        ):
             worker = OptimizedCLIPWorker()
 
             mock_batch_features = MagicMock()  # Use MagicMock to support __truediv__

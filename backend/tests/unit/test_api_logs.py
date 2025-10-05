@@ -401,7 +401,9 @@ class TestSubmitErrorReport:
 
             # Should be called 2 times: once for message, once for component stack
             assert mock_logger.error.call_count == 2
-            assert "[CLIENT-COMPONENT-STACK]" in mock_logger.error.call_args_list[1][0][0]
+            assert (
+                "[CLIENT-COMPONENT-STACK]" in mock_logger.error.call_args_list[1][0][0]
+            )
             assert "ErrorBoundary" in mock_logger.error.call_args_list[1][0][0]
 
     @pytest.mark.asyncio
@@ -421,7 +423,9 @@ class TestSubmitErrorReport:
             assert mock_logger.error.call_count == 3
             assert "[CLIENT-ERROR]" in mock_logger.error.call_args_list[0][0][0]
             assert "[CLIENT-ERROR-STACK]" in mock_logger.error.call_args_list[1][0][0]
-            assert "[CLIENT-COMPONENT-STACK]" in mock_logger.error.call_args_list[2][0][0]
+            assert (
+                "[CLIENT-COMPONENT-STACK]" in mock_logger.error.call_args_list[2][0][0]
+            )
 
     @pytest.mark.asyncio
     async def test_submit_error_report_with_component_name(self):

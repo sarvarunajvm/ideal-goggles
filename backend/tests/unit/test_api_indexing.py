@@ -381,6 +381,7 @@ class TestGetPhotosForProcessing:
 
     def test_get_photos_for_processing_full_reindex(self, mock_db_manager, db_manager):
         """Test getting photos for full reindex."""
+
         # Mock rows with dictionary-like access
         class MockRow:
             def __init__(self, data):
@@ -434,6 +435,7 @@ class TestGetPhotosForProcessing:
 
     def test_get_photos_for_processing_incremental(self, mock_db_manager, db_manager):
         """Test getting photos for incremental reindex."""
+
         # Mock rows with dictionary-like access
         class MockRow:
             def __init__(self, data):
