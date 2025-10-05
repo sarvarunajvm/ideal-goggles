@@ -63,13 +63,13 @@ class TestTextSearchService:
         """Test basic photo search functionality."""
         service, mock_db = text_search_service
 
-        # Mock search results
+        # Mock search results (without OCR columns)
         mock_search_results = [
             (
                 1,
-                "/path/photo1.jpg",
+                "/path/vacation.jpg",
                 "/path",
-                "photo1.jpg",
+                "vacation.jpg",
                 1024,
                 1640995200.0,
                 1640995200.0,
@@ -78,9 +78,6 @@ class TestTextSearchService:
                 "2022-01-01",
                 "Canon",
                 "EOS R5",
-                "vacation text",
-                0.9,
-                2.5,
             ),
         ]
 
@@ -93,9 +90,9 @@ class TestTextSearchService:
         assert result["query"] == "vacation"
         assert result["total_count"] == 1
         assert len(result["results"]) == 1
-        assert result["results"][0]["filename"] == "photo1.jpg"
-        # The match_types contains "ocr" since the match was in OCR text column
-        assert "ocr" in result["results"][0]["match_types"]
+        assert result["results"][0]["filename"] == "vacation.jpg"
+        # The match_types contains "filename" since the match was in filename
+        assert "filename" in result["results"][0]["match_types"]
 
     def test_search_photos_with_filters(self, text_search_service):
         """Test photo search with various filters."""
@@ -264,16 +261,13 @@ class TestTextSearchService:
         """Test getting search statistics."""
         service, mock_db = text_search_service
 
-        mock_stats_results = [(1000, 800, 900, 150.5)]
+        mock_stats_results = [(1000, 900)]
         mock_db.execute_query.return_value = mock_stats_results
 
         stats = service.get_search_statistics()
 
         assert stats["total_photos"] == 1000
-        assert stats["photos_with_ocr"] == 800
         assert stats["photos_with_exif"] == 900
-        assert stats["avg_ocr_length"] == 150.5
-        assert stats["ocr_coverage"] == 80.0  # 800/1000 * 100
         assert stats["exif_coverage"] == 90.0  # 900/1000 * 100
 
     def test_get_search_statistics_error_handling(self, text_search_service):
@@ -302,11 +296,9 @@ class TestTextSearchService:
         assert "p.filename LIKE ?" in query
         assert "p.folder LIKE ?" in query
         assert "(e.camera_make LIKE ? OR e.camera_model LIKE ?)" in query
-        assert "p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)" in query
 
         # Should have appropriate parameters
         assert "%vacation%" in params
-        assert "vacation*" in params
 
     def test_build_search_query_no_conditions(self, text_search_service):
         """Test building search query with no search conditions."""
@@ -346,9 +338,6 @@ class TestTextSearchService:
                 "2022-01-01",
                 "Canon",
                 "EOS R5",
-                "beach vacation",
-                0.9,
-                2.5,
             ),
         ]
 
@@ -360,9 +349,7 @@ class TestTextSearchService:
         assert result["file_id"] == 1
         assert result["filename"] == "vacation.jpg"
         assert "filename" in result["match_types"]
-        assert "ocr" in result["match_types"]
-        assert result["snippet"] is not None
-        assert "vacation" in result["snippet"]
+        assert result["snippet"] is None  # No OCR support
         assert result["relevance_score"] > 0
 
     def test_process_search_results_no_matches(self, text_search_service):
@@ -380,9 +367,6 @@ class TestTextSearchService:
                 1640995300.0,
                 "hash1",
                 "/thumb/1.jpg",
-                None,
-                None,
-                None,
                 None,
                 None,
                 None,
