@@ -3,6 +3,9 @@ packages:
   - func_tests
 
 onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
   - electron
+  - electron-winstaller
   - esbuild
   - msw
+  - unrs-resolver

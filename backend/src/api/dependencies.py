@@ -31,6 +31,14 @@ class DependenciesResponse(BaseModel):
     features: dict[str, bool] = Field(
         description="Feature availability based on dependencies"
     )
+    is_frozen: bool = Field(
+        default=False,
+        description="Whether running in production build (frozen executable)"
+    )
+    can_install: bool = Field(
+        default=True,
+        description="Whether dependencies can be installed in current environment"
+    )
 
 
 def _to_str_or_none(value: Any) -> str | None:
@@ -47,23 +55,43 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
     """Check if a Python package is installed and get its version.
 
     Robust to unexpected import errors and non-string version attributes.
+    Works for both normal and frozen (PyInstaller) environments.
     """
-    try:
-        import importlib
+    # In frozen executables, we need to check if the package was bundled
+    if getattr(sys, 'frozen', False):
+        # For frozen executables, check if package can be imported
+        # If it's not bundled, it won't be available even if installed in system
+        try:
+            import importlib
+            module = importlib.import_module(package_name)
+            version = getattr(module, "__version__", None)
+            if version is None and package_name == "sqlite3":
+                version = getattr(module, "version", None)
+            return True, _to_str_or_none(version)
+        except ImportError:
+            # In production build, package is not bundled
+            return False, None
+        except Exception:
+            logger.exception("Failed to check python package '%s' in frozen env", package_name)
+            return False, None
+    else:
+        # Development environment - normal import check
+        try:
+            import importlib
 
-        module = importlib.import_module(package_name)
-        # Many packages expose __version__, some use {pkg}.__version__ or version attributes
-        version = getattr(module, "__version__", None)
-        # Special cases where version may be exposed differently
-        if version is None and package_name == "sqlite3":
-            version = getattr(module, "version", None)
-        return True, _to_str_or_none(version)
-    except ImportError:
-        return False, None
-    except Exception:
-        # Catch-all to prevent a single misbehaving import from breaking the endpoint
-        logger.exception("Failed to check python package '%s'", package_name)
-        return False, None
+            module = importlib.import_module(package_name)
+            # Many packages expose __version__, some use {pkg}.__version__ or version attributes
+            version = getattr(module, "__version__", None)
+            # Special cases where version may be exposed differently
+            if version is None and package_name == "sqlite3":
+                version = getattr(module, "version", None)
+            return True, _to_str_or_none(version)
+        except ImportError:
+            return False, None
+        except Exception:
+            # Catch-all to prevent a single misbehaving import from breaking the endpoint
+            logger.exception("Failed to check python package '%s'", package_name)
+            return False, None
 
 
 def check_system_command(command: str) -> tuple[bool, str | None]:
@@ -202,13 +230,29 @@ async def get_dependencies_status() -> DependenciesResponse:
         "face_recognition": insightface_installed and cv2_installed,
     }
 
+    # Check if running in frozen environment
+    is_frozen = getattr(sys, 'frozen', False)
+    can_install = not is_frozen  # Can only install in development environment
+
     try:
-        return DependenciesResponse(core=core_deps, ml=ml_deps, features=features)
+        return DependenciesResponse(
+            core=core_deps,
+            ml=ml_deps,
+            features=features,
+            is_frozen=is_frozen,
+            can_install=can_install
+        )
     except Exception as e:
         # In case model validation fails unexpectedly, degrade gracefully instead of 500
         logger.exception("Failed to build DependenciesResponse: %s", e)
         # Return a minimal but valid response
-        return DependenciesResponse(core=[], ml=[], features={"basic_search": True})
+        return DependenciesResponse(
+            core=[],
+            ml=[],
+            features={"basic_search": True},
+            is_frozen=is_frozen,
+            can_install=can_install
+        )
 
 
 class InstallRequest(BaseModel):
@@ -231,6 +275,22 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
     try:
         import platform
         from pathlib import Path
+
+        # Check if running in frozen executable (production build)
+        is_frozen = getattr(sys, 'frozen', False)
+
+        if is_frozen:
+            # In production builds, ML dependencies cannot be installed dynamically
+            # They must be bundled at build time
+            logger.warning("Attempted to install dependencies in frozen executable")
+            return {
+                "status": "unavailable",
+                "message": "ML dependencies cannot be installed in the packaged application.",
+                "output": "ML features must be enabled during the build process. "
+                         "Please use the development version to install ML dependencies, "
+                         "or rebuild the application with ML dependencies included.",
+                "errors": "Dynamic dependency installation is not supported in production builds."
+            }
 
         # First try to find the installer script (for development)
         script_path = (
@@ -273,7 +333,7 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
                 "output": result.stdout,
                 "errors": result.stderr,
             }
-        # Fallback to direct pip installation (production mode)
+        # Fallback to direct pip installation (development mode without script)
         logger.info("Installer script not found, using direct pip installation")
 
         outputs = []

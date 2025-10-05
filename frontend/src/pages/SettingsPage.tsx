@@ -261,8 +261,20 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   {rootFolders.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      No folders added yet
+                    <div className="text-center py-6 space-y-3">
+                      <FolderOpen className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">No folders configured</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Add folders containing your photos to start indexing
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3 mx-4">
+                        <p className="font-medium mb-1">Quick Start:</p>
+                        <p>1. Click "Add" above to select a folder</p>
+                        <p>2. Choose folders with your photos</p>
+                        <p>3. Click "Save Configuration" when done</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -374,18 +386,30 @@ export default function SettingsPage() {
                     <Button
                       onClick={() => startIndexing(false)}
                       disabled={indexStatus?.status === 'indexing'}
-                      className="[background:var(--gradient-green)] text-black font-semibold shadow-md shadow-green-500/30 hover:shadow-lg hover:shadow-green-500/40 hover:scale-[1.02] disabled:opacity-50 transition-all"
+                      title={indexStatus?.status === 'indexing' ? 'Indexing in progress - please wait for it to complete' : 'Start incremental indexing for new photos'}
+                      className="[background:var(--gradient-green)] text-black font-semibold shadow-md shadow-green-500/30 hover:shadow-lg hover:shadow-green-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all relative group"
                     >
                       <Play className="h-4 w-4 mr-2" />
                       Quick Update
+                      {indexStatus?.status === 'indexing' && (
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          Indexing in progress...
+                        </span>
+                      )}
                     </Button>
                     <Button
                       onClick={() => startIndexing(true)}
                       disabled={indexStatus?.status === 'indexing'}
-                      className="[background:var(--gradient-gold)] text-black font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 transition-all"
+                      title={indexStatus?.status === 'indexing' ? 'Indexing in progress - please wait for it to complete' : 'Re-index all photos from scratch'}
+                      className="[background:var(--gradient-gold)] text-black font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all relative group"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Full Refresh
+                      {indexStatus?.status === 'indexing' && (
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          Indexing in progress...
+                        </span>
+                      )}
                     </Button>
                   </div>
 

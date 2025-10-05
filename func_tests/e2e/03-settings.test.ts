@@ -85,7 +85,7 @@ test.describe('Settings and Configuration', () => {
 
     test('stops indexing process', async () => {
       // Check if stop button appears when needed
-      const stopButton = settingsPage.page.locator('button:has-text("Stop")');
+      const stopButton = settingsPage.page.locator('button:has-text("Stop Indexing")');
       // Button may or may not be visible depending on indexing state
       if (await stopButton.isVisible()) {
         await settingsPage.stopIndexing();
@@ -96,8 +96,8 @@ test.describe('Settings and Configuration', () => {
 
     test('handles full vs incremental indexing', async () => {
       // Check both buttons exist
-      const incrementalButton = settingsPage.page.locator('button:has-text("Start Incremental")');
-      const fullButton = settingsPage.page.locator('button:has-text("Full Re-Index")');
+      const incrementalButton = settingsPage.page.locator('button:has-text("Quick Update")');
+      const fullButton = settingsPage.page.locator('button:has-text("Full Refresh")');
 
       await expect(incrementalButton).toBeVisible();
       await expect(fullButton).toBeVisible();

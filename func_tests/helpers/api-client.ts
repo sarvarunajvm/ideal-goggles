@@ -164,16 +164,19 @@ export class APIClient {
     const startTime = Date.now();
     while (Date.now() - startTime < maxWaitTime) {
       const response = await this.getIndexingStatus();
+      if (!response.ok) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
       const status = await response.json();
-
-      if (status.state === 'idle' || status.state === 'complete') {
+      // Backend returns { status: 'idle' | 'indexing' | 'completed' | 'error', errors?: [] }
+      if (status.status === 'idle' || status.status === 'completed') {
         return true;
       }
-
-      if (status.state === 'error') {
-        throw new Error(`Indexing failed: ${status.error}`);
+      if (status.status === 'error') {
+        const errMsg = Array.isArray(status.errors) && status.errors.length > 0 ? status.errors[0] : 'unknown error';
+        throw new Error(`Indexing failed: ${errMsg}`);
       }
-
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     return false;
@@ -183,10 +186,12 @@ export class APIClient {
     const startTime = Date.now();
     while (Date.now() - startTime < maxWaitTime) {
       try {
-        const response = await this.checkHealth();
-        if (response.ok) {
-          return true;
-        }
+        // Prefer indexing status endpoint since health may fail if ML models are missing
+        const response = await this.getIndexingStatus();
+        if (response.ok) return true;
+        // Fallback to health
+        const health = await this.checkHealth();
+        if (health.ok) return true;
       } catch (error) {
         // Backend not ready yet
       }

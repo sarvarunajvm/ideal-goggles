@@ -26,6 +26,25 @@ class ConfigurationResponse(BaseModel):
     thumbnail_size: str = Field(description="Thumbnail size preset")
     index_version: str = Field(description="Current index version")
 
+def _compute_default_roots() -> list[str]:
+    """Compute OS-specific default photo roots.
+    - Windows: %USERPROFILE%\\Pictures
+    - macOS/Linux: ~/Pictures
+    Returns only existing directories.
+    """
+    import os
+    import sys
+    from pathlib import Path
+    try:
+        if sys.platform.startswith("win"):
+            userprofile = os.environ.get("USERPROFILE") or str(Path.home())
+            candidate = Path(userprofile) / "Pictures"
+        else:
+            candidate = Path.home() / "Pictures"
+        return [str(candidate.resolve())] if candidate.exists() and candidate.is_dir() else []
+    except Exception:
+        return []
+
 
 class UpdateRootsRequest(BaseModel):
     """Request model for updating root folders."""
@@ -113,7 +132,7 @@ async def get_configuration() -> ConfigurationResponse:
         config_data = _get_config_from_db(db_manager)
 
         return ConfigurationResponse(
-            roots=config_data.get("roots", []),
+            roots=(config_data.get("roots") or _compute_default_roots()),
             ocr_enabled=config_data.get("ocr_enabled", False),  # Default to False
             ocr_languages=config_data.get("ocr_languages", ["eng"]),
             face_search_enabled=config_data.get("face_search_enabled", False),
@@ -442,7 +461,10 @@ def _parse_int_setting(key: str, value: str) -> int:
 def _parse_setting_value(key: str, value: str) -> Any:
     """Parse setting value based on key type."""
     if key in ["roots", "ocr_languages"]:
-        return _parse_json_setting(key, value)
+        parsed = _parse_json_setting(key, value)
+        if key == "roots" and (not isinstance(parsed, list) or not parsed):
+            return _compute_default_roots()
+        return parsed
     if key in ["face_search_enabled", "ocr_enabled", "semantic_search_enabled"]:
         return _parse_boolean_setting(value)
     if key in ["thumbnail_quality", "batch_size"]:
@@ -455,7 +477,7 @@ def _parse_setting_value(key: str, value: str) -> Any:
 def _get_config_defaults() -> dict[str, Any]:
     """Get default configuration values."""
     return {
-        "roots": [],
+        "roots": _compute_default_roots(),
         "ocr_enabled": False,  # Default to off
         "ocr_languages": ["eng", "tam"],
         "face_search_enabled": False,
@@ -486,6 +508,9 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
             if key not in settings_dict:
                 settings_dict[key] = default_value
 
+        # If roots missing or empty, apply computed defaults
+        if not settings_dict.get("roots"):
+            settings_dict["roots"] = _get_config_defaults().get("roots", [])
         return settings_dict
 
     except Exception as e:
@@ -496,7 +521,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
 
         # Return defaults on error
         return {
-            "roots": [],
+            "roots": _compute_default_roots(),
             "ocr_languages": ["eng", "tam"],
             "face_search_enabled": False,
             "thumbnail_size": "medium",

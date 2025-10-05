@@ -54,7 +54,7 @@ export default function PeoplePage() {
       }
     }
     check()
-    const id = setInterval(check, 1000)
+    const id = setInterval(check, 5000)
     return () => {
       cancelled = true
       clearInterval(id)
@@ -88,10 +88,7 @@ export default function PeoplePage() {
       setError('Person name cannot be empty')
       return
     }
-    if (formPhotos.length < 1) {
-      setError('At least one photo is required')
-      return
-    }
+    // Allow saving without photos - photos can be added later
 
     if (editingPersonId) {
       // Update existing person
@@ -242,7 +239,7 @@ export default function PeoplePage() {
                 <div className="mt-4 flex gap-2">
                   <Button
                     onClick={savePerson}
-                    disabled={!nameInput.trim() || formPhotos.length === 0}
+                    disabled={!nameInput.trim()}
                   >
                     Save Person
                   </Button>

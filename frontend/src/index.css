@@ -260,3 +260,16 @@ button:disabled {
 .animate-golden-pulse {
   animation: golden-pulse 2s ease-in-out infinite;
 }
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}

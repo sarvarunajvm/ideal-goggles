@@ -273,7 +273,7 @@ jobs:
         # Install Playwright browsers
         cd func_tests
         pnpm install --no-frozen-lockfile
-        pnpm exec playwright install chromium
+        pnpm exec playwright install --with-deps chromium
 
     - name: Quick smoke test
       run: |

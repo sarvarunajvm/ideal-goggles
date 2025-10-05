@@ -139,7 +139,7 @@ jobs:
         # E2E tests
         cd func_tests
         pnpm install --no-frozen-lockfile
-        pnpm exec playwright install --with-deps ${{ matrix.browser }}
+        pnpm exec playwright install --with-deps chromium
 
     - name: Build application
       run: |

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   apiService,
   SearchResponse,
@@ -139,6 +139,7 @@ function CompactSearchBar({
                 className="h-7 w-7"
                 onClick={() => onSearchModeChange('text')}
                 title="Quick Find"
+                aria-label="Quick Find - Search by filename, date, or text"
               >
                 <Search className="h-3.5 w-3.5" />
               </Button>
@@ -149,6 +150,7 @@ function CompactSearchBar({
                 className="h-7 w-7"
                 onClick={() => onSearchModeChange('semantic')}
                 title="Smart Search"
+                aria-label="Smart Search - Describe what you're looking for"
               >
                 <Sparkles className="h-3.5 w-3.5" />
               </Button>
@@ -159,6 +161,7 @@ function CompactSearchBar({
                 className="h-7 w-7"
                 onClick={() => onSearchModeChange('image')}
                 title="Similar Photos"
+                aria-label="Similar Photos - Upload an image to find similar ones"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
               </Button>
@@ -182,6 +185,7 @@ function CompactSearchBar({
               className="h-7 w-7"
               onClick={() => onSearchModeChange('text')}
               title="Quick Find - Search by filename, date, or text"
+              aria-label="Quick Find - Search by filename, date, or text"
             >
               <Search className="h-3.5 w-3.5" />
             </Button>
@@ -192,6 +196,7 @@ function CompactSearchBar({
               className="h-7 w-7"
               onClick={() => onSearchModeChange('semantic')}
               title="Smart Search - Describe what you're looking for"
+              aria-label="Smart Search - Describe what you're looking for"
             >
               <Sparkles className="h-3.5 w-3.5" />
             </Button>
@@ -324,10 +329,12 @@ function ResultsGrid({
   results,
   onItemClick,
   onRevealInFolder,
+  hasConfiguredFolders,
 }: {
   results: SearchResult[]
   onItemClick: (item: SearchResult) => void
   onRevealInFolder: (item: SearchResult) => void
+  hasConfiguredFolders?: boolean
 }) {
   const thumbnailBaseUrl = getThumbnailBaseUrl()
 
@@ -336,7 +343,16 @@ function ResultsGrid({
       <div className="flex flex-col items-center justify-center py-16">
         <Search className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-lg font-medium text-muted-foreground">No results found</p>
-        <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
+        {hasConfiguredFolders === false ? (
+          <div className="text-center mt-2">
+            <p className="text-sm text-muted-foreground">No photo folders are configured yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Go to <a href="/settings" className="text-primary hover:underline">Settings</a> to add your photo folders.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
+        )}
       </div>
     )
   }
@@ -383,8 +399,12 @@ function ResultsGrid({
             {/* Score badge */}
             {item.score && (
               <div className="absolute top-2 left-2">
-                <Badge variant="secondary" className="backdrop-blur-sm text-xs px-1 py-0">
-                  {(item.score * 100).toFixed(0)}%
+                <Badge
+                  variant="secondary"
+                  className="backdrop-blur-sm text-xs px-1 py-0"
+                  title="Similarity score"
+                >
+                  {(item.score * 100).toFixed(0)}% match
                 </Badge>
               </div>
             )}
@@ -421,6 +441,7 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>('text')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [hasConfiguredFolders, setHasConfiguredFolders] = useState(true)
 
   // Lightbox store
   const { openLightbox } = useLightboxStore()
@@ -432,6 +453,19 @@ export default function SearchPage() {
     folder: '',
     limit: 50,
   })
+
+  // Check if folders are configured on mount
+  useEffect(() => {
+    const checkConfig = async () => {
+      try {
+        const config = await apiService.getConfig()
+        setHasConfiguredFolders(config.roots && config.roots.length > 0)
+      } catch {
+        // Ignore errors
+      }
+    }
+    checkConfig()
+  }, [])
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) return
@@ -609,6 +643,7 @@ export default function SearchPage() {
                 results={searchResults.items}
                 onItemClick={handleItemClick}
                 onRevealInFolder={handleRevealInFolder}
+                hasConfiguredFolders={hasConfiguredFolders}
               />
             </>
           ) : (
@@ -616,12 +651,24 @@ export default function SearchPage() {
             <div className="flex flex-col items-center justify-center py-24">
               <Search className="h-16 w-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-xl font-semibold text-muted-foreground mb-2">
-                Start searching your photos
+                {hasConfiguredFolders ? 'Start searching your photos' : 'Welcome to Ideal Goggles'}
               </h3>
-              <p className="text-sm text-muted-foreground text-center max-w-md">
-                Use Quick Find for filename and date searches, Smart Search to describe what you're looking for,
-                or Similar Photos to find visually similar images.
-              </p>
+              {hasConfiguredFolders ? (
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                  Use Quick Find for filename and date searches, Smart Search to describe what you're looking for,
+                  or Similar Photos to find visually similar images.
+                </p>
+              ) : (
+                <div className="text-center max-w-md">
+                  <p className="text-sm text-muted-foreground">
+                    To get started, you need to configure your photo folders.
+                  </p>
+                  <Button variant="outline" className="mt-4" onClick={() => window.location.href = '/settings'}>
+                    <Folder className="h-4 w-4 mr-2" />
+                    Go to Settings
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

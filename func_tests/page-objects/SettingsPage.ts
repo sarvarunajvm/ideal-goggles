@@ -18,12 +18,12 @@ export class SettingsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.rootFoldersSection = page.locator('text=Photo Directories').locator('..');
+    this.rootFoldersSection = page.locator('text=Photo Folders').locator('..');
     this.addFolderButton = page.locator('button:has-text("Add")');
     this.folderInput = page.locator('input[placeholder*="path/to/your/photos"]');
     this.saveButton = page.locator('button:has-text("Save Configuration")');
     this.resetButton = page.locator('button:has-text("Reset to Defaults")');
-    this.indexingButton = page.locator('button:has-text("Start Incremental")');
+    this.indexingButton = page.locator('button:has-text("Quick Update")');
     this.indexingStatus = page.locator('text=Current Status').locator('..');
     this.progressBar = page.locator('.h-2').first(); // Progress bar
     this.ocrToggle = page.locator('#ocr-eng'); // English OCR checkbox
@@ -56,7 +56,7 @@ export class SettingsPage extends BasePage {
   async startIndexing(fullIndex: boolean = false) {
     if (fullIndex) {
       // Try different button texts that might be used
-      const fullIndexButton = this.page.locator('button:has-text("Full Re-Index"), button:has-text("Full Index"), button:has-text("Re-index All")').first();
+      const fullIndexButton = this.page.locator('button:has-text("Full Refresh"), button:has-text("Full Re-Index"), button:has-text("Full Index")').first();
       const buttonExists = await fullIndexButton.isVisible().catch(() => false);
 
       if (buttonExists) {
@@ -72,7 +72,7 @@ export class SettingsPage extends BasePage {
   }
 
   async stopIndexing() {
-    const stopButton = this.page.locator('button:has-text("Stop")');
+    const stopButton = this.page.locator('button:has-text("Stop Indexing"), button:has-text("Stop")').first();
     await stopButton.click();
     await this.page.waitForTimeout(1000);
   }

@@ -106,12 +106,9 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
     await page.reload();
 
     // App should show loading/waiting screen when backend is unavailable
-    await expect(page.locator('text=Starting local backend')).toBeVisible();
-
-    // Should show the backend URL it's trying to connect to
-    await expect(page.locator('code')).toContainText('/api');
+    await expect(page.locator('text=Getting everything ready')).toBeVisible();
 
     // Should show helpful message about waiting
-    await expect(page.locator('text=/If this persists/')).toBeVisible();
+    await expect(page.locator('text=/This usually takes just a few seconds/')).toBeVisible();
   });
 });

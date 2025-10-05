@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import Navigation from './Navigation'
 import StatusBar from './StatusBar'
+import ConfigurationBanner from './ConfigurationBanner'
 
 interface LayoutProps {
   children: ReactNode
@@ -11,6 +12,9 @@ export default function Layout({ children }: LayoutProps) {
     <div className="flex flex-col h-screen bg-background text-foreground">
       {/* Top Navigation Bar */}
       <Navigation />
+
+      {/* Configuration Banner - Shows when no folders are configured */}
+      <ConfigurationBanner />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-background/95">{children}</main>

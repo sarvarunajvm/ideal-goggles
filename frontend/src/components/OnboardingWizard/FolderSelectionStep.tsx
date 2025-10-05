@@ -11,6 +11,8 @@ export function FolderSelectionStep() {
     prevStep,
   } = useOnboardingStore();
   const [isSelecting, setIsSelecting] = useState(false);
+  const [manualPath, setManualPath] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const handleSelectFolder = async () => {
     setIsSelecting(true);
@@ -26,17 +28,23 @@ export function FolderSelectionStep() {
           }
         }
       } else {
-        // Fallback for web/development - use a simple prompt
-        const folderPath = prompt('Enter the folder path:');
-        if (folderPath && !selectedFolders.includes(folderPath)) {
-          addFolder(folderPath);
-        }
+        // Fallback for web/development - show input field instead of prompt
+        setShowManualInput(true);
       }
     } catch (error) {
       console.error('Failed to select folder:', error);
-      alert('Failed to select folder. Please try again.');
+      // Show manual input as fallback
+      setShowManualInput(true);
     } finally {
       setIsSelecting(false);
+    }
+  };
+
+  const handleManualAdd = () => {
+    if (manualPath && !selectedFolders.includes(manualPath)) {
+      addFolder(manualPath);
+      setManualPath('');
+      setShowManualInput(false);
     }
   };
 
@@ -54,6 +62,9 @@ export function FolderSelectionStep() {
         </h2>
         <p className="mt-2 text-muted-foreground">
           Choose the folders where you keep your photos
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Default: your Pictures folder ({navigator.platform.includes('Win') ? '%USERPROFILE%\\Pictures' : '~/Pictures'})
         </p>
       </div>
 
@@ -92,17 +103,56 @@ export function FolderSelectionStep() {
         )}
       </div>
 
+      {/* Manual input field for web/development */}
+      {showManualInput && (
+        <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+          <p className="text-sm text-muted-foreground">Enter folder path manually:</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={manualPath}
+              onChange={(e) => setManualPath(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleManualAdd();
+                }
+              }}
+              placeholder="/path/to/your/photos"
+              className="flex-1 px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              onClick={handleManualAdd}
+              disabled={!manualPath}
+              className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add
+            </button>
+            <button
+              onClick={() => {
+                setShowManualInput(false);
+                setManualPath('');
+              }}
+              className="px-4 py-2 text-sm font-medium rounded-md bg-muted hover:bg-muted/80"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add folder button */}
-      <button
-        onClick={handleSelectFolder}
-        disabled={isSelecting}
-        className="flex w-full items-center justify-center space-x-2 rounded-lg py-3 font-semibold [background:var(--gradient-gold)] text-black shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-      >
-        <FolderPlus className="h-5 w-5" />
-        <span>
-          {isSelecting ? 'Selecting...' : 'Add Folder'}
-        </span>
-      </button>
+      {!showManualInput && (
+        <button
+          onClick={handleSelectFolder}
+          disabled={isSelecting}
+          className="flex w-full items-center justify-center space-x-2 rounded-lg py-3 font-semibold [background:var(--gradient-gold)] text-black shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          <FolderPlus className="h-5 w-5" />
+          <span>
+            {isSelecting ? 'Selecting...' : 'Add Folder'}
+          </span>
+        </button>
+      )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4">

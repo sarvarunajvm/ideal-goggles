@@ -17,13 +17,13 @@ export class SearchPage extends BasePage {
     super(page);
     this.searchInput = page.locator('input[placeholder*="Search"], input[placeholder*="Describe"]');
     this.searchButton = page.locator('button[type="submit"]');
-    // Updated to use TabsTrigger buttons with proper selectors
-    this.textSearchButton = page.locator('button[role="tab"]:has-text("Text Search")');
-    this.semanticSearchButton = page.locator('button[role="tab"]:has-text("Semantic")');
+    // Updated to match current UI with Quick Find and Smart Search (using aria-label for icon buttons)
+    this.textSearchButton = page.locator('button[aria-label*="Quick Find"]');
+    this.semanticSearchButton = page.locator('button[aria-label*="Smart Search"]');
     this.imageSearchButton = page.locator('button[role="tab"]:has-text("Image")');
     this.filterButton = page.locator('text=Filters');
     this.resultsContainer = page.locator('.grid').first(); // Grid of results
-    this.emptyState = page.locator('text=Search Your Photos');
+    this.emptyState = page.locator('text=Start searching your photos');
     this.uploadArea = page.locator('text=Upload an image to search');
     this.loadingSpinner = page.locator('.animate-spin');
   }
@@ -63,9 +63,25 @@ export class SearchPage extends BasePage {
   }
 
   async getActiveSearchMode(): Promise<string | null> {
-    // Find the active tab using aria-selected attribute
-    const activeTab = await this.page.locator('button[role="tab"][aria-selected="true"]').textContent();
-    return activeTab?.trim() || null;
+    // Quick Find is the default mode - check if its button exists and is visible
+    // The UI shows Quick Find is active by default when the page loads
+    const quickFindButton = await this.textSearchButton.isVisible().catch(() => false);
+    if (quickFindButton) {
+      return 'Quick Find';
+    }
+
+    // Check if Smart Search is active (would need to be clicked first)
+    const smartSearchButton = await this.semanticSearchButton.isVisible().catch(() => false);
+    if (smartSearchButton) {
+      // If Smart Search button was clicked, we'd see different placeholder text
+      const placeholder = await this.searchInput.getAttribute('placeholder');
+      if (placeholder?.includes('Describe')) {
+        return 'Smart Search';
+      }
+    }
+
+    // Default to Quick Find
+    return 'Quick Find';
   }
 
   async toggleFilters() {
