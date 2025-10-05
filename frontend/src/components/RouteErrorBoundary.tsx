@@ -66,12 +66,12 @@ export function RouteErrorBoundary() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={handleGoHome} className="flex items-center space-x-2 flex-1">
+            <Button onClick={handleGoHome} className="flex items-center space-x-2 flex-1 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all">
               <Home className="h-4 w-4" />
               <span>Go Home</span>
             </Button>
 
-            <Button onClick={handleReload} variant="outline" className="flex items-center space-x-2 flex-1">
+            <Button onClick={handleReload} className="flex items-center space-x-2 flex-1 !bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] hover:!from-[rgb(var(--cyan-rgb))]/80 hover:!to-[rgb(var(--cyan-rgb))]/80 !text-black !border-[rgb(var(--cyan-rgb))]/50 !shadow-[var(--shadow-cyan)] hover:!shadow-[var(--shadow-cyan)] hover:scale-105 !font-semibold transition-all">
               <RefreshCw className="h-4 w-4" />
               <span>Reload</span>
             </Button>

@@ -3,6 +3,7 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const API_BASE = 'http://localhost:5555';
 
@@ -40,10 +41,12 @@ export function IndexingStep() {
   // Track elapsed onboarding time (reserved for future UX tweaks)
   const [, setElapsedTime] = useState<number>(0);
   const [showBackgroundOption, setShowBackgroundOption] = useState(false);
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     startIndexing();
-    const interval = setInterval(pollIndexingStatus, 500);
+    const interval = setInterval(pollIndexingStatus, 2000); // Reduced from 500ms to 2s for better performance
     return () => clearInterval(interval);
   }, []);
 
@@ -73,9 +76,14 @@ export function IndexingStep() {
     }
   }, [status?.status, isComplete, showBackgroundOption]);
 
-  const startIndexing = async () => {
+  const startIndexing = async (isRetry = false) => {
     try {
-      setIndexingStarted(true);
+      if (isRetry) {
+        setIsRetrying(true);
+        setError(null);
+      } else {
+        setIndexingStarted(true);
+      }
 
       // First, configure the roots
       await axios.post(`${API_BASE}/config/roots`, {
@@ -86,12 +94,25 @@ export function IndexingStep() {
       await axios.post(`${API_BASE}/index/start`, {
         full: true,
       });
+
+      if (isRetry) {
+        setIsRetrying(false);
+      }
     } catch (err: any) {
       if (err.response?.status !== 409) {
         // 409 means already indexing, which is fine
         setError(err.message || 'Failed to start indexing');
+        if (isRetry) {
+          setIsRetrying(false);
+        }
       }
     }
+  };
+
+  const handleRetry = async () => {
+    const newAttemptCount = retryAttempts + 1;
+    setRetryAttempts(newAttemptCount);
+    await startIndexing(true);
   };
 
   const pollIndexingStatus = async () => {
@@ -158,11 +179,42 @@ export function IndexingStep() {
       {/* Status display */}
       <div className="rounded-lg border border-border/50 bg-background/50 p-6">
         {error ? (
-          <div className="flex items-center space-x-3 text-destructive">
-            <AlertCircle className="h-6 w-6" />
-            <div>
-              <p className="font-medium">Error occurred</p>
-              <p className="text-sm">{error}</p>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 text-destructive">
+              <AlertCircle className="h-6 w-6" />
+              <div className="flex-1">
+                <p className="font-medium">Setup failed</p>
+                <p className="text-sm">{error}</p>
+                {retryAttempts > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Retry attempt {retryAttempts}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={handleRetry}
+                disabled={isRetrying || retryAttempts >= 3}
+                size="sm"
+                className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {isRetrying ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Retrying...</span>
+                  </div>
+                ) : retryAttempts >= 3 ? (
+                  'Max retries reached'
+                ) : (
+                  `Try again${retryAttempts > 0 ? ` (${3 - retryAttempts} left)` : ''}`
+                )}
+              </Button>
+              {retryAttempts >= 3 && (
+                <p className="text-xs text-muted-foreground">
+                  Please check your folder permissions and try going back to select different folders.
+                </p>
+              )}
             </div>
           </div>
         ) : isComplete ? (
@@ -197,9 +249,25 @@ export function IndexingStep() {
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="space-y-2">
-              <div className="h-3 w-full overflow-hidden rounded-full bg-muted/50 border border-border/50">
+            {/* Enhanced Progress bar with phase indicator */}
+            <div className="space-y-3">
+              {/* Current phase badge */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+                  <span className="text-sm font-medium text-primary">
+                    {status ? getPhaseLabel(status.progress.current_phase) : 'Starting...'}
+                  </span>
+                </div>
+                {status?.progress && status?.progress.total_files > 0 && (
+                  <span className="text-sm font-mono text-muted-foreground">
+                    {Math.round((status.progress.processed_files / status.progress.total_files) * 100)}%
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-4 w-full overflow-hidden rounded-full bg-muted/50 border border-border/50 shadow-inner">
                 {status?.progress?.total_files === 0 ? (
                   // Indeterminate progress bar for discovery phase
                   <div className="h-full bg-gradient-to-r from-primary via-yellow-300 to-primary animate-pulse">
@@ -208,28 +276,69 @@ export function IndexingStep() {
                 ) : (
                   // Determinate progress bar when we know the total
                   <div
-                    className="h-full bg-gradient-to-r from-primary to-yellow-300 transition-all duration-500 shadow-sm"
+                    className="h-full bg-gradient-to-r from-primary to-yellow-300 transition-all duration-500 shadow-sm relative overflow-hidden"
                     style={{
                       width: status && status.progress && status.progress.total_files > 0
                         ? `${(status.progress.processed_files / status.progress.total_files) * 100}%`
                         : '0%',
                     }}
-                  />
+                  >
+                    {/* Animated shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                  </div>
                 )}
               </div>
-              <div className="space-y-1">
+              {/* File count and detailed progress */}
+              <div className="space-y-2">
                 <p className="text-sm text-foreground/90 text-center font-medium">
                   {status?.progress?.total_files === 0 ? (
                     <>Discovering photos in your folders...</>
                   ) : (
                     <>
                       {status?.progress?.processed_files || 0} / {status?.progress?.total_files || '?'}{' '}
-                      photos {status?.progress && status?.progress.total_files > 0 &&
-                        `(${Math.round((status.progress.processed_files / status.progress.total_files) * 100)}%)`
-                      }
+                      photos processed
                     </>
                   )}
                 </p>
+
+                {/* Phase progress breakdown - only show when we have status */}
+                {status && status.progress.total_files > 0 && (
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="text-center">
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-400 transition-all duration-300"
+                          style={{ width: status.progress.current_phase === 'discovery' || status.progress.current_phase === 'completed' ? '100%' : '0%' }}
+                        />
+                      </div>
+                      <span className="text-muted-foreground">Discovery</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-400 transition-all duration-300"
+                          style={{
+                            width: ['metadata', 'thumbnails', 'embeddings', 'faces', 'completed'].includes(status.progress.current_phase)
+                              ? '100%'
+                              : ['scanning'].includes(status.progress.current_phase)
+                                ? '50%'
+                                : '0%'
+                          }}
+                        />
+                      </div>
+                      <span className="text-muted-foreground">Processing</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-400 transition-all duration-300"
+                          style={{ width: ['embeddings', 'faces', 'completed'].includes(status.progress.current_phase) ? '100%' : '0%' }}
+                        />
+                      </div>
+                      <span className="text-muted-foreground">AI Features</span>
+                    </div>
+                  </div>
+                )}
                 {status?.progress && status?.progress.total_files > 0 && status?.progress.processed_files > 0 && (
                   <p className="text-xs text-muted-foreground text-center">
                     {(() => {
@@ -262,12 +371,12 @@ export function IndexingStep() {
                 {status?.progress.processed_files ? `${status.progress.processed_files} photos ready to search.` : ''} Continue while we finish in the background.
               </p>
             </div>
-            <button
+            <Button
               onClick={handleContinueInBackground}
-              className="rounded-lg px-6 py-2 font-semibold [background:var(--gradient-green)] text-black shadow-md shadow-green-500/30 hover:shadow-lg hover:shadow-green-500/40 hover:scale-[1.02] transition-all"
+              className="!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 !font-semibold transition-all"
             >
               Skip & Start
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -286,20 +395,20 @@ export function IndexingStep() {
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4">
-        <button
+        <Button
           onClick={prevStep}
-          disabled={status?.status === 'indexing' || isComplete}
-          className="rounded-lg px-6 py-2 font-medium [background:var(--gradient-red)] text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/30 hover:shadow-lg hover:shadow-red-500/40 hover:scale-[1.02] transition-all"
+          disabled={(status?.status === 'indexing' && !error) || isComplete}
+          className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleNext}
           disabled={!isComplete}
-          className="rounded-lg px-6 py-2 font-semibold [background:var(--gradient-gold)] text-black disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all"
+          className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
         >
           {isComplete ? 'Continue' : 'Waiting...'}
-        </button>
+        </Button>
       </div>
     </div>
   );

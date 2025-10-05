@@ -44,10 +44,9 @@ export function BatchActions({ totalItems, onSelectAll }: BatchActionsProps) {
           </span>
         </div>
         <Button
-          variant="outline"
           size="sm"
           onClick={toggleSelectionMode}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 !bg-gradient-to-r !from-[rgb(var(--purple-rgb))] !to-[rgb(var(--purple-rgb))] hover:!from-[rgb(var(--purple-rgb))]/80 hover:!to-[rgb(var(--purple-rgb))]/80 !text-white !border-[rgb(var(--purple-rgb))]/50 !shadow-[var(--shadow-purple)] hover:!shadow-[var(--shadow-purple)] hover:scale-105 !font-semibold transition-all"
         >
           <Square className="h-4 w-4" />
           Select
@@ -69,30 +68,27 @@ export function BatchActions({ totalItems, onSelectAll }: BatchActionsProps) {
           {selectedCount > 0 && (
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => setExportDialogOpen(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 !bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] hover:!from-[rgb(var(--cyan-rgb))]/80 hover:!to-[rgb(var(--cyan-rgb))]/80 !text-black !border-[rgb(var(--cyan-rgb))]/50 !shadow-[var(--shadow-cyan)] hover:!shadow-[var(--shadow-cyan)] hover:scale-105 !font-semibold transition-all"
               >
                 <Download className="h-4 w-4" />
                 Export
               </Button>
 
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => setTagDialogOpen(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all"
               >
                 <Tag className="h-4 w-4" />
                 Tag
               </Button>
 
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => setDeleteDialogOpen(true)}
-                className="flex items-center gap-2 text-destructive hover:text-destructive"
+                className="flex items-center gap-2 !bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -107,7 +103,7 @@ export function BatchActions({ totalItems, onSelectAll }: BatchActionsProps) {
               variant="ghost"
               size="sm"
               onClick={onSelectAll}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 !text-[var(--neon-green)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--green-rgb))]/20 hover:!to-[rgb(var(--green-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-green)] !transition-all"
             >
               <CheckSquare className="h-4 w-4" />
               Select All
@@ -119,7 +115,7 @@ export function BatchActions({ totalItems, onSelectAll }: BatchActionsProps) {
             size="sm"
             onClick={clearSelection}
             disabled={selectedCount === 0}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 !text-[var(--neon-cyan)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--cyan-rgb))]/20 hover:!to-[rgb(var(--cyan-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-cyan)] !transition-all disabled:opacity-50"
           >
             Clear
           </Button>
@@ -128,7 +124,7 @@ export function BatchActions({ totalItems, onSelectAll }: BatchActionsProps) {
             variant="ghost"
             size="sm"
             onClick={toggleSelectionMode}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 !text-[var(--neon-red)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--red-rgb))]/20 hover:!to-[rgb(var(--red-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-red)] !transition-all"
           >
             <X className="h-4 w-4" />
             Cancel

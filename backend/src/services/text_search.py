@@ -146,14 +146,10 @@ class TextSearchService:
                 t.thumb_path,
                 e.shot_dt,
                 e.camera_make,
-                e.camera_model,
-                o.text as ocr_text,
-                o.confidence as ocr_confidence,
-                bm25(ocr) as ocr_rank
+                e.camera_model
             FROM photos p
             LEFT JOIN thumbnails t ON p.id = t.file_id
             LEFT JOIN exif e ON p.id = e.file_id
-            LEFT JOIN ocr o ON p.id = o.file_id
         """
 
         # Build WHERE conditions
@@ -177,13 +173,6 @@ class TextSearchService:
                 f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
             )
             params.extend([search_pattern, search_pattern])
-
-            # Search in OCR text using FTS5
-            if processed_query.strip():
-                text_conditions.append(
-                    "p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)"
-                )
-                params.append(processed_query)
 
             # Combine text conditions with OR
             where_conditions.append(f"({' OR '.join(text_conditions)})")
@@ -229,12 +218,7 @@ class TextSearchService:
 
         # Add ordering and pagination
         full_query += """
-            ORDER BY
-                CASE
-                    WHEN o.text IS NOT NULL THEN bm25(ocr)
-                    ELSE 0
-                END DESC,
-                p.modified_ts DESC
+            ORDER BY p.modified_ts DESC
             LIMIT ? OFFSET ?
         """
 
@@ -256,7 +240,6 @@ class TextSearchService:
             SELECT COUNT(DISTINCT p.id)
             FROM photos p
             LEFT JOIN exif e ON p.id = e.file_id
-            LEFT JOIN ocr o ON p.id = o.file_id
         """
 
         where_conditions = []
@@ -276,12 +259,6 @@ class TextSearchService:
                 f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
             )
             params.extend([search_pattern, search_pattern])
-
-            if processed_query.strip():
-                text_conditions.append(
-                    "p.id IN (SELECT file_id FROM ocr WHERE ocr MATCH ?)"
-                )
-                params.append(processed_query)
 
             where_conditions.append(f"({' OR '.join(text_conditions)})")
 
@@ -349,23 +326,12 @@ class TextSearchService:
                 match_types.append("exif")
                 relevance_score += 0.2
 
-            # Check OCR match
-            if row[12]:  # ocr_text
-                match_types.append("ocr")
-                # Use FTS5 BM25 rank if available
-                if row[14] and row[14] > 0:  # ocr_rank
-                    relevance_score += min(0.5, row[14] / 10.0)
-                else:
-                    relevance_score += 0.3
-
             # Default score if no specific matches
             if not match_types:
                 relevance_score = 0.1
 
-            # Generate snippet for OCR matches
+            # No snippet without OCR
             snippet = None
-            if "ocr" in match_types and row[12]:
-                snippet = self._generate_snippet(row[12], original_query)
 
             result_item = {
                 "file_id": row[0],
@@ -383,7 +349,6 @@ class TextSearchService:
                 "relevance_score": round(relevance_score, 3),
                 "match_types": match_types,
                 "snippet": snippet,
-                "ocr_confidence": row[13] if row[13] else None,
             }
 
             processed_results.append(result_item)
@@ -546,11 +511,8 @@ class TextSearchService:
             stats_query = """
                 SELECT
                     COUNT(DISTINCT p.id) as total_photos,
-                    COUNT(DISTINCT o.file_id) as photos_with_ocr,
-                    COUNT(DISTINCT e.file_id) as photos_with_exif,
-                    AVG(LENGTH(o.text)) as avg_ocr_length
+                    COUNT(DISTINCT e.file_id) as photos_with_exif
                 FROM photos p
-                LEFT JOIN ocr o ON p.id = o.file_id
                 LEFT JOIN exif e ON p.id = e.file_id
             """
 
@@ -560,14 +522,9 @@ class TextSearchService:
                 row = results[0]
                 return {
                     "total_photos": row[0],
-                    "photos_with_ocr": row[1],
-                    "photos_with_exif": row[2],
-                    "avg_ocr_length": round(row[3], 2) if row[3] else 0,
-                    "ocr_coverage": (
-                        round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0
-                    ),
+                    "photos_with_exif": row[1],
                     "exif_coverage": (
-                        round((row[2] / row[0]) * 100, 2) if row[0] > 0 else 0
+                        round((row[1] / row[0]) * 100, 2) if row[0] > 0 else 0
                     ),
                 }
 

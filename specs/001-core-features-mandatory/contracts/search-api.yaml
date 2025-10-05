@@ -1,17 +1,34 @@
 openapi: 3.0.3
 info:
-  title: Ideal Goggles API
-  version: 1.0.8
-  description: Local API for Ideal Goggles with production logging
+  title: Ideal Goggles Search API
+  version: 2.0.0
+  description: |
+    Photo search and management API with multiple search capabilities:
+    - **Text Search**: Full-text search across filenames, folders, and metadata
+    - **Semantic Search**: Natural language search using CLIP embeddings
+    - **Image Search**: Reverse image search using visual similarity
+    - **Face Search**: Find photos containing specific enrolled people
+
+    ## Key Features
+    - Pagination support for all search endpoints
+    - Configurable result limits and offsets
+    - Rich metadata including thumbnails and EXIF data
+    - Performance tracking with execution time metrics
+
+    ## Authentication
+    Currently no authentication required for local deployment.
+    Future versions will support API key authentication.
+
   contact:
     name: API Support
     email: support@ideal-goggles.app
   license:
     name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: http://127.0.0.1:5555
-    description: Local backend server
+    description: Local backend server (default)
   - url: /api
     description: Proxied through frontend (development)
 
@@ -286,31 +303,69 @@ paths:
 
   /search:
     get:
-      summary: Search photos by text and filters
+      summary: Text-based search with filters
+      description: |
+        Performs text-based search across photo metadata including:
+        - Filenames and folder paths
+        - EXIF camera information (make, model)
+        - Date ranges for photo timestamps
+
+        ### Search Examples
+        - `?q=sunset` - Find photos with "sunset" in filename/folder
+        - `?q=Canon&from=2024-01-01` - Canon photos from 2024 onwards
+        - `?folder=/vacation/2024&limit=100` - Photos in vacation folder
+
+        ### Pagination
+        Use `limit` and `offset` for paginating large result sets.
+        The response includes `total_matches` for calculating pages.
       tags: [Search]
+      operationId: searchPhotos
       parameters:
         - name: q
           in: query
           schema:
             type: string
-          description: Search query text
+            minLength: 1
+            maxLength: 500
+            example: "beach sunset"
+          description: |
+            Search query text. Searches in:
+            - Photo filenames
+            - Folder paths
+            - Camera make/model from EXIF
+
         - name: from
           in: query
           schema:
             type: string
             format: date
-          description: Start date filter (YYYY-MM-DD)
+            example: "2024-01-01"
+          description: |
+            Start date filter (inclusive).
+            Format: YYYY-MM-DD
+            Filters by photo capture timestamp (shot_dt).
+
         - name: to
           in: query
           schema:
             type: string
             format: date
-          description: End date filter (YYYY-MM-DD)
+            example: "2024-12-31"
+          description: |
+            End date filter (inclusive).
+            Format: YYYY-MM-DD
+            Filters by photo capture timestamp (shot_dt).
+
         - name: folder
           in: query
           schema:
             type: string
-          description: Folder path filter
+            maxLength: 1024
+            example: "/Photos/2024/Summer"
+          description: |
+            Folder path filter (prefix match).
+            Matches all photos in this folder and subfolders.
+
         - name: limit
           in: query
           schema:
@@ -318,54 +373,170 @@ paths:
             default: 50
             minimum: 1
             maximum: 200
-          description: Maximum number of results
+            example: 50
+          description: |
+            Maximum number of results per page.
+            Default: 50, Max: 200
+
         - name: offset
           in: query
           schema:
             type: integer
             default: 0
             minimum: 0
-          description: Results offset for pagination
+            example: 0
+          description: |
+            Results offset for pagination.
+            Calculate as: page_number * limit
+
       responses:
         '200':
-          description: Search results
+          description: Search completed successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResults'
+              examples:
+                textSearch:
+                  summary: Text search results
+                  value:
+                    query: "sunset"
+                    total_matches: 42
+                    items:
+                      - file_id: 123
+                        path: "/Photos/2024/beach_sunset.jpg"
+                        folder: "/Photos/2024"
+                        filename: "beach_sunset.jpg"
+                        thumb_path: "/thumbnails/123.jpg"
+                        shot_dt: "2024-06-15T18:30:00Z"
+                        score: 0.95
+                        badges: ["filename"]
+                        snippet: null
+                    took_ms: 125
+
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /search/semantic:
     post:
-      summary: Semantic search using text description
+      summary: AI-powered semantic search
+      description: |
+        Uses CLIP embeddings to find photos matching natural language descriptions.
+        This endpoint converts text descriptions into visual concepts and finds
+        semantically similar images.
+
+        ### Prerequisites
+        - CLIP dependencies must be installed
+        - Photos must have generated embeddings (done during indexing)
+
+        ### Example Queries
+        - "a dog playing in the park"
+        - "sunset over mountains"
+        - "birthday party with cake"
+        - "red sports car on highway"
+
+        ### How It Works
+        1. Text is converted to CLIP embedding
+        2. Cosine similarity calculated against photo embeddings
+        3. Results ranked by similarity score
       tags: [Search]
+      operationId: semanticSearch
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                text:
-                  type: string
-                  description: Natural language description
-                top_k:
-                  type: integer
-                  default: 50
-                  minimum: 1
-                  maximum: 200
-              required: [text]
+              $ref: '#/components/schemas/SemanticSearchRequest'
+            examples:
+              simpleSearch:
+                summary: Simple semantic search
+                value:
+                  text: "beach sunset with palm trees"
+                  top_k: 20
+              detailedSearch:
+                summary: Detailed description search
+                value:
+                  text: "a golden retriever running through green grass on a sunny day"
+                  top_k: 50
       responses:
         '200':
-          description: Semantic search results
+          description: Semantic search completed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResults'
+              examples:
+                semanticResults:
+                  summary: Semantic search results
+                  value:
+                    query: "sunset beach"
+                    total_matches: 15
+                    items:
+                      - file_id: 456
+                        path: "/Photos/vacation/beach_evening.jpg"
+                        folder: "/Photos/vacation"
+                        filename: "beach_evening.jpg"
+                        thumb_path: "/thumbnails/456.jpg"
+                        shot_dt: "2024-07-20T19:15:00Z"
+                        score: 0.89
+                        badges: ["image"]
+                        snippet: null
+                    took_ms: 250
+
+        '503':
+          description: |
+            Service unavailable - CLIP dependencies not installed or configured.
+            Install with: pip install torch torchvision clip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /search/image:
     post:
-      summary: Reverse image search using uploaded photo
+      summary: Reverse image search
+      description: |
+        Find visually similar photos by uploading an image.
+        Uses CLIP embeddings to calculate visual similarity.
+
+        ### Supported Formats
+        - JPEG/JPG
+        - PNG
+        - GIF
+        - BMP
+        - WebP
+
+        ### Use Cases
+        - Find duplicates or near-duplicates
+        - Locate similar compositions
+        - Find photos from same event/location
+        - Identify edited versions of same photo
+
+        ### Process
+        1. Image is processed through CLIP model
+        2. Visual embedding is generated
+        3. Similarity calculated against indexed photos
+        4. Results ranked by visual similarity score
       tags: [Search]
+      operationId: imageSearch
       requestBody:
         required: true
         content:
@@ -376,52 +547,194 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: Uploaded image file
+                  description: |
+                    Image file to search with.
+                    Max size: 50MB
+                    Supported: JPEG, PNG, GIF, BMP, WebP
                 top_k:
                   type: integer
                   default: 50
                   minimum: 1
                   maximum: 200
+                  description: Maximum number of similar images to return
               required: [file]
       responses:
         '200':
-          description: Image search results
+          description: Image search completed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResults'
+              examples:
+                imageSearchResults:
+                  summary: Reverse image search results
+                  value:
+                    query: "Image: vacation_photo.jpg"
+                    total_matches: 23
+                    items:
+                      - file_id: 789
+                        path: "/Photos/2024/similar_scene.jpg"
+                        folder: "/Photos/2024"
+                        filename: "similar_scene.jpg"
+                        thumb_path: "/thumbnails/789.jpg"
+                        shot_dt: "2024-06-10T14:20:00Z"
+                        score: 0.94
+                        badges: ["image"]
+                        snippet: null
+                    took_ms: 320
+
         '400':
-          description: Invalid image file
+          description: |
+            Invalid image file. Check:
+            - File is a valid image format
+            - File is not corrupted
+            - File size is under 50MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '503':
+          description: Service unavailable - CLIP dependencies not installed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /photos/{photo_id}/original:
+    get:
+      summary: Get original photo file
+      description: |
+        Retrieve the original photo file by its database ID.
+        Returns the full-resolution image file.
+
+        ### Media Types
+        Automatically detected based on file extension:
+        - JPEG/JPG: image/jpeg
+        - PNG: image/png
+        - GIF: image/gif
+        - BMP: image/bmp
+        - WebP: image/webp
+        - Others: application/octet-stream
+      tags: [Search]
+      operationId: getOriginalPhoto
+      parameters:
+        - name: photo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Database ID of the photo
+          example: 123
+      responses:
+        '200':
+          description: Original photo file
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+        '404':
+          description: |
+            Photo not found. Either:
+            - Invalid photo ID
+            - Photo file deleted from disk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /search/faces:
     post:
-      summary: Search photos by enrolled person
+      summary: Search by enrolled person
+      description: |
+        Find all photos containing a specific enrolled person.
+        Requires face search to be enabled and person to be enrolled.
+
+        ### Prerequisites
+        - Face search must be enabled in config
+        - Person must be enrolled via `/people` endpoint
+        - Photos must have face detection completed
+
+        ### How It Works
+        1. Person's face vector retrieved from database
+        2. Faces in photos compared using face recognition
+        3. Results include confidence scores
+        4. Only returns matches above 0.5 confidence threshold
+
+        ### Privacy Note
+        Face data is stored locally only and never transmitted externally.
       tags: [Search]
+      operationId: faceSearch
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                person_id:
-                  type: integer
-                  description: ID of enrolled person
-                top_k:
-                  type: integer
-                  default: 50
-                  minimum: 1
-                  maximum: 200
-              required: [person_id]
+              $ref: '#/components/schemas/FaceSearchRequest'
+            examples:
+              searchPerson:
+                summary: Search for specific person
+                value:
+                  person_id: 1
+                  top_k: 100
       responses:
         '200':
-          description: Face search results
+          description: Face search completed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResults'
+              examples:
+                faceSearchResults:
+                  summary: Face search results
+                  value:
+                    query: "Person: John Doe"
+                    total_matches: 34
+                    items:
+                      - file_id: 234
+                        path: "/Photos/events/party_2024.jpg"
+                        folder: "/Photos/events"
+                        filename: "party_2024.jpg"
+                        thumb_path: "/thumbnails/234.jpg"
+                        shot_dt: "2024-03-15T20:30:00Z"
+                        score: 0.92
+                        badges: ["face"]
+                        snippet: null
+                    took_ms: 180
+
+        '403':
+          description: |
+            Face search is disabled.
+            Enable via `/config` endpoint: `face_search_enabled: true`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
         '404':
-          description: Person not found
+          description: Person not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /people:
     get:
@@ -630,55 +943,150 @@ components:
 
     SearchResults:
       type: object
+      description: |
+        Standard response format for all search endpoints.
+        Contains matched items with metadata and performance metrics.
+      required:
+        - query
+        - total_matches
+        - items
+        - took_ms
       properties:
         query:
           type: string
-          description: Original search query
+          description: |
+            Original search query or description.
+            For image search: "Image: {filename}"
+            For face search: "Person: {name}"
+          example: "sunset beach"
         total_matches:
           type: integer
-          description: Total number of matching photos
+          description: Total count of matching photos (useful for pagination)
+          minimum: 0
+          example: 42
         items:
           type: array
+          description: Array of search result items, ordered by relevance
           items:
             $ref: '#/components/schemas/SearchResultItem'
         took_ms:
           type: integer
           description: Search execution time in milliseconds
+          minimum: 0
+          example: 125
 
     SearchResultItem:
       type: object
+      description: Individual search result with photo metadata and match information
+      required:
+        - file_id
+        - path
+        - folder
+        - filename
+        - score
+        - badges
       properties:
         file_id:
           type: integer
+          description: Unique database identifier for the photo
+          example: 123
         path:
           type: string
-          description: Absolute path to photo file
+          description: Absolute file system path to the photo
+          example: "/Users/john/Photos/2024/beach_sunset.jpg"
         folder:
           type: string
-          description: Parent folder path
+          description: Parent folder path (directory containing the photo)
+          example: "/Users/john/Photos/2024"
         filename:
           type: string
           description: File name with extension
+          example: "beach_sunset.jpg"
         thumb_path:
           type: string
-          description: Relative path to thumbnail
+          nullable: true
+          description: |
+            Relative path to thumbnail image.
+            Null if thumbnail not generated yet.
+          example: "/thumbnails/123.jpg"
         shot_dt:
           type: string
           format: date-time
-          description: Photo capture timestamp
+          nullable: true
+          description: |
+            Photo capture timestamp from EXIF data.
+            ISO 8601 format. Null if no EXIF date available.
+          example: "2024-06-15T18:30:00Z"
         score:
           type: number
           format: float
-          description: Relevance score (0.0-1.0)
+          minimum: 0.0
+          maximum: 1.0
+          description: |
+            Relevance/similarity score:
+            - Text search: relevance score based on match types
+            - Semantic/Image: cosine similarity (0=different, 1=identical)
+            - Face search: face recognition confidence
+          example: 0.89
         badges:
           type: array
+          description: |
+            Match type indicators showing where/how the match was found:
+            - "filename": Match in file name
+            - "folder": Match in folder path
+            - "exif": Match in camera metadata
+            - "image": Visual/semantic match
+            - "face": Face recognition match
           items:
             type: string
-            enum: [OCR, Face, Photo-Match, EXIF]
-          description: Types of matches found
+            enum: [filename, folder, exif, image, face]
+          example: ["filename", "exif"]
         snippet:
           type: string
-          description: Relevant text excerpt for text matches
+          nullable: true
+          description: |
+            Text excerpt showing context around match.
+            Currently null (OCR not implemented).
+            Future: Will show OCR text snippets.
+          example: null
+
+    SemanticSearchRequest:
+      type: object
+      description: Request body for semantic search
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Natural language description of what to find
+          example: "a dog playing in the park"
+        top_k:
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 200
+          description: Maximum number of results to return
+          example: 50
+
+    FaceSearchRequest:
+      type: object
+      description: Request body for face-based search
+      required:
+        - person_id
+      properties:
+        person_id:
+          type: integer
+          description: Database ID of the enrolled person
+          example: 1
+        top_k:
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 200
+          description: Maximum number of results to return
+          example: 100
 
     Person:
       type: object

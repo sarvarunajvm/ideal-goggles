@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Image, Users, FileText, Search, Database, Activity, TrendingUp, Loader2 } from 'lucide-react'
 
@@ -23,12 +24,14 @@ interface IndexStats {
 export default function StatsPage() {
   const [stats, setStats] = useState<IndexStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [hasConfiguredFolders, setHasConfiguredFolders] = useState(true)
 
   useEffect(() => {
     const loadStats = async () => {
       try {
         setLoading(true)
+        setError(null)
 
         // Check if folders are configured
         const config = await apiService.getConfig()
@@ -38,6 +41,7 @@ export default function StatsPage() {
         setStats(statsData as unknown as IndexStats)
       } catch (error) {
         console.error('Failed to load stats:', error)
+        setError(error instanceof Error ? error.message : 'Failed to load statistics')
       } finally {
         setLoading(false)
       }
@@ -60,12 +64,36 @@ export default function StatsPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Database className="h-12 w-12 mx-auto text-destructive" />
+          <p className="text-destructive font-medium">Failed to load statistics</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="!bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] hover:!from-[rgb(var(--cyan-rgb))]/80 hover:!to-[rgb(var(--cyan-rgb))]/80 !text-black !border-[rgb(var(--cyan-rgb))]/50 !shadow-[var(--shadow-cyan)] hover:!shadow-[var(--shadow-cyan)] hover:scale-105 !font-semibold transition-all"
+          >
+            Try again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (!stats) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Database className="h-12 w-12 mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">No statistics available</p>
+          <p className="text-sm text-muted-foreground">
+            {hasConfiguredFolders
+              ? "Your photo library hasn't been indexed yet. Go to Settings to start indexing."
+              : "Configure your photo folders in Settings to begin."}
+          </p>
         </div>
       </div>
     )

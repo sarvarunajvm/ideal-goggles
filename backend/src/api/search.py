@@ -13,7 +13,14 @@ from pydantic import BaseModel, Field
 
 from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
 from ..core.middleware import get_request_id
+from ..core.utils import (
+    DependencyChecker,
+    calculate_execution_time,
+    handle_internal_error,
+    handle_service_unavailable,
+)
 from ..db.connection import get_database_manager
+from ..db.utils import DatabaseHelper
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -164,17 +171,15 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
         Search results based on semantic similarity
     """
     start_time = datetime.now()
+    logger.info(
+        f"Semantic search started for query: '{request.text}' with top_k: {request.top_k}"
+    )
 
     try:
         # Check if CLIP dependencies are available
-        try:
-            import clip
-            import torch
-        except ImportError as e:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Semantic search unavailable: CLIP dependencies not installed ({e})",
-            )
+        clip_available, error_msg = DependencyChecker.check_clip()
+        if not clip_available:
+            handle_service_unavailable("Semantic search", error_msg)
 
         # Import embedding worker here to avoid circular imports
         from ..workers.embedding_worker import CLIPEmbeddingWorker
@@ -202,18 +207,22 @@ async def semantic_search(request: SemanticSearchRequest) -> SearchResults:
             )
 
         # Search for similar images
+        logger.info(
+            f"Calling _execute_semantic_search with embedding shape: {query_embedding.shape if hasattr(query_embedding, 'shape') else 'unknown'}"
+        )
         search_results = await _execute_semantic_search(
             db_manager, query_embedding, request.top_k
         )
+        logger.info(f"Semantic search returned {len(search_results)} results")
 
         # Calculate execution time
-        execution_time = (datetime.now() - start_time).total_seconds() * 1000
+        execution_time = calculate_execution_time(start_time)
 
         return SearchResults(
             query=request.text,
             total_matches=len(search_results),
             items=search_results,
-            took_ms=int(execution_time),
+            took_ms=execution_time,
         )
 
     except HTTPException:
@@ -412,21 +421,12 @@ async def _execute_text_search(
             "e.camera_model LIKE ?",
         ]
 
-        # Add OCR search if available
-        ocr_condition = """
-            p.id IN (
-                SELECT file_id FROM ocr WHERE ocr MATCH ?
-            )
-        """
-        text_conditions.append(ocr_condition)
-
         # Combine text conditions with OR
         where_conditions.append(f"({' OR '.join(text_conditions)})")
 
         # Add parameters for each condition
         search_pattern = f"%{query}%"
         params.extend([search_pattern] * 4)  # For LIKE conditions
-        params.append(query)  # For FTS match
 
     # Add date filter
     if from_date or to_date:
@@ -519,7 +519,9 @@ async def _execute_semantic_search(
         WHERE p.indexed_at IS NOT NULL
     """
 
+    logger.info("Executing embeddings query for semantic search")
     rows = db_manager.execute_query(embeddings_query)
+    logger.info(f"Query returned {len(rows)} rows")
 
     # Calculate similarities
     similarities = []
@@ -527,17 +529,50 @@ async def _execute_semantic_search(
 
     from ..models.embedding import Embedding
 
-    for row in rows:
+    logger.info(f"Processing {len(rows)} embeddings for semantic search")
+
+    for i, row in enumerate(rows):
         try:
             # Decode embedding from blob
             stored_embedding = Embedding._blob_to_numpy(row[1])
 
+            # Ensure both embeddings are numpy arrays and have compatible shapes
+            if not isinstance(query_embedding, np.ndarray):
+                query_embedding = np.array(query_embedding, dtype=np.float32)
+            if not isinstance(stored_embedding, np.ndarray):
+                stored_embedding = np.array(stored_embedding, dtype=np.float32)
+
+            # Flatten both embeddings to ensure 1D arrays
+            query_flat = query_embedding.flatten()
+            stored_flat = stored_embedding.flatten()
+
+            # Check dimensions match
+            if len(query_flat) != len(stored_flat):
+                logger.warning(
+                    f"Embedding dimension mismatch: query={len(query_flat)}, stored={len(stored_flat)} for file_id {row[0]}"
+                )
+                continue
+
+            # Normalize both vectors (important for cosine similarity)
+            query_norm = query_flat / (np.linalg.norm(query_flat) + 1e-8)
+            stored_norm = stored_flat / (np.linalg.norm(stored_flat) + 1e-8)
+
             # Calculate cosine similarity
-            similarity = float(np.dot(query_embedding, stored_embedding))
+            similarity = float(np.dot(query_norm, stored_norm))
+
+            # Ensure similarity is in valid range [-1, 1]
+            similarity = max(-1.0, min(1.0, similarity))
 
             similarities.append((similarity, row))
 
-        except Exception:
+            # Log first few similarities for debugging
+            if i < 5:
+                logger.info(
+                    f"Similarity {i}: {similarity:.4f} for file_id {row[0]} (query_dim: {len(query_flat)}, stored_dim: {len(stored_flat)})"
+                )
+
+        except Exception as e:
+            logger.exception(f"Failed to process embedding for file_id {row[0]}: {e}")
             continue
 
     # Sort by similarity and take top results

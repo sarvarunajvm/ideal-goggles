@@ -166,33 +166,41 @@ class Embedding:
     @staticmethod
     def _numpy_to_blob(vector: np.ndarray) -> bytes:
         """Convert numpy array to blob for database storage."""
-        # Store dimension first, then float32 data
-        dimension = len(vector)
-        blob = struct.pack("<I", dimension)  # 4 bytes for dimension
-        blob += vector.astype(np.float32).tobytes()
-        return blob
+        # Ensure we have a 1D float32 array
+        if not isinstance(vector, np.ndarray):
+            msg = f"Expected numpy array, got {type(vector)}"
+            raise TypeError(msg)
+
+        # Flatten if necessary and convert to float32
+        flat_vector = vector.flatten().astype(np.float32)
+        dimension = len(flat_vector)
+
+        # Debug: log dimension and vector info
+        if dimension not in [512, 768, 1024]:  # Common CLIP dimensions
+            pass
+
+        # Simple format: just store the float32 data directly
+        # We know CLIP ViT-B/32 embeddings are always 512 dimensions
+        if dimension != 512:
+            msg = f"Expected 512-dimensional embedding, got {dimension}"
+            raise ValueError(msg)
+
+        return flat_vector.tobytes()
 
     @staticmethod
     def _blob_to_numpy(blob: bytes) -> np.ndarray:
         """Convert blob from database to numpy array."""
-        if len(blob) < 4:
-            msg = "Invalid blob: too short"
-            raise ValueError(msg)
-
-        # Read dimension
-        dimension = struct.unpack("<I", blob[:4])[0]
-
-        # Read vector data
-        expected_size = 4 + dimension * 4  # 4 bytes for dim + 4 bytes per float32
+        # Simple format: just float32 data, expecting 512 dimensions
+        expected_size = 512 * 4  # 512 float32 values * 4 bytes each = 2048 bytes
         if len(blob) != expected_size:
             msg = f"Invalid blob size: expected {expected_size}, got {len(blob)}"
             raise ValueError(msg)
 
-        vector_bytes = blob[4:]
-        vector = np.frombuffer(vector_bytes, dtype=np.float32)
+        # Read vector data directly
+        vector = np.frombuffer(blob, dtype=np.float32)
 
-        if len(vector) != dimension:
-            msg = f"Dimension mismatch: expected {dimension}, got {len(vector)}"
+        if len(vector) != 512:
+            msg = f"Dimension mismatch: expected 512, got {len(vector)}"
             raise ValueError(msg)
 
         return vector

@@ -90,9 +90,9 @@ function DependencyCard({
             {!dependency.required && onInstall && (
               <Button
                 size="sm"
-                variant="outline"
                 onClick={onInstall}
                 disabled={installing}
+                className="!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 {installing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -420,10 +420,10 @@ export default function DependenciesManager() {
             </div>
             <div className="flex items-center space-x-2">
               <Button
-                variant="outline"
                 size="sm"
                 onClick={fetchDependencies}
                 disabled={installing !== null}
+                className="!bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] hover:!from-[rgb(var(--cyan-rgb))]/80 hover:!to-[rgb(var(--cyan-rgb))]/80 !text-black !border-[rgb(var(--cyan-rgb))]/50 !shadow-[var(--shadow-cyan)] hover:!shadow-[var(--shadow-cyan)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh
@@ -433,6 +433,7 @@ export default function DependenciesManager() {
                   size="sm"
                   onClick={handleInstallAll}
                   disabled={installing !== null}
+                  className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
                 >
                   {installing === 'all' ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />

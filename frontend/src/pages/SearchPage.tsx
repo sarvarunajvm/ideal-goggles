@@ -65,7 +65,8 @@ function CompactSearchBar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (query.trim() && searchMode !== 'image') {
+    if (searchMode !== 'image') {
+      // Allow empty queries - they will return all photos
       onSearch(query.trim())
     }
   }
@@ -182,7 +183,7 @@ function CompactSearchBar({
               type="button"
               variant={searchMode === 'text' ? 'default' : 'ghost'}
               size="icon"
-              className="h-7 w-7"
+              className={`h-7 w-7 ${searchMode === 'text' ? '!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] !shadow-[var(--shadow-green)] !text-black' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--green-rgb))]/20 !hover:to-[rgb(var(--green-rgb))]/30 !hover:shadow-[var(--shadow-green)] !hover:text-[var(--neon-green)] transition-all'}`}
               onClick={() => onSearchModeChange('text')}
               title="Quick Find - Search by filename, date, or text"
               aria-label="Quick Find - Search by filename, date, or text"
@@ -193,14 +194,24 @@ function CompactSearchBar({
               type="button"
               variant={searchMode === 'semantic' ? 'default' : 'ghost'}
               size="icon"
-              className="h-7 w-7"
+              className={`h-7 w-7 ${searchMode === 'semantic' ? '!bg-gradient-to-r !from-[rgb(var(--purple-rgb))] !to-[rgb(var(--purple-rgb))] !shadow-[var(--shadow-purple)] !text-white' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--purple-rgb))]/20 !hover:to-[rgb(var(--purple-rgb))]/30 !hover:shadow-[var(--shadow-purple)] !hover:text-[var(--neon-purple)] transition-all'}`}
               onClick={() => onSearchModeChange('semantic')}
               title="Smart Search - Describe what you're looking for"
               aria-label="Smart Search - Describe what you're looking for"
             >
               <Sparkles className="h-3.5 w-3.5" />
             </Button>
-            {/* Image search is handled via drag-drop/upload area */}
+            <Button
+              type="button"
+              variant={(searchMode as string) === 'image' ? 'default' : 'ghost'}
+              size="icon"
+              className={`h-7 w-7 ${(searchMode as string) === 'image' ? '!bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] !shadow-[var(--shadow-cyan)] !text-black' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--cyan-rgb))]/20 !hover:to-[rgb(var(--cyan-rgb))]/30 !hover:shadow-[var(--shadow-cyan)] !hover:text-[var(--neon-cyan)] transition-all'}`}
+              onClick={() => onSearchModeChange('image')}
+              title="Similar Photos - Find visually similar images"
+              aria-label="Similar Photos - Find visually similar images"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           <Input
@@ -232,19 +243,19 @@ function CompactSearchBar({
               variant={hasActiveFilters ? "default" : "ghost"}
               size="sm"
               onClick={onFiltersToggle}
-              className="h-8 w-8 p-0"
+              className={`h-8 w-8 p-0 ${hasActiveFilters ? '!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] !shadow-[var(--shadow-gold)] !text-black' : '!hover:bg-gradient-to-r !hover:from-[rgb(var(--gold-rgb))]/20 !hover:to-[rgb(var(--gold-rgb))]/30 !hover:shadow-[var(--shadow-gold)] transition-all'}`}
               title="Advanced filters"
             >
-              <Filter className={`h-3 w-3 ${hasActiveFilters ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+              <Filter className={`h-3 w-3 ${hasActiveFilters ? '' : 'text-muted-foreground'}`} />
             </Button>
             <Button
               type="submit"
               size="sm"
-              disabled={!query.trim() || loading}
-              className="h-8 px-3"
+              disabled={loading}
+              className="h-8 px-3 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-[1.02] !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-2 border-primary border-t-transparent" />
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-black border-t-transparent" />
               ) : (
                 'Search'
               )}
@@ -439,7 +450,7 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>('text')
+  const [searchMode, setSearchMode] = useState<'text' | 'semantic' | 'image'>('semantic')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [hasConfiguredFolders, setHasConfiguredFolders] = useState(true)
 
@@ -468,8 +479,6 @@ export default function SearchPage() {
   }, [])
 
   const handleSearch = async (query: string) => {
-    if (!query.trim()) return
-
     setLoading(true)
     setError(null)
 

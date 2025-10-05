@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { apiService, IndexStatus } from '../services/apiClient'
+import { apiService, IndexStatus, DependenciesResponse } from '../services/apiClient'
 import { useOnboardingStore } from '../stores/onboardingStore'
 import {
   Card,
@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const { toast } = useToast()
   const { reset: resetOnboarding } = useOnboardingStore()
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null)
+  const [dependencies, setDependencies] = useState<DependenciesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -40,15 +41,20 @@ export default function SettingsPage() {
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadRef = useRef(true)
 
+  // Check if OCR is available based on dependencies
+  const isOcrAvailable = dependencies?.features?.text_recognition ?? false
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [configData, statusData] = await Promise.all([
+      const [configData, statusData, dependenciesData] = await Promise.all([
         apiService.getConfig(),
         apiService.getIndexStatus(),
+        apiService.getDependencies(),
       ])
 
       setIndexStatus(statusData)
+      setDependencies(dependenciesData)
 
       // Update form state
       setRootFolders(configData.roots || [])
@@ -245,14 +251,14 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2 text-base">
+                    <CardTitle className="flex items-center space-x-2">
                       <FolderOpen className="h-4 w-4 text-primary" />
                       <span>Photo Folders</span>
                     </CardTitle>
                     <Button
                       onClick={addRootFolder}
                       size="sm"
-                      className="h-8 px-3 [background:var(--gradient-gold)] text-black font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all"
+                      className="!bg-gradient-to-r !from-[rgb(var(--pink-rgb))] !to-[rgb(var(--pink-rgb))] hover:!from-[rgb(var(--pink-rgb))]/80 hover:!to-[rgb(var(--pink-rgb))]/80 !text-black !border-[rgb(var(--pink-rgb))]/50 !shadow-[var(--shadow-pink)] hover:!shadow-[var(--shadow-pink)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                     >
                       <FolderPlus className="h-4 w-4 mr-1" />
                       Add
@@ -290,7 +296,7 @@ export default function SettingsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeRootFolder(index)}
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100"
+                            className="h-6 w-6 p-0 !text-[var(--neon-red)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--red-rgb))]/20 hover:!to-[rgb(var(--red-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-red)] opacity-0 group-hover:opacity-100 !transition-all"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -315,7 +321,7 @@ export default function SettingsPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => removeRootFolder(index + 3)}
-                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100"
+                                    className="h-6 w-6 p-0 !text-[var(--neon-red)] hover:!bg-gradient-to-r hover:!from-[rgb(var(--red-rgb))]/20 hover:!to-[rgb(var(--red-rgb))]/30 hover:!shadow-md hover:!shadow-[var(--shadow-red)] opacity-0 group-hover:opacity-100 !transition-all"
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -359,23 +365,41 @@ export default function SettingsPage() {
                         </Badge>
                       </div>
                       {indexStatus.status === 'indexing' && (
-                        <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground">
-                            {indexStatus.progress.current_phase}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium capitalize">
+                              Phase: {indexStatus.progress.current_phase}
+                            </div>
+                            {indexStatus.progress.total_files > 0 && (
+                              <div className="text-sm text-muted-foreground">
+                                {Math.round((indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100)}%
+                              </div>
+                            )}
                           </div>
-                          {indexStatus.progress.total_files > 0 && (
+                          {indexStatus.progress.total_files > 0 ? (
                             <>
                               <Progress
-                                value={
-                                  (indexStatus.progress.processed_files /
-                                    indexStatus.progress.total_files) * 100
-                                }
+                                value={indexStatus.progress.total_files > 0 ? (indexStatus.progress.processed_files / indexStatus.progress.total_files) * 100 : 0}
                                 className="h-2"
                               />
-                              <div className="text-xs text-muted-foreground text-right">
-                                {indexStatus.progress.processed_files}/{indexStatus.progress.total_files} files
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>
+                                  {indexStatus.progress.processed_files}/{indexStatus.progress.total_files} files
+                                </span>
+                                {indexStatus.estimated_completion && (
+                                  <span>
+                                    Est. {new Date(indexStatus.estimated_completion).toLocaleTimeString()}
+                                  </span>
+                                )}
                               </div>
                             </>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                              <span className="text-sm text-muted-foreground">
+                                Initializing {indexStatus.progress.current_phase}...
+                              </span>
+                            </div>
                           )}
                         </div>
                       )}
@@ -401,7 +425,7 @@ export default function SettingsPage() {
                       onClick={() => startIndexing(true)}
                       disabled={indexStatus?.status === 'indexing'}
                       title={indexStatus?.status === 'indexing' ? 'Indexing in progress - please wait for it to complete' : 'Re-index all photos from scratch'}
-                      className="[background:var(--gradient-gold)] text-black font-semibold shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all relative group"
+                      className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Full Refresh
@@ -417,7 +441,7 @@ export default function SettingsPage() {
                     <Button
                       onClick={stopIndexing}
                       variant="destructive"
-                      className="w-full"
+                      className="w-full !bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !font-semibold !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:!scale-[1.02] !border !border-[rgb(var(--red-rgb))]/30 hover:!border-[rgb(var(--red-rgb))]/50 !transition-all"
                     >
                       <Square className="h-4 w-4 mr-2" />
                       Stop Indexing
@@ -432,7 +456,7 @@ export default function SettingsPage() {
               {/* Search Features Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Search Features</CardTitle>
+                  <CardTitle className="flex items-center space-x-2">Search Features</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Smart Search Toggle */}
@@ -452,52 +476,56 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  {/* Text Recognition Toggle */}
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="ocr-enabled" className="text-sm font-medium">
-                        Text Recognition
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Find text in photos
-                      </p>
-                    </div>
-                    <Switch
-                      id="ocr-enabled"
-                      checked={ocrEnabled}
-                      onCheckedChange={setOcrEnabled}
-                    />
-                  </div>
-
-                  {/* OCR Languages - Only show when enabled */}
-                  {ocrEnabled && (
-                    <div className="pl-4 space-y-2 border-l-2 border-primary/30">
-                      <Label className="text-xs font-medium">Languages</Label>
-                      {[
-                        { code: 'eng', name: 'English' },
-                        { code: 'tam', name: 'Tamil' },
-                      ].map(({ code, name }) => (
-                        <div key={code} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`ocr-${code}`}
-                            checked={ocrLanguages.includes(code)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setOcrLanguages([...ocrLanguages, code])
-                              } else {
-                                setOcrLanguages(ocrLanguages.filter(l => l !== code))
-                              }
-                            }}
-                          />
-                          <Label
-                            htmlFor={`ocr-${code}`}
-                            className="text-xs cursor-pointer"
-                          >
-                            {name}
+                  {/* Text Recognition Toggle - Only show if OCR is available */}
+                  {isOcrAvailable && (
+                    <>
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="ocr-enabled" className="text-sm font-medium">
+                            Text Recognition
                           </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Find text in photos
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                        <Switch
+                          id="ocr-enabled"
+                          checked={ocrEnabled}
+                          onCheckedChange={setOcrEnabled}
+                        />
+                      </div>
+
+                      {/* OCR Languages - Only show when enabled */}
+                      {ocrEnabled && (
+                        <div className="pl-4 space-y-2 border-l-2 border-primary/30">
+                          <Label className="text-xs font-medium">Languages</Label>
+                          {[
+                            { code: 'eng', name: 'English' },
+                            { code: 'tam', name: 'Tamil' },
+                          ].map(({ code, name }) => (
+                            <div key={code} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`ocr-${code}`}
+                                checked={ocrLanguages.includes(code)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setOcrLanguages([...ocrLanguages, code])
+                                  } else {
+                                    setOcrLanguages(ocrLanguages.filter(l => l !== code))
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`ocr-${code}`}
+                                className="text-xs cursor-pointer"
+                              >
+                                {name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Face Search Toggle */}
@@ -522,7 +550,7 @@ export default function SettingsPage() {
               {/* Reset Onboarding */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Setup Wizard</CardTitle>
+                  <CardTitle className="flex items-center space-x-2">Setup Wizard</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Button
@@ -533,7 +561,7 @@ export default function SettingsPage() {
                         description: 'The setup wizard will appear on next app launch.',
                       })
                     }}
-                    className="w-full bg-gradient-to-r from-cyan-400 to-teal-400 text-black font-semibold shadow-md shadow-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all"
+                    className="w-full !bg-gradient-to-r !from-[rgb(var(--cyan-rgb))] !to-[rgb(var(--cyan-rgb))] !text-black !font-semibold !shadow-[var(--shadow-cyan)] hover:!shadow-[var(--shadow-cyan)] hover:!scale-[1.02] !transition-all"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Run Setup Again

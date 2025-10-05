@@ -1,5 +1,6 @@
 """Dependency status and management endpoints."""
 
+import platform
 import subprocess
 import sys
 from typing import Any
@@ -97,6 +98,73 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
             return False, None
 
 
+def verify_model_functionality(model_type: str) -> dict[str, Any]:
+    """Verify that a model can actually be loaded and used.
+
+    Returns dict with:
+    - functional: bool - whether the model works
+    - error: str | None - error message if not functional
+    - details: dict - additional details (memory usage, model path, etc.)
+    """
+    import psutil
+
+    result = {"functional": False, "error": None, "details": {}}
+
+    # Check available memory first
+    memory = psutil.virtual_memory()
+    result["details"]["available_memory_gb"] = round(memory.available / (1024**3), 2)
+    result["details"]["total_memory_gb"] = round(memory.total / (1024**3), 2)
+
+    if model_type == "clip":
+        try:
+            import clip
+            import torch
+
+            # Check if CUDA is available
+            result["details"]["cuda_available"] = torch.cuda.is_available()
+            result["details"]["device"] = "cuda" if torch.cuda.is_available() else "cpu"
+
+            # Try to load the model
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
+
+            # Test with a dummy tensor
+            dummy_image = torch.randn(1, 3, 224, 224).to(device)
+            with torch.no_grad():
+                _ = model.encode_image(dummy_image)
+
+            result["functional"] = True
+            result["details"]["model_name"] = "ViT-B/32"
+            result["details"]["model_loaded"] = True
+
+            # Clean up
+            del model, preprocess, dummy_image
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        except Exception as e:
+            result["error"] = str(e)
+            result["details"]["error_type"] = type(e).__name__
+
+    elif model_type == "face":
+        try:
+            from ..workers.face_worker import FaceDetectionWorker
+
+            # Try to initialize the worker
+            worker = FaceDetectionWorker()
+            result["functional"] = worker.is_available()
+            result["details"]["model_loaded"] = worker.is_available()
+
+            if not result["functional"]:
+                result["error"] = "Face detection model not available"
+
+        except Exception as e:
+            result["error"] = str(e)
+            result["details"]["error_type"] = type(e).__name__
+
+    return result
+
+
 def check_system_command(command: str) -> tuple[bool, str | None]:
     """Check if a system command is available and get its version.
 
@@ -163,18 +231,6 @@ async def get_dependencies_status() -> DependenciesResponse:
     # Check ML dependencies
     ml_deps: list[DependencyStatus] = []
 
-    # Tesseract OCR
-    tesseract_installed, tesseract_version = check_system_command("tesseract")
-    ml_deps.append(
-        DependencyStatus(
-            name="tesseract",
-            installed=tesseract_installed,
-            version=tesseract_version,
-            required=False,
-            description="OCR text extraction from images",
-        )
-    )
-
     # CLIP and PyTorch
     torch_installed, torch_version = check_python_package("torch")
     ml_deps.append(
@@ -226,11 +282,11 @@ async def get_dependencies_status() -> DependenciesResponse:
     features = {
         "basic_search": True,  # Always available
         "thumbnail_generation": any(d.name == "PIL" and d.installed for d in core_deps),
-        "ocr_text_extraction": tesseract_installed,
         "semantic_search": clip_installed and torch_installed,
         "image_similarity": clip_installed and torch_installed,
         "face_detection": insightface_installed and cv2_installed,
         "face_recognition": insightface_installed and cv2_installed,
+        "text_recognition": False,  # OCR/Tesseract was removed from the system
     }
 
     # Check if running in frozen environment
@@ -258,10 +314,96 @@ async def get_dependencies_status() -> DependenciesResponse:
         )
 
 
+@router.get("/dependencies/verify")
+async def verify_dependencies() -> dict[str, Any]:
+    """
+    Verify that dependencies are not just installed but actually functional.
+
+    Returns detailed information about each model's status including:
+    - Whether it can be loaded
+    - Memory requirements
+    - Actual errors if any
+    """
+    verification_results = {
+        "summary": {"all_functional": True, "issues_found": []},
+        "models": {},
+        "system": {},
+    }
+
+    # Get system information
+    import psutil
+
+    memory = psutil.virtual_memory()
+    verification_results["system"] = {
+        "memory": {
+            "total_gb": round(memory.total / (1024**3), 2),
+            "available_gb": round(memory.available / (1024**3), 2),
+            "percent_used": memory.percent,
+        },
+        "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "platform": platform.system(),
+        "architecture": platform.machine(),
+    }
+
+    # Verify each model
+    for model_type in ["clip", "face"]:
+        result = verify_model_functionality(model_type)
+        verification_results["models"][model_type] = result
+
+        if not result["functional"]:
+            verification_results["summary"]["all_functional"] = False
+            verification_results["summary"]["issues_found"].append(
+                {"model": model_type, "error": result["error"]}
+            )
+
+    # Add recommendations based on issues
+    recommendations = []
+    if verification_results["system"]["memory"]["available_gb"] < 2:
+        recommendations.append(
+            "Low memory available. Close other applications to free up memory."
+        )
+
+    for issue in verification_results["summary"]["issues_found"]:
+        error_str = str(issue.get("error", "")).lower()
+        model = issue["model"]
+
+        if "cuda" in error_str:
+            recommendations.append(
+                f"{model}: CUDA error detected. Model will use CPU instead."
+            )
+        elif "import" in error_str or "module" in error_str or "not found" in error_str:
+            if model == "clip":
+                recommendations.append(
+                    f"{model}: CLIP model not installed. Run: pip install torch torchvision ftfy regex git+https://github.com/openai/CLIP.git"
+                )
+            elif model == "face":
+                recommendations.append(
+                    f"{model}: Face detection not installed. Run: pip install insightface opencv-python onnxruntime"
+                )
+            else:
+                recommendations.append(
+                    f"{model}: Model not installed. Run dependency installation."
+                )
+        elif "memory" in error_str:
+            recommendations.append(
+                f"{model}: Insufficient memory. Consider using a smaller model or closing other applications."
+            )
+        else:
+            recommendations.append(
+                f"{model}: Check error details and ensure all dependencies are properly installed."
+            )
+
+    verification_results["recommendations"] = recommendations
+
+    return verification_results
+
+
 class InstallRequest(BaseModel):
     """Request model for dependency installation."""
 
-    components: list[str] = Field(default=["all"], description="Components to install")
+    components: list[str] = Field(
+        default=["all"], description="Components to install (clip, face, all)"
+    )
 
 
 @router.post("/dependencies/install")
@@ -270,7 +412,7 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
     Install ML dependencies.
 
     Args:
-        components: List of components to install (tesseract, clip, face, all)
+        components: List of components to install (clip, face, all)
 
     Returns:
         Installation status
@@ -307,8 +449,8 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
             cmd = [sys.executable, str(script_path)]
 
             if "all" not in request.components:
-                if "tesseract" not in request.components:
-                    cmd.append("--skip-tesseract")
+                # Always skip tesseract since we're removing OCR
+                cmd.append("--skip-tesseract")
                 if "clip" not in request.components:
                     cmd.append("--skip-clip")
                 if "face" not in request.components:
@@ -342,41 +484,8 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
         outputs = []
         errors = []
         components_to_install = (
-            request.components
-            if "all" not in request.components
-            else ["tesseract", "clip", "face"]
+            request.components if "all" not in request.components else ["clip", "face"]
         )
-
-        # Install Tesseract (system package)
-        if "tesseract" in components_to_install:
-            if platform.system() == "Darwin":  # macOS
-                # Check if brew is available
-                brew_check = subprocess.run(
-                    ["which", "brew"], check=False, capture_output=True
-                )
-                if brew_check.returncode == 0:
-                    logger.info("Installing Tesseract via Homebrew")
-                    result = subprocess.run(
-                        ["brew", "install", "tesseract"],
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=120,
-                    )
-                    if result.returncode == 0:
-                        outputs.append("Tesseract installed successfully")
-                    else:
-                        errors.append(f"Tesseract installation failed: {result.stderr}")
-                else:
-                    errors.append(
-                        "Homebrew not found. Please install from https://brew.sh"
-                    )
-            elif platform.system() == "Linux":
-                outputs.append(
-                    "Please install Tesseract using: sudo apt-get install tesseract-ocr"
-                )
-            else:
-                outputs.append("Please install Tesseract manually for your system")
 
         # Install Python packages
         packages = []

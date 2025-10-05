@@ -3,6 +3,7 @@
  */
 
 import { logger } from '../utils/logger'
+import { mapErrorToUserMessage } from '../utils/errorMessages'
 
 export const getApiBaseUrl = (): string => {
   // In Electron, backend always runs on port 5555
@@ -80,6 +81,17 @@ export interface IndexStatus {
   estimated_completion: string | null
 }
 
+export interface IndexStats {
+  database?: {
+    total_photos: number
+    faces_detected: number
+    indexed_photos: number
+    database_size_mb: number
+  }
+  models?: Record<string, unknown>
+  thumbnails?: Record<string, unknown>
+}
+
 export interface DependencyStatus {
   name: string
   installed: boolean
@@ -88,10 +100,46 @@ export interface DependencyStatus {
   description: string
 }
 
+export interface ModelVerificationDetails {
+  functional: boolean
+  error: string | null
+  details: {
+    available_memory_gb: number
+    total_memory_gb: number
+    cuda_available?: boolean
+    device?: string
+    model_name?: string
+    model_loaded?: boolean
+    tesseract_version?: string
+  }
+}
+
 export interface DependenciesResponse {
   core: DependencyStatus[]
   ml: DependencyStatus[]
   features: Record<string, boolean>
+}
+
+export interface DependencyVerificationResponse {
+  summary: {
+    all_functional: boolean
+    issues_found: Array<{
+      model: string
+      error: string
+    }>
+  }
+  models: Record<string, ModelVerificationDetails>
+  system: {
+    memory: {
+      total_gb: number
+      available_gb: number
+      percent_used: number
+    }
+    python_version: string
+    platform: string
+    architecture: string
+  }
+  recommendations: string[]
 }
 
 class ApiService {
@@ -142,13 +190,22 @@ class ApiService {
           errorText
         )
 
-        const error = new Error(
-          `HTTP error! status: ${response.status}, message: ${errorText}`
-        )
+        const technicalError = `HTTP error! status: ${response.status}, message: ${errorText}`
+        const mappedError = mapErrorToUserMessage(technicalError)
+
+        const error = new Error(mappedError.message)
+        // Attach additional properties for error handling
+        ;(error as any).originalError = technicalError
+        ;(error as any).severity = mappedError.severity
+        ;(error as any).status = response.status
+
         logger.error(`API request failed: ${endpoint}`, error, {
           requestId,
           status: response.status,
           endpoint,
+          originalError: technicalError,
+          userMessage: mappedError.message,
+          severity: mappedError.severity,
         })
         throw error
       }
@@ -289,7 +346,7 @@ class ApiService {
     })
   }
 
-  async getIndexStats(): Promise<Record<string, unknown>> {
+  async getIndexStats(): Promise<IndexStats> {
     return this.request('/index/stats')
   }
 
@@ -324,6 +381,10 @@ class ApiService {
   // Dependencies endpoints
   async getDependencies(): Promise<DependenciesResponse> {
     return this.request<DependenciesResponse>('/dependencies')
+  }
+
+  async verifyDependencies(): Promise<DependencyVerificationResponse> {
+    return this.request<DependencyVerificationResponse>('/dependencies/verify')
   }
 
   async installDependencies(

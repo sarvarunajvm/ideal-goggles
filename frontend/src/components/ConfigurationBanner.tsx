@@ -24,8 +24,8 @@ export default function ConfigurationBanner() {
     }
 
     checkConfig()
-    // Check every 10 seconds in case folders are added
-    const interval = setInterval(checkConfig, 10000)
+    // Check every 30 seconds in case folders are added (reduced frequency for better performance)
+    const interval = setInterval(checkConfig, 30000)
     return () => clearInterval(interval)
   }, [dismissed])
 
@@ -59,7 +59,7 @@ export default function ConfigurationBanner() {
           <Link to="/settings">
             <Button
               size="sm"
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-semibold hover:shadow-lg hover:shadow-yellow-500/30 transition-all"
+              className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all"
             >
               Go to Settings
             </Button>

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,33 @@ class IndexStatus(BaseModel):
     estimated_completion: datetime | None = Field(
         description="Estimated completion time"
     )
+
+
+def _calculate_estimated_completion():
+    """Calculate estimated completion time based on current progress."""
+    if (
+        not _indexing_state["started_at"]
+        or _indexing_state["progress"]["total_files"] == 0
+    ):
+        return None
+
+    progress = _indexing_state["progress"]
+    current_time = datetime.now()
+    elapsed = (current_time - _indexing_state["started_at"]).total_seconds()
+
+    if progress["processed_files"] == 0:
+        return None
+
+    # Calculate progress percentage
+    progress_ratio = progress["processed_files"] / progress["total_files"]
+    if progress_ratio <= 0:
+        return None
+
+    # Estimate total time needed
+    estimated_total_time = elapsed / progress_ratio
+    remaining_time = estimated_total_time - elapsed
+
+    return current_time + timedelta(seconds=remaining_time)
 
 
 class StartIndexRequest(BaseModel):
@@ -104,8 +131,10 @@ async def start_indexing(
             "task": None,
         }
 
-        # Start indexing in background
-        background_tasks.add_task(_run_indexing_process, request.full)
+        # Start indexing in background and store task for cancellation
+        task = asyncio.create_task(_run_indexing_process(request.full))
+        _indexing_state["task"] = task
+        background_tasks.add_task(_monitor_indexing_task, task)
 
         logger.info(
             "Indexing started successfully",
@@ -140,12 +169,26 @@ async def get_indexing_status() -> IndexStatus:
     Returns:
         Current indexing status and progress
     """
+    # Calculate estimated completion in real-time
+    estimated_completion = None
+    if _indexing_state["status"] == "indexing":
+        estimated_completion = _calculate_estimated_completion()
+
+    # Add percentage to progress
+    progress = dict(_indexing_state["progress"])
+    if progress.get("total_files", 0) > 0:
+        progress["percentage"] = (
+            progress.get("processed_files", 0) / progress["total_files"]
+        ) * 100
+    else:
+        progress["percentage"] = 0.0
+
     return IndexStatus(
         status=_indexing_state["status"],
-        progress=_indexing_state["progress"],
+        progress=progress,
         errors=_indexing_state["errors"],
         started_at=_indexing_state["started_at"],
-        estimated_completion=_indexing_state["estimated_completion"],
+        estimated_completion=estimated_completion,
     )
 
 
@@ -186,6 +229,96 @@ async def stop_indexing() -> dict[str, Any]:
         )
 
 
+@router.get("/index/diagnostics")
+async def get_model_diagnostics() -> dict[str, Any]:
+    """
+    Get diagnostic information about ML models and dependencies.
+
+    Returns:
+        Model availability and status information
+    """
+    diagnostics = {"models": {}, "dependencies": {}, "errors": []}
+
+    # Check CLIP model
+    try:
+        from ..workers.embedding_worker import OptimizedCLIPWorker
+
+        clip_worker = OptimizedCLIPWorker()
+        diagnostics["models"]["clip"] = {
+            "available": True,
+            "model_name": getattr(clip_worker, "model_name", "CLIP"),
+            "status": "ready",
+        }
+    except Exception as e:
+        diagnostics["models"]["clip"] = {
+            "available": False,
+            "error": str(e),
+            "status": "failed",
+        }
+        diagnostics["errors"].append(f"CLIP model failed: {e}")
+
+    # Check Face detection model
+    try:
+        from ..workers.face_worker import FaceDetectionWorker
+
+        face_worker = FaceDetectionWorker()
+        diagnostics["models"]["face_detection"] = {
+            "available": face_worker.is_available(),
+            "status": "ready" if face_worker.is_available() else "not_available",
+        }
+    except Exception as e:
+        diagnostics["models"]["face_detection"] = {
+            "available": False,
+            "error": str(e),
+            "status": "failed",
+        }
+        diagnostics["errors"].append(f"Face detection model failed: {e}")
+
+    # Check EXIF extraction (no ML model required)
+    try:
+        from ..workers.exif_extractor import EXIFExtractionPipeline
+
+        diagnostics["dependencies"]["exif"] = {"available": True, "status": "ready"}
+    except Exception as e:
+        diagnostics["dependencies"]["exif"] = {
+            "available": False,
+            "error": str(e),
+            "status": "failed",
+        }
+        diagnostics["errors"].append(f"EXIF extraction failed: {e}")
+
+    # Check thumbnail generation
+    try:
+        from ..workers.thumbnail_worker import SmartThumbnailGenerator
+
+        diagnostics["dependencies"]["thumbnails"] = {
+            "available": True,
+            "status": "ready",
+        }
+    except Exception as e:
+        diagnostics["dependencies"]["thumbnails"] = {
+            "available": False,
+            "error": str(e),
+            "status": "failed",
+        }
+
+    # Overall status
+    all_critical_available = (
+        diagnostics["models"].get("clip", {}).get("available", False)
+        and diagnostics["dependencies"].get("exif", {}).get("available", False)
+        and diagnostics["dependencies"].get("thumbnails", {}).get("available", False)
+    )
+
+    diagnostics["overall_status"] = "healthy" if all_critical_available else "degraded"
+    diagnostics["recommendation"] = (
+        "All critical components are functional"
+        if all_critical_available
+        else "Some components are not available. Indexing will proceed with reduced functionality."
+    )
+
+    return diagnostics
+
+
 @router.get("/index/stats")
 async def get_indexing_statistics() -> dict[str, Any]:
     """
@@ -206,7 +339,6 @@ async def get_indexing_statistics() -> dict[str, Any]:
                 "total_photos": db_info.get("table_counts", {}).get("photos", 0),
                 "indexed_photos": _get_indexed_photo_count(db_manager),
                 "photos_with_exif": db_info.get("table_counts", {}).get("exif", 0),
-                "photos_with_ocr": _get_ocr_photo_count(db_manager),
                 "photos_with_embeddings": db_info.get("table_counts", {}).get(
                     "embeddings", 0
                 ),
@@ -239,13 +371,32 @@ async def get_indexing_statistics() -> dict[str, Any]:
         )
 
 
+async def _monitor_indexing_task(task):
+    """Monitor the indexing task and handle completion/cancellation."""
+    global _indexing_state
+    try:
+        await task
+    except asyncio.CancelledError:
+        _indexing_state["status"] = "stopped"
+        _indexing_state["task"] = None
+        logger.info("Indexing task was successfully cancelled")
+    except Exception as e:
+        _indexing_state["status"] = "error"
+        _indexing_state["errors"].append(str(e))
+        _indexing_state["task"] = None
+        logger.exception(f"Indexing task failed: {e}")
+    finally:
+        # Clear task reference when done
+        if _indexing_state.get("task") == task:
+            _indexing_state["task"] = None
+
+
 async def _setup_indexing_workers():
     """Setup and import all required workers."""
     from ..workers.crawler import FileCrawler
     from ..workers.embedding_worker import OptimizedCLIPWorker
     from ..workers.exif_extractor import EXIFExtractionPipeline
     from ..workers.face_worker import FaceDetectionWorker
-    from ..workers.ocr_worker import SmartOCRWorker
     from ..workers.thumbnail_worker import SmartThumbnailGenerator
 
     return {
@@ -253,9 +404,15 @@ async def _setup_indexing_workers():
         "OptimizedCLIPWorker": OptimizedCLIPWorker,
         "EXIFExtractionPipeline": EXIFExtractionPipeline,
         "FaceDetectionWorker": FaceDetectionWorker,
-        "SmartOCRWorker": SmartOCRWorker,
         "SmartThumbnailGenerator": SmartThumbnailGenerator,
     }
+
+
+def _check_cancellation():
+    """Check if indexing has been cancelled and raise CancelledError if so."""
+    if _indexing_state["status"] == "stopped":
+        cancellation_msg = "Indexing was stopped by user request"
+        raise asyncio.CancelledError(cancellation_msg)
 
 
 async def _run_discovery_phase(workers, config, full_reindex):
@@ -265,6 +422,9 @@ async def _run_discovery_phase(workers, config, full_reindex):
 
     _indexing_state["progress"]["current_phase"] = "discovery"
     logger.info("Phase 1: File discovery")
+
+    # Check for cancellation
+    _check_cancellation()
 
     crawler = workers["FileCrawler"]()
     for root_path in config.get("roots", []):
@@ -325,46 +485,152 @@ async def _run_processing_phases(workers, config, photos_to_process):
     # Phase 2: Metadata extraction
     _indexing_state["progress"]["current_phase"] = "metadata"
     logger.info("Phase 2: EXIF metadata extraction")
-    exif_pipeline = workers["EXIFExtractionPipeline"]()
-    await asyncio.sleep(0.5)  # Add small delay to show progress
-    await exif_pipeline.process_photos(photos_to_process)
-    processed_count = int(total_photos * 0.2)  # 20% complete after metadata
-    _indexing_state["progress"]["processed_files"] = processed_count
 
-    # Phase 3: OCR processing (optional - skip if Tesseract not available)
-    _indexing_state["progress"]["current_phase"] = "ocr"
-    logger.info("Phase 3: OCR text extraction")
-    await asyncio.sleep(0.5)  # Add small delay to show progress
+    # Check for cancellation
+    _check_cancellation()
+
     try:
-        ocr_worker = workers["SmartOCRWorker"](
-            languages=config.get("ocr_languages", ["eng"])
+        exif_pipeline = workers["EXIFExtractionPipeline"]()
+        await asyncio.sleep(0.5)  # Add small delay to show progress
+        exif_results = await exif_pipeline.process_photos(photos_to_process)
+
+        # Save EXIF data to database
+        from ..db.connection import get_database_manager
+
+        db_manager = get_database_manager()
+        saved_exif_count = 0
+
+        for result in exif_results:
+            if result.get("extraction_successful") and result.get("exif_data"):
+                try:
+                    exif_data = result["exif_data"]
+                    query = """
+                        INSERT OR REPLACE INTO exif
+                        (file_id, shot_dt, camera_make, camera_model, lens, iso,
+                         aperture, shutter_speed, focal_length, gps_lat, gps_lon, orientation)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                    params = (
+                        result["photo_id"],
+                        exif_data.shot_dt if hasattr(exif_data, "shot_dt") else None,
+                        (
+                            exif_data.camera_make
+                            if hasattr(exif_data, "camera_make")
+                            else None
+                        ),
+                        (
+                            exif_data.camera_model
+                            if hasattr(exif_data, "camera_model")
+                            else None
+                        ),
+                        exif_data.lens if hasattr(exif_data, "lens") else None,
+                        exif_data.iso if hasattr(exif_data, "iso") else None,
+                        exif_data.aperture if hasattr(exif_data, "aperture") else None,
+                        (
+                            exif_data.shutter_speed
+                            if hasattr(exif_data, "shutter_speed")
+                            else None
+                        ),
+                        (
+                            exif_data.focal_length
+                            if hasattr(exif_data, "focal_length")
+                            else None
+                        ),
+                        exif_data.gps_lat if hasattr(exif_data, "gps_lat") else None,
+                        exif_data.gps_lon if hasattr(exif_data, "gps_lon") else None,
+                        (
+                            exif_data.orientation
+                            if hasattr(exif_data, "orientation")
+                            else None
+                        ),
+                    )
+                    db_manager.execute_update(query, params)
+                    saved_exif_count += 1
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to save EXIF for photo {result['photo_id']}: {e}"
+                    )
+
+        logger.info(
+            f"Saved {saved_exif_count}/{len(exif_results)} EXIF records to database"
         )
-        await ocr_worker.extract_batch(photos_to_process)
-    except RuntimeError as e:
-        if "Tesseract" in str(e):
-            logger.warning(f"OCR skipped: {e}")
-            logger.info("Continuing without OCR text extraction")
-        else:
-            raise
-    processed_count = int(total_photos * 0.4)  # 40% complete after OCR
+    except Exception as e:
+        logger.exception(f"EXIF extraction failed: {e}")
+        _indexing_state["errors"].append(f"EXIF extraction failed: {e!s}")
+
+    processed_count = int(total_photos * 0.3)  # 30% complete after metadata
     _indexing_state["progress"]["processed_files"] = processed_count
 
-    # Phase 4: Embedding generation (optional - skip if dependencies missing)
+    # Phase 3: Embedding generation (optional - skip if dependencies missing)
     _indexing_state["progress"]["current_phase"] = "embeddings"
-    logger.info("Phase 4: Embedding generation")
+    logger.info("Phase 3: Embedding generation")
+
+    # Check for cancellation
+    _check_cancellation()
+
     await asyncio.sleep(0.5)  # Add small delay to show progress
     try:
         embedding_worker = workers["OptimizedCLIPWorker"]()
-        await embedding_worker.generate_batch_optimized(photos_to_process)
+        embeddings = await embedding_worker.generate_batch_optimized(photos_to_process)
+
+        # Save embeddings to database
+        import time
+
+        from ..db.connection import get_database_manager
+
+        db_manager = get_database_manager()
+        saved_embedding_count = 0
+
+        for embedding in embeddings:
+            if embedding and hasattr(embedding, "file_id"):
+                try:
+                    query = """
+                        INSERT OR REPLACE INTO embeddings
+                        (file_id, clip_vector, embedding_model, processed_at)
+                        VALUES (?, ?, ?, ?)
+                    """
+                    params = (
+                        embedding.file_id,
+                        (
+                            embedding.clip_vector
+                            if hasattr(embedding, "clip_vector")
+                            else None
+                        ),
+                        (
+                            embedding.embedding_model
+                            if hasattr(embedding, "embedding_model")
+                            else "CLIP"
+                        ),
+                        (
+                            embedding.processed_at
+                            if hasattr(embedding, "processed_at")
+                            else time.time()
+                        ),
+                    )
+                    db_manager.execute_update(query, params)
+                    saved_embedding_count += 1
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to save embedding for file_id {embedding.file_id}: {e}"
+                    )
+
+        logger.info(
+            f"Saved {saved_embedding_count}/{len(embeddings)} embeddings to database"
+        )
     except Exception as e:
-        logger.warning(f"Embedding generation skipped: {e}")
+        logger.warning(f"Embedding generation failed: {e}")
+        _indexing_state["errors"].append(f"Embedding generation failed: {e!s}")
         logger.info("Continuing without embeddings")
-    processed_count = int(total_photos * 0.6)  # 60% complete after embeddings
+    processed_count = int(total_photos * 0.5)  # 50% complete after embeddings
     _indexing_state["progress"]["processed_files"] = processed_count
 
-    # Phase 5: Thumbnail generation
+    # Phase 4: Thumbnail generation
     _indexing_state["progress"]["current_phase"] = "thumbnails"
-    logger.info("Phase 5: Thumbnail generation")
+    logger.info("Phase 4: Thumbnail generation")
+
+    # Check for cancellation
+    _check_cancellation()
+
     await asyncio.sleep(0.5)  # Add small delay to show progress
     thumbnail_generator = workers["SmartThumbnailGenerator"](
         cache_root=str(settings.THUMBNAILS_DIR)
@@ -400,18 +666,60 @@ async def _run_processing_phases(workers, config, photos_to_process):
                 )
 
     logger.info(f"Saved {saved_count}/{len(thumbnails)} thumbnails to database")
-    processed_count = int(total_photos * 0.8)  # 80% complete after thumbnails
+    processed_count = int(total_photos * 0.75)  # 75% complete after thumbnails
     _indexing_state["progress"]["processed_files"] = processed_count
 
-    # Phase 6: Face detection (if enabled)
+    # Phase 5: Face detection (if enabled)
     if config.get("face_search_enabled", False):
         _indexing_state["progress"]["current_phase"] = "faces"
-        logger.info("Phase 6: Face detection")
-        face_worker = workers["FaceDetectionWorker"]()
-        if face_worker.is_available():
-            await face_worker.process_batch(photos_to_process)
-        else:
-            logger.warning("Face detection not available, skipping")
+        logger.info("Phase 5: Face detection")
+
+        # Check for cancellation
+        _check_cancellation()
+
+        try:
+            face_worker = workers["FaceDetectionWorker"]()
+            if face_worker.is_available():
+                face_results = await face_worker.process_batch(photos_to_process)
+
+                # Save face detection results to database
+                from ..db.connection import get_database_manager
+
+                db_manager = get_database_manager()
+                saved_face_count = 0
+
+                # face_results is a list of face lists, one per photo
+                for i, face_list in enumerate(face_results):
+                    if face_list:  # If this photo has faces
+                        photo = photos_to_process[i]
+                        logger.debug(
+                            f"Saving {len(face_list)} faces for photo {photo.id} ({photo.filename})"
+                        )
+
+                        for face in face_list:
+                            try:
+                                # Use the Face object's to_db_params method to get database parameters
+                                params = face.to_db_params()
+
+                                query = """
+                                    INSERT INTO faces
+                                    (file_id, person_id, box_xyxy, face_vector, confidence, verified)
+                                    VALUES (?, ?, ?, ?, ?, ?)
+                                """
+                                db_manager.execute_update(query, params)
+                                saved_face_count += 1
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to save face for photo {photo.id} ({photo.filename}): {e}"
+                                )
+
+                logger.info(f"Saved {saved_face_count} face records to database")
+            else:
+                logger.warning("Face detection not available, skipping")
+                _indexing_state["errors"].append("Face detection model not available")
+        except Exception as e:
+            logger.exception(f"Face detection failed: {e}")
+            _indexing_state["errors"].append(f"Face detection failed: {e!s}")
 
     # Final update - 100% complete
     _indexing_state["progress"]["processed_files"] = total_photos
@@ -508,7 +816,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         config = {}
         for row in settings_rows:
             key, value = row[0], row[1]
-            if key in ["roots", "ocr_languages"]:
+            if key == "roots":
                 import json
 
                 try:
@@ -523,15 +831,13 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         # Set defaults
         if "roots" not in config:
             config["roots"] = []
-        if "ocr_languages" not in config:
-            config["ocr_languages"] = ["eng"]
         if "face_search_enabled" not in config:
             config["face_search_enabled"] = False
 
         return config
 
     except Exception:
-        return {"roots": [], "ocr_languages": ["eng"], "face_search_enabled": False}
+        return {"roots": [], "face_search_enabled": False}
 
 
 def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:
@@ -563,16 +869,6 @@ def _get_indexed_photo_count(db_manager) -> int:
     """Get count of indexed photos."""
     try:
         query = "SELECT COUNT(*) FROM photos WHERE indexed_at IS NOT NULL"
-        result = db_manager.execute_query(query)
-        return result[0][0] if result else 0
-    except:
-        return 0
-
-
-def _get_ocr_photo_count(db_manager) -> int:
-    """Get count of photos with OCR data."""
-    try:
-        query = "SELECT COUNT(DISTINCT file_id) FROM ocr"
         result = db_manager.execute_query(query)
         return result[0][0] if result else 0
     except:

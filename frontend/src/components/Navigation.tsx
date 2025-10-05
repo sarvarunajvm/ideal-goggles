@@ -101,10 +101,13 @@ export default function Navigation() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowCodePrompt(false)
-              setCodeInput('')
-            }}>
+            <Button
+              onClick={() => {
+                setShowCodePrompt(false)
+                setCodeInput('')
+              }}
+              className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] transition-all"
+            >
               Cancel
             </Button>
             <Button onClick={handleCodeSubmit}>
