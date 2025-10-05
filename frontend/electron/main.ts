@@ -13,6 +13,21 @@ let backendProcess: ChildProcess | null = null;
 const isDev = process.env.NODE_ENV === 'development';
 let BACKEND_PORT = 5555; // resolved at runtime in production/dev
 
+// Enforce single app instance
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  console.log('[App] Another instance detected; quitting.');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // Backend management
 async function startBackend(): Promise<void> {
   console.log('[Backend] Starting backend initialization...');
@@ -85,9 +100,28 @@ async function startBackend(): Promise<void> {
 
       // In production, check if backend is already running
       if (portInUse) {
-        console.log('[Backend] Port 5555 already in use, assuming backend is running');
-        resolve();
-        return;
+        console.log('[Backend] Port 5555 already in use, probing backend health');
+        try {
+          const http = await import('http');
+          await new Promise<void>((res, rej) => {
+            const req = http.get({ host: '127.0.0.1', port: BACKEND_PORT, path: '/health', timeout: 2000 }, (resp) => {
+              if (resp.statusCode && resp.statusCode >= 200 && resp.statusCode < 500) {
+                console.log('[Backend] Existing service responded on /health, proceeding');
+                res();
+              } else {
+                rej(new Error('Unexpected status from /health: ' + resp.statusCode));
+              }
+            });
+            req.on('error', rej);
+            req.on('timeout', () => {
+              req.destroy(new Error('Health probe timeout'));
+            });
+          });
+          resolve();
+          return;
+        } catch (e) {
+          console.warn('[Backend] Port is in use but /health probe failed. Will attempt to start packaged backend anyway. Error:', (e as any)?.message || e);
+        }
       }
 
       console.log('[Backend] Port 5555 is free, starting packaged backend...');
@@ -193,17 +227,26 @@ async function startBackend(): Promise<void> {
         reject(error);
       });
 
-      // Wait until the backend port is responsive
+      // Wait until the backend port is responsive (with one retry at higher budget)
       console.log('[Backend] Starting port wait...');
-      waitForPort(BACKEND_PORT)
-        .then(() => {
-          console.log('[Backend] Successfully connected to backend!');
+      try {
+        await waitForPort(BACKEND_PORT);
+        console.log('[Backend] Successfully connected to backend!');
+        resolve();
+        return;
+      } catch (err1) {
+        console.warn('[Backend] First port wait failed, retrying with extended attempts...', err1);
+        try {
+          await waitForPort(BACKEND_PORT, '127.0.0.1', 120, 500);
+          console.log('[Backend] Connected after retry.');
           resolve();
-        })
-        .catch((err) => {
-          console.error('[Backend] Failed to connect to backend:', err);
-          reject(err);
-        });
+          return;
+        } catch (err2) {
+          console.error('[Backend] Failed to connect to backend after retries:', err2);
+          reject(err2);
+          return;
+        }
+      }
 
     } catch (error) {
       console.error('[Backend] Failed to start backend:', error);

@@ -107,7 +107,7 @@ test.describe('Dependencies and Error Handling', () => {
       await basePage.goto();
 
       // Should show appropriate message
-      const errorMessage = page.locator('text=Starting local backend');
+      const errorMessage = page.locator('text=Getting everything ready');
       await expect(errorMessage).toBeVisible();
     });
 

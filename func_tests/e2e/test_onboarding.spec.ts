@@ -45,7 +45,7 @@ test.describe('Onboarding Wizard E2E Test', () => {
 
     // Check welcome content
     await expect(page.locator('text=Welcome to Ideal Goggles')).toBeVisible();
-    await expect(page.locator('text=Your private photo management assistant')).toBeVisible();
+    await expect(page.locator('text=Find any photo in seconds, just by describing it')).toBeVisible();
   });
 
   test('should navigate through onboarding steps', async () => {

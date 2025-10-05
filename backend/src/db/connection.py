@@ -188,6 +188,14 @@ class DatabaseManager:
                     )
                     self._run_migrations(from_version=current_version)
 
+            # Ensure required baseline tables exist (especially settings)
+            # This guards packaged runs where migrations directory is missing
+            # and an existing DB may lack the settings table.
+            try:
+                self._ensure_settings_table()
+            except Exception as e:
+                logger.exception(f"Failed to ensure settings table: {e}")
+
     def _get_schema_version(self) -> int:
         """Get current schema version from database."""
         try:
@@ -279,6 +287,34 @@ class DatabaseManager:
             except Exception as e:
                 logger.exception(f"Failed to apply embedded schema: {e}")
                 raise
+
+    def _ensure_settings_table(self):
+        """Create settings table and defaults if missing."""
+        with self.get_connection() as conn:
+            # Create table if not exists
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS settings (
+                  key TEXT PRIMARY KEY,
+                  value TEXT NOT NULL,
+                  updated_at REAL NOT NULL
+                )
+                """
+            )
+
+            # Ensure required keys exist
+            def ensure_key(key: str, default: str):
+                row = conn.execute(
+                    "SELECT value FROM settings WHERE key = ?", (key,)
+                ).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+                        (key, default),
+                    )
+
+            ensure_key("schema_version", "1")
+            ensure_key("index_version", "1")
 
     def get_connection(self) -> sqlite3.Connection:
         """Get a database connection with optimal settings."""
@@ -413,7 +449,16 @@ def get_database_manager(db_path: str | None = None) -> DatabaseManager:
     """Get or create the global database manager instance."""
     global _db_manager
     if _db_manager is None:
-        _db_manager = DatabaseManager(db_path)
+        # Prefer app data directory if available
+        if db_path is None:
+            try:
+                # Import lazily to avoid circular dependencies at module import time
+                from ..core.config import get_settings  # type: ignore[import-untyped]
+            except Exception:
+                from src.core.config import get_settings  # type: ignore[import-untyped]
+            settings = get_settings()
+            db_path = Path(settings.DATA_DIR) / "photos.db"
+        _db_manager = DatabaseManager(str(db_path))
     return _db_manager
 
 

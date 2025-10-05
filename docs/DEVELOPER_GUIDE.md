@@ -403,12 +403,12 @@ pnpm run test:components
 pnpm run test:coverage
 ```
 
-### E2E Testing
+### E2E Testing (Chromium-only)
 
 ```bash
 cd tests
-pnpm test                # Run all E2E tests
-pnpm run test:smoke      # Quick smoke tests
+pnpm test                # Run all E2E tests (Chromium)
+pnpm run test:smoke      # Quick smoke tests (Chromium)
 pnpm run test:ui         # Interactive mode
 ```
 

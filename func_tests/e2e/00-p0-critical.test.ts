@@ -51,10 +51,10 @@ test.describe('@P0 Critical User Flows', () => {
       searchPage = new SearchPage(page);
       await searchPage.goto();
 
-      // Select text search mode
-      await searchPage.textSearchButton.click();
+      // Quick Find is the default mode, so we don't need to click it
+      // Just verify it's the active mode
       const activeMode = await searchPage.getActiveSearchMode();
-      expect(activeMode).toContain('Text Search');
+      expect(activeMode).toContain('Quick Find');
 
       // Enter search query
       await searchPage.searchInput.fill('test query');
@@ -116,9 +116,9 @@ test.describe('@P0 Critical User Flows', () => {
       // Navigate directly without using basePage.goto() which waits for nav
       await page.goto('http://localhost:3333');
 
-      // Should show appropriate error state
-      await expect(page.locator('text=Starting local backend')).toBeVisible({ timeout: 10000 });
-      await expect(page.locator('text=/If this persists/')).toBeVisible();
+      // Should show appropriate loading state
+      await expect(page.locator('text=Getting everything ready')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=/This usually takes just a few seconds/')).toBeVisible();
     });
   });
 });

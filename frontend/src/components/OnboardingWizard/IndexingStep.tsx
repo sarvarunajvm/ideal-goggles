@@ -200,21 +200,35 @@ export function IndexingStep() {
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="h-3 w-full overflow-hidden rounded-full bg-muted/50 border border-border/50">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-yellow-300 transition-all duration-500 shadow-sm"
-                  style={{
-                    width: status && status.progress && status.progress.total_files > 0
-                      ? `${(status.progress.processed_files / status.progress.total_files) * 100}%`
-                      : status?.status === 'indexing' ? '5%' : '0%',
-                  }}
-                />
+                {status?.progress?.total_files === 0 ? (
+                  // Indeterminate progress bar for discovery phase
+                  <div className="h-full bg-gradient-to-r from-primary via-yellow-300 to-primary animate-pulse">
+                    <div className="h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                  </div>
+                ) : (
+                  // Determinate progress bar when we know the total
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-yellow-300 transition-all duration-500 shadow-sm"
+                    style={{
+                      width: status && status.progress && status.progress.total_files > 0
+                        ? `${(status.progress.processed_files / status.progress.total_files) * 100}%`
+                        : '0%',
+                    }}
+                  />
+                )}
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-foreground/90 text-center font-medium">
-                  {status?.progress?.processed_files || 0} / {status?.progress?.total_files || '?'}{' '}
-                  photos {status?.progress && status?.progress.total_files > 0 &&
-                    `(${Math.round((status.progress.processed_files / status.progress.total_files) * 100)}%)`
-                  }
+                  {status?.progress?.total_files === 0 ? (
+                    <>Discovering photos in your folders...</>
+                  ) : (
+                    <>
+                      {status?.progress?.processed_files || 0} / {status?.progress?.total_files || '?'}{' '}
+                      photos {status?.progress && status?.progress.total_files > 0 &&
+                        `(${Math.round((status.progress.processed_files / status.progress.total_files) * 100)}%)`
+                      }
+                    </>
+                  )}
                 </p>
                 {status?.progress && status?.progress.total_files > 0 && status?.progress.processed_files > 0 && (
                   <p className="text-xs text-muted-foreground text-center">

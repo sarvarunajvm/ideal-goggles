@@ -23,11 +23,17 @@ interface IndexStats {
 export default function StatsPage() {
   const [stats, setStats] = useState<IndexStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasConfiguredFolders, setHasConfiguredFolders] = useState(true)
 
   useEffect(() => {
     const loadStats = async () => {
       try {
         setLoading(true)
+
+        // Check if folders are configured
+        const config = await apiService.getConfig()
+        setHasConfiguredFolders(config.roots && config.roots.length > 0)
+
         const statsData = await apiService.getIndexStats()
         setStats(statsData as unknown as IndexStats)
       } catch (error) {
@@ -60,6 +66,51 @@ export default function StatsPage() {
         <div className="text-center space-y-4">
           <Database className="h-12 w-12 mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">No statistics available</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show warning if no folders configured but stats exist (stale data)
+  if (!hasConfiguredFolders && stats.database.total_photos > 0) {
+    return (
+      <div className="flex-1 overflow-auto bg-background">
+        <div className="w-full max-w-[1920px] mx-auto p-6">
+          <div className="mb-6">
+            <div className="flex items-center space-x-3 mb-2">
+              <Activity className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold">Library Statistics</h1>
+            </div>
+          </div>
+
+          <Card className="border-yellow-500/50 bg-yellow-500/10">
+            <CardHeader>
+              <CardTitle className="text-yellow-600 dark:text-yellow-400">
+                No Photo Folders Configured
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                You haven't configured any photo folders yet. The statistics shown below are from a previous indexing session and may not reflect your current photo library.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Go to <a href="/settings" className="text-primary hover:underline">Settings</a> to add your photo folders and start indexing.
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="mt-6 opacity-50 pointer-events-none">
+            <p className="text-sm text-muted-foreground mb-2">Previous session data:</p>
+            {/* Show the stats but dimmed */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-2xl font-bold">{stats.database.total_photos.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Photos (from previous session)</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     )

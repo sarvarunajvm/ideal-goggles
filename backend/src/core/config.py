@@ -65,6 +65,9 @@ class Settings(BaseSettings):
 
         # Set default paths if not provided
         if self.DATA_DIR is None:
+            # Prefer Electron-provided app userData in packaged app (env overrides)
+            # Fallback to backend-local data directory in dev/test.
+            # Electron main sets DATA_DIR env when spawning backend.
             self.DATA_DIR = backend_dir / "data"
         else:
             self.DATA_DIR = Path(self.DATA_DIR).resolve()

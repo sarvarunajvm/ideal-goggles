@@ -40,7 +40,7 @@
 - **What**: Full test suite
 - **When**: Daily at 2 AM UTC
 - **Duration**: ~30 minutes
-- **Browser**: All browsers
+- **Browser**: Chromium only
 - **Config**: `playwright.config.ts`
 - **Command**: `pnpm exec playwright test`
 
@@ -116,12 +116,12 @@ pnpm exec playwright test --ui
 pnpm exec playwright test -g "performs basic text search"
 ```
 
-### Full Test Suite
+### Full Test Suite (Chromium-only)
 ```bash
-# All tests, all browsers
+# All tests (Chromium only)
 pnpm exec playwright test
 
-# With specific browser
+# With specific browser (Chromium)
 pnpm exec playwright test --project=chromium
 
 # In headed mode

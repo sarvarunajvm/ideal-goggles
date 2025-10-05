@@ -5,8 +5,13 @@ a = Analysis(
     ['src/main.py'],
     pathex=['src'],
     binaries=[],
-    datas=[],
+    datas=[
+        # Include CLIP model tokenizer files if they exist
+        # Note: You may need to adjust these paths based on your environment
+        # ('~/.cache/clip', 'clip'),  # Uncomment if CLIP models are pre-downloaded
+    ],
     hiddenimports=[
+        # Face detection dependencies
         'insightface',
         'insightface.app',
         'insightface.model_zoo',
@@ -16,6 +21,25 @@ a = Analysis(
         'sklearn',
         'sklearn.utils._typedefs',
         'sklearn.neighbors._partition_nodes',
+        # PyTorch and CLIP for semantic search
+        'torch',
+        'torch._C',
+        'torch._inductor',
+        'torch._dynamo',
+        'torch.nn',
+        'torch.utils',
+        'torch.utils.data',
+        'torchvision',
+        'torchvision.transforms',
+        'clip',
+        'clip.model',
+        'clip.simple_tokenizer',
+        'ftfy',
+        'regex',
+        'tqdm',
+        # Additional ML utilities
+        'PIL',
+        'PIL.Image',
     ],
     hookspath=[],
     hooksconfig={},

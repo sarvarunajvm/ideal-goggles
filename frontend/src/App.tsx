@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import { apiService } from './services/apiClient'
 import { OnboardingWizard } from './components/OnboardingWizard/OnboardingWizard'
 import { useOnboardingStore } from './stores/onboardingStore'
+import { Toaster } from './components/ui/toaster'
 
 function App() {
   const [backendOk, setBackendOk] = useState<boolean | null>(null)
@@ -106,6 +107,7 @@ function App() {
       <Layout>
         <Outlet />
       </Layout>
+      <Toaster />
     </>
   )
 }

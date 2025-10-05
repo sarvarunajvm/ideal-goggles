@@ -30,6 +30,17 @@ export class BasePage {
   }
 
   async waitForApp() {
+    // Check if onboarding wizard is present and skip it
+    const skipButton = this.page.locator('button:has-text("Skip setup")');
+    try {
+      await skipButton.waitFor({ state: 'visible', timeout: 2000 });
+      await skipButton.click();
+      // Wait for onboarding to disappear
+      await skipButton.waitFor({ state: 'hidden', timeout: 5000 });
+    } catch {
+      // Onboarding not present or already skipped
+    }
+
     await this.navBar.waitFor({ state: 'visible', timeout: 30000 });
   }
 
