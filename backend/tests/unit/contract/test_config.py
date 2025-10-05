@@ -20,21 +20,23 @@ class TestConfigEndpoint:
 
         # Validate required fields exist
         assert "roots" in data
-        assert "ocr_languages" in data
         assert "face_search_enabled" in data
+        assert "semantic_search_enabled" in data
+        assert "batch_size" in data
+        assert "thumbnail_size" in data
         assert "index_version" in data
 
         # Validate field types
         assert isinstance(data["roots"], list)
-        assert isinstance(data["ocr_languages"], list)
         assert isinstance(data["face_search_enabled"], bool)
+        assert isinstance(data["semantic_search_enabled"], bool)
+        assert isinstance(data["batch_size"], int)
+        assert isinstance(data["thumbnail_size"], str)
         assert isinstance(data["index_version"], str)
 
         # Validate list contents
         for root in data["roots"]:
             assert isinstance(root, str)
-        for lang in data["ocr_languages"]:
-            assert isinstance(lang, str)
 
     def test_config_endpoint_default_values(self, client: TestClient) -> None:
         """Test that config endpoint returns expected default values."""
@@ -44,9 +46,11 @@ class TestConfigEndpoint:
         # Face search should be disabled by default (privacy requirement)
         assert data["face_search_enabled"] is False
 
-        # OCR should include English and Tamil
-        assert "eng" in data["ocr_languages"]
-        assert "tam" in data["ocr_languages"]
+        # Semantic search should be enabled by default
+        assert data["semantic_search_enabled"] is True
+
+        # Should have reasonable batch size
+        assert data["batch_size"] > 0
 
     def test_config_endpoint_content_type(self, client: TestClient) -> None:
         """Test that config endpoint returns JSON content type."""

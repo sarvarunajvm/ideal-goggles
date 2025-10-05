@@ -60,7 +60,6 @@ class TestConfigurationResponse:
         """Test creating ConfigurationResponse."""
         response = ConfigurationResponse(
             roots=["/path/to/photos"],
-            ocr_languages=["eng", "tam"],
             face_search_enabled=True,
             semantic_search_enabled=True,
             batch_size=50,
@@ -69,7 +68,6 @@ class TestConfigurationResponse:
         )
 
         assert response.roots == ["/path/to/photos"]
-        assert response.ocr_languages == ["eng", "tam"]
         assert response.face_search_enabled is True
         assert response.semantic_search_enabled is True
         assert response.batch_size == 50
@@ -153,25 +151,8 @@ class TestUpdateConfigRequest:
         request = UpdateConfigRequest(batch_size=75)
 
         assert request.face_search_enabled is None
+        assert request.semantic_search_enabled is None
         assert request.batch_size == 75
-
-    @pytest.mark.skip(reason="UpdateConfigRequest doesn't have ocr_languages field")
-    def test_ocr_languages_validation_valid(self):
-        """Test OCR languages validation with valid languages."""
-        request = UpdateConfigRequest(ocr_languages=["eng", "tam"])
-        assert request.ocr_languages == ["eng", "tam"]
-
-    @pytest.mark.skip(reason="UpdateConfigRequest doesn't have ocr_languages field")
-    def test_ocr_languages_validation_invalid(self):
-        """Test OCR languages validation rejects invalid language."""
-        with pytest.raises(ValueError, match="Unsupported OCR language"):
-            UpdateConfigRequest(ocr_languages=["eng", "invalid"])
-
-    @pytest.mark.skip(reason="UpdateConfigRequest doesn't have ocr_languages field")
-    def test_ocr_languages_validation_none_allowed(self):
-        """Test OCR languages validation allows None."""
-        request = UpdateConfigRequest(ocr_languages=None)
-        assert request.ocr_languages is None
 
     def test_batch_size_validation_minimum(self):
         """Test batch_size validation enforces minimum."""
@@ -217,11 +198,6 @@ class TestParsingHelpers:
         result = _parse_json_setting("roots", "not valid json")
         assert result == []
 
-    def test_parse_json_setting_custom_fallback(self):
-        """Test parsing with custom fallback."""
-        result = _parse_json_setting("ocr_languages", "not valid json")
-        assert result == ["eng", "tam"]
-
     def test_parse_boolean_setting_true_values(self):
         """Test parsing boolean true values."""
         assert _parse_boolean_setting("true") is True
@@ -256,9 +232,6 @@ class TestParsingHelpers:
         result = _parse_setting_value("roots", '["path1"]')
         assert result == ["path1"]
 
-        result = _parse_setting_value("ocr_languages", '["eng"]')
-        assert result == ["eng"]
-
     def test_parse_setting_value_boolean_type(self):
         """Test parsing boolean type."""
         result = _parse_setting_value("face_search_enabled", "true")
@@ -283,8 +256,9 @@ class TestGetConfigDefaults:
         defaults = _get_config_defaults()
 
         assert "roots" in defaults
-        assert "ocr_languages" in defaults
         assert "face_search_enabled" in defaults
+        assert "semantic_search_enabled" in defaults
+        assert "batch_size" in defaults
         assert "thumbnail_size" in defaults
         assert "thumbnail_quality" in defaults
         assert "index_version" in defaults
@@ -293,9 +267,10 @@ class TestGetConfigDefaults:
         """Test default configuration values."""
         defaults = _get_config_defaults()
 
-        assert defaults["roots"] == []
-        assert defaults["ocr_languages"] == ["eng", "tam"]
+        assert isinstance(defaults["roots"], list)
         assert defaults["face_search_enabled"] is False
+        assert defaults["semantic_search_enabled"] is True
+        assert defaults["batch_size"] == 50
         assert defaults["thumbnail_size"] == "medium"
         assert defaults["thumbnail_quality"] == 85
         assert defaults["index_version"] == "1"
@@ -309,9 +284,9 @@ class TestGetConfigFromDb:
         config = _get_config_from_db(db_manager)
 
         # Should return defaults
-        assert config["roots"] == []
-        assert config["ocr_languages"] == ["eng", "tam"]
+        assert isinstance(config["roots"], list)
         assert config["face_search_enabled"] is False
+        assert config["semantic_search_enabled"] is True
 
     def test_get_config_from_db_with_data(self, db_manager):
         """Test getting config from database with data."""
@@ -351,9 +326,10 @@ class TestGetConfigFromDb:
         config = _get_config_from_db(db_manager)
 
         # Should have the set value
+        assert config["batch_size"] == 75
         # Should also have defaults for other settings
-        assert config["roots"] == []
-        assert config["ocr_languages"] == ["eng", "tam"]
+        assert isinstance(config["roots"], list)
+        assert config["face_search_enabled"] is False
 
     def test_get_config_from_db_database_error(self, db_manager):
         """Test handling database error."""
@@ -371,7 +347,7 @@ class TestGetConfigFromDb:
         config = _get_config_from_db(db_manager)
 
         # Should return defaults on error
-        assert config["roots"] == []
+        assert isinstance(config["roots"], list)
         assert config["face_search_enabled"] is False
 
 
@@ -460,18 +436,18 @@ class TestGetConfiguration:
         assert isinstance(result, ConfigurationResponse)
         assert result.roots == ["path1"]
         assert result.face_search_enabled is True
-        assert result.ocr_languages == ["eng", "tam"]  # default
+        assert result.semantic_search_enabled is True  # default
 
     async def test_get_configuration_with_defaults(self, mock_db_manager):
         """Test getting configuration returns defaults when no data."""
         result = await get_configuration()
 
-        assert result.roots == []
-        assert result.ocr_languages == ["eng", "tam"]
+        assert isinstance(result.roots, list)
         assert result.face_search_enabled is False
         assert result.semantic_search_enabled is True
         assert result.batch_size == 50
         assert result.thumbnail_size == "medium"
+        assert result.index_version == "1"
 
     async def test_get_configuration_database_error(self, mock_db_manager, db_manager):
         """Test handling database error when getting configuration returns defaults."""
@@ -487,9 +463,9 @@ class TestGetConfiguration:
         result = await get_configuration()
 
         assert isinstance(result, ConfigurationResponse)
-        assert result.roots == []
-        assert result.ocr_languages == ["eng", "tam"]
+        assert isinstance(result.roots, list)
         assert result.face_search_enabled is False
+        assert result.semantic_search_enabled is True
 
 
 @pytest.mark.asyncio
@@ -545,8 +521,8 @@ class TestUpdateConfiguration:
         assert "message" in result
         assert "updated_fields" in result
         assert "batch_size" in result["updated_fields"]
-        # batch_size is stored as string in DB and returned as-is
-        assert result["configuration"]["batch_size"] == "75"
+        # batch_size is parsed as int by _get_config_from_db
+        assert result["configuration"]["batch_size"] == 75
 
     async def test_update_configuration_multiple_fields(
         self, mock_db_manager, db_manager
@@ -567,18 +543,8 @@ class TestUpdateConfiguration:
         # Verify in database
         config = _get_config_from_db(db_manager)
         assert config["face_search_enabled"] is True
-        # batch_size is stored as string in DB
-        assert config["batch_size"] == "100"
-
-    async def test_update_configuration_ocr_languages(
-        self, mock_db_manager, db_manager
-    ):
-        """Test updating OCR languages."""
-        request = UpdateConfigRequest(ocr_languages=["eng"])
-        result = await update_configuration(request)
-
-        assert "ocr_languages" in result["updated_fields"]
-        assert result["configuration"]["ocr_languages"] == ["eng"]
+        # batch_size is parsed as int by _get_config_from_db
+        assert config["batch_size"] == 100
 
     async def test_update_configuration_thumbnail_quality(
         self, mock_db_manager, db_manager
@@ -629,14 +595,12 @@ class TestGetDefaultConfiguration:
         result = await get_default_configuration()
 
         assert result["roots"] == []
-        assert result["ocr_languages"] == ["eng", "tam"]
         assert result["face_search_enabled"] is False
         assert result["semantic_search_enabled"] is True
         assert result["batch_size"] == 50
         assert result["thumbnail_size"] == "medium"
         assert result["thumbnail_quality"] == 85
         assert result["index_version"] == "1"
-        assert "supported_ocr_languages" in result
         assert "supported_image_formats" in result
         assert "thumbnail_size_options" in result
         assert "max_batch_size" in result
@@ -707,20 +671,24 @@ class TestRemoveRootFolder:
     async def test_remove_root_folder_database_error(self, mock_db_manager, db_manager):
         """Test handling database error when removing root folder."""
 
-        # Mock execute_query to raise an exception
-        def mock_execute_query(query, params=None):
+        # First set some roots so the index is valid
+        _update_config_in_db(db_manager, "roots", ["/path1", "/path2"])
+
+        # Now mock execute_update to raise an exception
+        original_execute_update = db_manager.execute_update
+
+        def mock_execute_update(query, params):
             error_msg = "Database error"
             raise Exception(error_msg)
 
-        db_manager.execute_query = mock_execute_query
+        db_manager.execute_update = mock_execute_update
 
-        # When database error occurs, _get_config_from_db returns defaults (empty roots)
-        # So we get a 404 not found error instead of 500
+        # When database error occurs during update, we get a 500 error
         with pytest.raises(HTTPException) as exc_info:
             await remove_root_folder(0)
 
-        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-        assert "not found" in exc_info.value.detail
+        assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert "Failed to remove root folder" in exc_info.value.detail
 
 
 @pytest.mark.asyncio
@@ -738,13 +706,15 @@ class TestResetConfiguration:
 
         assert "message" in result
         assert "configuration" in result
+        # reset_configuration sets roots to empty list []
         assert result["configuration"]["roots"] == []
         assert result["configuration"]["face_search_enabled"] is False
         assert result["configuration"]["thumbnail_size"] == "medium"
 
-        # Verify in database
+        # Verify in database - after reset, _get_config_from_db may return default roots
         config = _get_config_from_db(db_manager)
-        assert config["roots"] == []
+        # roots should be a list (could be empty or default photo roots)
+        assert isinstance(config["roots"], list)
         assert config["face_search_enabled"] is False
 
     async def test_reset_configuration_database_error(

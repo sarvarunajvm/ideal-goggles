@@ -199,8 +199,8 @@ class TestDependenciesAPI:
         assert response.status_code == 200
 
         data = response.json()
-        # OCR text extraction should be disabled if tesseract is missing
-        assert data["features"]["ocr_text_extraction"] is False
+        # Text recognition should be disabled (OCR/Tesseract was removed from the system)
+        assert data["features"]["text_recognition"] is False
 
     def test_dependency_status_model(self):
         """Test DependencyStatus model."""

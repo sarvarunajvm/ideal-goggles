@@ -144,7 +144,7 @@ class TestDatabaseHealth:
 class TestDependencies:
     """Test _check_dependencies function."""
 
-    @patch("src.api.health.subprocess.run")
+    @patch("subprocess.run")
     def test_check_dependencies_all_available(self, mock_run):
         """Test when all dependencies are available."""
         # Mock Tesseract check
@@ -163,7 +163,7 @@ class TestDependencies:
         assert result["dependencies"]["PIL"]["available"] is True
         assert result["dependencies"]["numpy"]["available"] is True
 
-    @patch("src.api.health.subprocess.run")
+    @patch("subprocess.run")
     def test_check_dependencies_tesseract_not_available(self, mock_run):
         """Test when Tesseract is not available."""
         mock_result = MagicMock()
@@ -174,7 +174,7 @@ class TestDependencies:
 
         assert result["dependencies"]["tesseract"]["available"] is False
 
-    @patch("src.api.health.subprocess.run")
+    @patch("subprocess.run")
     def test_check_dependencies_tesseract_timeout(self, mock_run):
         """Test when Tesseract check times out."""
         mock_run.side_effect = Exception("Timeout")
@@ -432,11 +432,11 @@ class TestGetUptime:
     """Test _get_uptime function."""
 
     @patch("src.api.health.psutil")
-    @patch("src.api.health.time")
+    @patch("time.time")
     def test_get_uptime_success(self, mock_time, mock_psutil):
         """Test successful uptime retrieval."""
         mock_psutil.boot_time.return_value = 1000000.0
-        mock_time.time.return_value = 1086400.0  # 24 hours later
+        mock_time.return_value = 1086400.0  # 24 hours later
 
         result = _get_uptime()
 
