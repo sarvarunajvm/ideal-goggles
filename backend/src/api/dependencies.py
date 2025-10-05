@@ -33,11 +33,11 @@ class DependenciesResponse(BaseModel):
     )
     is_frozen: bool = Field(
         default=False,
-        description="Whether running in production build (frozen executable)"
+        description="Whether running in production build (frozen executable)",
     )
     can_install: bool = Field(
         default=True,
-        description="Whether dependencies can be installed in current environment"
+        description="Whether dependencies can be installed in current environment",
     )
 
 
@@ -58,11 +58,12 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
     Works for both normal and frozen (PyInstaller) environments.
     """
     # In frozen executables, we need to check if the package was bundled
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # For frozen executables, check if package can be imported
         # If it's not bundled, it won't be available even if installed in system
         try:
             import importlib
+
             module = importlib.import_module(package_name)
             version = getattr(module, "__version__", None)
             if version is None and package_name == "sqlite3":
@@ -72,7 +73,9 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
             # In production build, package is not bundled
             return False, None
         except Exception:
-            logger.exception("Failed to check python package '%s' in frozen env", package_name)
+            logger.exception(
+                "Failed to check python package '%s' in frozen env", package_name
+            )
             return False, None
     else:
         # Development environment - normal import check
@@ -231,7 +234,7 @@ async def get_dependencies_status() -> DependenciesResponse:
     }
 
     # Check if running in frozen environment
-    is_frozen = getattr(sys, 'frozen', False)
+    is_frozen = getattr(sys, "frozen", False)
     can_install = not is_frozen  # Can only install in development environment
 
     try:
@@ -240,7 +243,7 @@ async def get_dependencies_status() -> DependenciesResponse:
             ml=ml_deps,
             features=features,
             is_frozen=is_frozen,
-            can_install=can_install
+            can_install=can_install,
         )
     except Exception as e:
         # In case model validation fails unexpectedly, degrade gracefully instead of 500
@@ -251,7 +254,7 @@ async def get_dependencies_status() -> DependenciesResponse:
             ml=[],
             features={"basic_search": True},
             is_frozen=is_frozen,
-            can_install=can_install
+            can_install=can_install,
         )
 
 
@@ -277,7 +280,7 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
         from pathlib import Path
 
         # Check if running in frozen executable (production build)
-        is_frozen = getattr(sys, 'frozen', False)
+        is_frozen = getattr(sys, "frozen", False)
 
         if is_frozen:
             # In production builds, ML dependencies cannot be installed dynamically
@@ -287,9 +290,9 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
                 "status": "unavailable",
                 "message": "ML dependencies cannot be installed in the packaged application.",
                 "output": "ML features must be enabled during the build process. "
-                         "Please use the development version to install ML dependencies, "
-                         "or rebuild the application with ML dependencies included.",
-                "errors": "Dynamic dependency installation is not supported in production builds."
+                "Please use the development version to install ML dependencies, "
+                "or rebuild the application with ML dependencies included.",
+                "errors": "Dynamic dependency installation is not supported in production builds.",
             }
 
         # First try to find the installer script (for development)

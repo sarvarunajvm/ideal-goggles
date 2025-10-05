@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { apiService } from '../services/apiClient'
-import { AlertCircle, X, FolderOpen } from 'lucide-react'
+import { X, FolderOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function ConfigurationBanner() {

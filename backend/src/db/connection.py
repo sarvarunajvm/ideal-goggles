@@ -301,6 +301,7 @@ class DatabaseManager:
                 )
                 """
             )
+
             # Ensure required keys exist
             def ensure_key(key: str, default: str):
                 row = conn.execute(
@@ -311,6 +312,7 @@ class DatabaseManager:
                         "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
                         (key, default),
                     )
+
             ensure_key("schema_version", "1")
             ensure_key("index_version", "1")
 
@@ -451,9 +453,9 @@ def get_database_manager(db_path: str | None = None) -> DatabaseManager:
         if db_path is None:
             try:
                 # Import lazily to avoid circular dependencies at module import time
-                from ..core.config import get_settings  # type: ignore
+                from ..core.config import get_settings  # type: ignore[import-untyped]
             except Exception:
-                from src.core.config import get_settings  # type: ignore
+                from src.core.config import get_settings  # type: ignore[import-untyped]
             settings = get_settings()
             db_path = Path(settings.DATA_DIR) / "photos.db"
         _db_manager = DatabaseManager(str(db_path))

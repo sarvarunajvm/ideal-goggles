@@ -26,6 +26,7 @@ class ConfigurationResponse(BaseModel):
     thumbnail_size: str = Field(description="Thumbnail size preset")
     index_version: str = Field(description="Current index version")
 
+
 def _compute_default_roots() -> list[str]:
     """Compute OS-specific default photo roots.
     - Windows: %USERPROFILE%\\Pictures
@@ -35,13 +36,18 @@ def _compute_default_roots() -> list[str]:
     import os
     import sys
     from pathlib import Path
+
     try:
         if sys.platform.startswith("win"):
             userprofile = os.environ.get("USERPROFILE") or str(Path.home())
             candidate = Path(userprofile) / "Pictures"
         else:
             candidate = Path.home() / "Pictures"
-        return [str(candidate.resolve())] if candidate.exists() and candidate.is_dir() else []
+        return (
+            [str(candidate.resolve())]
+            if candidate.exists() and candidate.is_dir()
+            else []
+        )
     except Exception:
         return []
 

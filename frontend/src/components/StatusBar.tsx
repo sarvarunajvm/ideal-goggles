@@ -35,7 +35,8 @@ export default function StatusBar() {
         // Also get the actual indexed count from stats
         try {
           const stats = await apiService.getIndexStats()
-          setIndexedCount(stats.database.indexed_photos)
+          const database = stats.database as { indexed_photos?: number }
+          setIndexedCount(database?.indexed_photos ?? 0)
         } catch {
           // If stats fails, fall back to index status count
           setIndexedCount(index.progress.processed_files)
