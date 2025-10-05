@@ -92,6 +92,8 @@ yarn.lock
 .specify/
 .claude/
 
+.playwright-mcp
+
 AGENTS.md
 CLAUDE.md
 *.xml
