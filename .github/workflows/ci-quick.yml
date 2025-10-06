@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 8
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
@@ -95,7 +95,7 @@ jobs:
         python-version: ['3.12']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
@@ -181,7 +181,7 @@ jobs:
         node-version: ['20']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
@@ -239,7 +239,7 @@ jobs:
     timeout-minutes: 8
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
