@@ -139,7 +139,7 @@
     "clsx": "^2.1.1",
     "electron-log": "^5.2.4",
     "electron-updater": "^6.3.9",
-    "framer-motion": "^11.16.1",
+    "framer-motion": "^12.23.22",
     "lucide-react": "^0.544.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
