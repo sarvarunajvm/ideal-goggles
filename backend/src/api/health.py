@@ -16,37 +16,27 @@ router = APIRouter()
 @router.get("/health")
 async def health_check() -> dict[str, Any]:
     """
-    Health check endpoint.
+    Lightweight health check endpoint for quick availability checks.
+    For detailed health information, use /health/detailed
 
     Returns:
-        Dict containing health status and system information
+        Dict containing basic health status
     """
     try:
+        # Quick database connectivity check
+        db_manager = get_database_manager()
+        test_query = "SELECT 1 as test"
+        result = db_manager.execute_query(test_query)
+        db_healthy = result and len(result) > 0 and result[0][0] == 1
+
         # Basic health response
-        health_data = {
-            "status": "healthy",
+        return {
+            "status": "healthy" if db_healthy else "degraded",
             "timestamp": datetime.now().isoformat(),
             "version": "1.0.8",
             "service": "ideal-goggles-api",
+            "database": {"healthy": db_healthy},
         }
-
-        # Add system information
-        system_info = _get_system_info()
-        health_data["system"] = system_info
-
-        # Check database connectivity
-        db_health = await _check_database_health()
-        health_data["database"] = db_health
-
-        # Check dependencies
-        deps_health = _check_dependencies()
-        health_data["dependencies"] = deps_health
-
-        # Determine overall health status
-        if not db_health["healthy"] or not deps_health["critical_available"]:
-            health_data["status"] = "degraded"
-
-        return health_data
 
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Health check failed: {e!s}")
@@ -214,18 +204,38 @@ async def detailed_health_check() -> dict[str, Any]:
         Dict containing detailed health status and diagnostics
     """
     try:
-        # Get basic health info
-        basic_health = await health_check()
-
-        # Add more detailed information
-        return {
-            **basic_health,
-            "diagnostics": {
-                "uptime": _get_uptime(),
-                "environment": _get_environment_info(),
-                "performance": await _get_performance_metrics(),
-            },
+        # Build detailed health response
+        health_data = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.8",
+            "service": "ideal-goggles-api",
         }
+
+        # Add system information
+        system_info = _get_system_info()
+        health_data["system"] = system_info
+
+        # Check database connectivity
+        db_health = await _check_database_health()
+        health_data["database"] = db_health
+
+        # Check dependencies
+        deps_health = _check_dependencies()
+        health_data["dependencies"] = deps_health
+
+        # Determine overall health status
+        if not db_health["healthy"] or not deps_health["critical_available"]:
+            health_data["status"] = "degraded"
+
+        # Add diagnostics
+        health_data["diagnostics"] = {
+            "uptime": _get_uptime(),
+            "environment": _get_environment_info(),
+            "performance": await _get_performance_metrics(),
+        }
+
+        return health_data
 
     except Exception as e:
         raise HTTPException(
