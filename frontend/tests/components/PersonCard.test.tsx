@@ -5,21 +5,20 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
 import PersonCard from '../../src/components/PersonCard'
 import { Person } from '../../src/types'
 
 // Mock osIntegration
-vi.mock('../../src/services/osIntegration', () => ({
+jest.mock('../../src/services/osIntegration', () => ({
   default: {
-    revealInFolder: vi.fn(),
-    openExternal: vi.fn(),
+    revealInFolder: jest.fn(),
+    openExternal: jest.fn(),
   }
 }))
 
 // Mock toast
-const mockToast = vi.fn()
-vi.mock('../../src/components/ui/use-toast', () => ({
+const mockToast = jest.fn()
+jest.mock('../../src/components/ui/use-toast', () => ({
   useToast: () => ({ toast: mockToast })
 }))
 
@@ -45,14 +44,14 @@ describe('PersonCard Component', () => {
     ]
   }
 
-  const mockOnClick = vi.fn()
-  const mockOnEdit = vi.fn()
-  const mockOnDelete = vi.fn()
-  const mockOnMerge = vi.fn()
-  const mockOnRefresh = vi.fn()
+  const mockOnClick = jest.fn()
+  const mockOnEdit = jest.fn()
+  const mockOnDelete = jest.fn()
+  const mockOnMerge = jest.fn()
+  const mockOnRefresh = jest.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
   })
 
   describe('Rendering', () => {

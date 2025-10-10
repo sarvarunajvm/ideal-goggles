@@ -60,9 +60,7 @@ class MLSetup:
         else:
             logger.info(message)
 
-    def run_command(
-        self, cmd: list[str], check: bool = True
-    ) -> tuple[int, str, str]:
+    def run_command(self, cmd: list[str], check: bool = True) -> tuple[int, str, str]:
         """Run a command and return exit code, stdout, stderr."""
         if self.verbose:
             logger.debug(f"Running: {' '.join(cmd)}")
@@ -209,9 +207,7 @@ class MLSetup:
         self.install_results["insightface"] = result
         return result
 
-    def install_all_dependencies(
-        self, skip_tesseract: bool = True
-    ) -> bool:
+    def install_all_dependencies(self, skip_tesseract: bool = True) -> bool:
         """Install all ML dependencies."""
         logger.info("=" * 60)
         logger.info("ML DEPENDENCIES INSTALLATION")
@@ -250,7 +246,7 @@ class MLSetup:
 
     def download_and_verify_clip(self) -> bool:
         """Download and verify CLIP model ViT-B/32 (the EXACT model we use)."""
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         logger.info("CLIP Model: ViT-B/32")
         logger.info("=" * 60)
 
@@ -292,7 +288,8 @@ class MLSetup:
                 image_features = image_features / image_features.norm(
                     dim=-1, keepdim=True
                 )
-                image_embedding = image_features.cpu().numpy().flatten()
+                # Ensure float32 for downstream consumers
+                image_embedding = image_features.float().cpu().numpy().flatten()
 
             # Verify embedding properties
             assert (
@@ -317,10 +314,9 @@ class MLSetup:
             with torch.no_grad():
                 text_features = model.encode_text(test_text)
                 # Normalize (exactly as in embedding_worker.py:145)
-                text_features = text_features / text_features.norm(
-                    dim=-1, keepdim=True
-                )
-                text_embedding = text_features.cpu().numpy().flatten()
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                # Ensure float32 for downstream consumers
+                text_embedding = text_features.float().cpu().numpy().flatten()
 
             assert (
                 len(text_embedding) == 512
@@ -337,9 +333,7 @@ class MLSetup:
             # Test similarity computation (verify the model produces sensible results)
             similarity = float(np.dot(image_embedding, text_embedding))
             logger.info(f"  ✓ Image-text similarity: {similarity:.4f}")
-            assert (
-                -1.0 <= similarity <= 1.0
-            ), f"Similarity out of range: {similarity}"
+            assert -1.0 <= similarity <= 1.0, f"Similarity out of range: {similarity}"
 
             self.model_results["clip"]["verified"] = True
             logger.info("✅ CLIP model verified - WORKING CORRECTLY")
@@ -353,19 +347,19 @@ class MLSetup:
 
         except AssertionError as e:
             error_msg = f"CLIP verification failed: {e}"
-            logger.error(f"❌ {error_msg}")
+            logger.exception("❌ %s", error_msg)
             self.model_results["clip"]["error"] = error_msg
             return False
 
         except Exception as e:
             error_msg = f"CLIP download/verification failed: {e}"
-            logger.error(f"❌ {error_msg}")
+            logger.exception("❌ %s", error_msg)
             self.model_results["clip"]["error"] = error_msg
             return False
 
     def download_and_verify_insightface(self) -> bool:
         """Download and verify InsightFace buffalo_l model (the EXACT model we use)."""
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         logger.info("InsightFace Model: buffalo_l")
         logger.info("=" * 60)
 
@@ -470,7 +464,9 @@ class MLSetup:
                 assert (
                     len(embedding) == 512
                 ), f"Expected 512-dim embedding, got {len(embedding)}"
-                assert isinstance(embedding, np.ndarray), "Embedding must be numpy array"
+                assert isinstance(
+                    embedding, np.ndarray
+                ), "Embedding must be numpy array"
 
                 # Check embedding is normalized (InsightFace uses normed_embedding)
                 norm = float(np.linalg.norm(embedding))
@@ -482,7 +478,7 @@ class MLSetup:
             else:
                 # Model works but didn't detect our synthetic face - that's okay
                 logger.info(
-                    "  ℹ No face detected in synthetic image (expected for simple pattern)"
+                    "  Info: No face detected in synthetic image (expected for simple pattern)"
                 )
                 logger.info("  ✓ Model can process images without errors")
 
@@ -493,20 +489,19 @@ class MLSetup:
 
         except AssertionError as e:
             error_msg = f"InsightFace verification failed: {e}"
-            logger.error(f"❌ {error_msg}")
+            logger.exception("❌ %s", error_msg)
             self.model_results["insightface"]["error"] = error_msg
             return False
 
         except Exception as e:
             error_msg = f"InsightFace download/verification failed: {e}"
-            logger.error(f"❌ {error_msg}")
-            logger.exception("Full traceback:")
+            logger.exception("❌ %s", error_msg)
             self.model_results["insightface"]["error"] = error_msg
             return False
 
     def verify_all_models(self) -> bool:
         """Download and verify all ML models."""
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         logger.info("ML MODEL DOWNLOAD & VERIFICATION")
         logger.info("=" * 60)
         logger.info(
@@ -514,15 +509,15 @@ class MLSetup:
         )
 
         # Download and verify each model
-        clip_ok = self.download_and_verify_clip()
-        insightface_ok = self.download_and_verify_insightface()
+        self.download_and_verify_clip()
+        self.download_and_verify_insightface()
 
         # Print summary
         return self.print_verification_summary()
 
     def print_verification_summary(self) -> bool:
         """Print verification summary."""
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         logger.info("VERIFICATION SUMMARY")
         logger.info("=" * 60)
 
@@ -542,7 +537,7 @@ class MLSetup:
             if not result["verified"]:
                 all_verified = False
 
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         if all_verified:
             logger.info("✅ ALL MODELS VERIFIED AND WORKING")
         else:

@@ -564,7 +564,7 @@ describe('API Client Service', () => {
       })
 
       await expect(apiService.getHealth()).rejects.toThrow(
-        'HTTP error! status: 500'
+        'Server error occurred. Please try again in a moment.'
       )
       expect(logger.error).toHaveBeenCalledWith(
         'API request failed: /health',
@@ -585,7 +585,7 @@ describe('API Client Service', () => {
       })
 
       await expect(apiService.getHealth()).rejects.toThrow(
-        'HTTP error! status: 404'
+        'The requested feature is not available.'
       )
     })
 
@@ -597,7 +597,7 @@ describe('API Client Service', () => {
       })
 
       await expect(apiService.getHealth()).rejects.toThrow(
-        'HTTP error! status: 401'
+        'An unexpected error occurred. Please try again.'
       )
     })
 
@@ -743,6 +743,7 @@ describe('API Client Service', () => {
       const mockData = { status: 'ok' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => mockData
       })
 
@@ -784,6 +785,7 @@ describe('API Client Service', () => {
     test('tracks request duration correctly', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => ({})
       })
 

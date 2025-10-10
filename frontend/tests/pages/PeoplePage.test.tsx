@@ -58,22 +58,22 @@ describe('PeoplePage', () => {
   }
 
   describe('Initial Rendering', () => {
-    it('should render the page title', () => {
+    it('should render the page title', async () => {
       renderComponent()
       expect(screen.getByText('People')).toBeInTheDocument()
     })
 
-    it('should render add person button', () => {
+    it('should render add person button', async () => {
       renderComponent()
       expect(screen.getByText('➕ Add Person')).toBeInTheDocument()
     })
 
-    it('should render search input', () => {
+    it('should render search input', async () => {
       renderComponent()
       expect(screen.getByPlaceholderText('Search people by name')).toBeInTheDocument()
     })
 
-    it('should check face search enabled status on mount', () => {
+    it('should check face search enabled status on mount', async () => {
       renderComponent()
       await waitFor(() => {
         expect(apiService.getConfig).toHaveBeenCalled()
@@ -82,7 +82,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Add Person Form', () => {
-    it('should open add person form when clicking add button', () => {
+    it('should open add person form when clicking add button', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -94,7 +94,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Upload Photos')).toBeInTheDocument()
     })
 
-    it('should allow entering person name', () => {
+    it('should allow entering person name', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -105,7 +105,7 @@ describe('PeoplePage', () => {
       expect(nameInput).toHaveValue('John Doe')
     })
 
-    it('should show error when saving without name', () => {
+    it('should show error when saving without name', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -116,7 +116,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Person name cannot be empty')).toBeInTheDocument()
     })
 
-    it('should show error when saving without photos', () => {
+    it('should show error when saving without photos', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -130,7 +130,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('At least one photo is required')).toBeInTheDocument()
     })
 
-    it('should handle file upload', () => {
+    it('should handle file upload', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -144,7 +144,7 @@ describe('PeoplePage', () => {
       expect(global.URL.createObjectURL).toHaveBeenCalled()
     })
 
-    it('should display uploaded photos in gallery', () => {
+    it('should display uploaded photos in gallery', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -159,7 +159,7 @@ describe('PeoplePage', () => {
       expect(gallery.querySelector('img')).toBeInTheDocument()
     })
 
-    it('should create new person when form is valid', () => {
+    it('should create new person when form is valid', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -181,7 +181,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should close form after successful save', () => {
+    it('should close form after successful save', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -202,7 +202,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should show toast notification after save', () => {
+    it('should show toast notification after save', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -221,7 +221,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Saved')).toBeInTheDocument()
     })
 
-    it('should hide toast after timeout', () => {
+    it('should hide toast after timeout', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -246,7 +246,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should cancel form and reset state', () => {
+    it('should cancel form and reset state', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -266,7 +266,7 @@ describe('PeoplePage', () => {
       expect(nameInputAgain).toHaveValue('')
     })
 
-    it('should handle multiple file uploads', () => {
+    it('should handle multiple file uploads', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -286,7 +286,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Search Functionality', () => {
-    it('should filter people by name', () => {
+    it('should filter people by name', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -311,7 +311,7 @@ describe('PeoplePage', () => {
       expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument()
     })
 
-    it('should be case insensitive', () => {
+    it('should be case insensitive', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -327,7 +327,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    it('should show all people when search is cleared', () => {
+    it('should show all people when search is cleared', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -354,7 +354,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Person Details', () => {
-    it('should display person card with details', () => {
+    it('should display person card with details', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -369,7 +369,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    it('should show photo count', () => {
+    it('should show photo count', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -385,7 +385,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('2 sample photos')).toBeInTheDocument()
     })
 
-    it('should show singular photo text for one photo', () => {
+    it('should show singular photo text for one photo', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -398,7 +398,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('1 sample photo')).toBeInTheDocument()
     })
 
-    it('should show enrolled date', () => {
+    it('should show enrolled date', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -413,7 +413,7 @@ describe('PeoplePage', () => {
       expect(enrolledDate.textContent).toContain('Added')
     })
 
-    it('should show active badge', () => {
+    it('should show active badge', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -428,7 +428,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Person Selection and Details', () => {
-    it('should expand person details when clicking card', () => {
+    it('should expand person details when clicking card', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -445,7 +445,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Delete John Doe?')).toBeInTheDocument()
     })
 
-    it('should show photo gallery in expanded view', () => {
+    it('should show photo gallery in expanded view', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -462,7 +462,7 @@ describe('PeoplePage', () => {
       expect(galleries.length).toBeGreaterThan(0)
     })
 
-    it('should allow uploading additional photos to existing person', () => {
+    it('should allow uploading additional photos to existing person', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -489,7 +489,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Edit Person', () => {
-    it('should open edit form when clicking edit button', () => {
+    it('should open edit form when clicking edit button', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -506,7 +506,7 @@ describe('PeoplePage', () => {
       expect(screen.getByLabelText('Name')).toHaveValue('John Doe')
     })
 
-    it('should update person when saving edited form', () => {
+    it('should update person when saving edited form', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -533,7 +533,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Delete Person', () => {
-    it('should show delete confirmation when clicking delete', () => {
+    it('should show delete confirmation when clicking delete', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -550,7 +550,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Confirm Delete')).toBeInTheDocument()
     })
 
-    it('should delete person when confirmed', () => {
+    it('should delete person when confirmed', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -571,7 +571,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should show deleted toast after deletion', () => {
+    it('should show deleted toast after deletion', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -590,7 +590,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Deleted')).toBeInTheDocument()
     })
 
-    it('should cancel deletion', () => {
+    it('should cancel deletion', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -614,7 +614,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Photo Management', () => {
-    it('should show remove button on photo hover', () => {
+    it('should show remove button on photo hover', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -631,7 +631,7 @@ describe('PeoplePage', () => {
       expect(removeButton).toBeInTheDocument()
     })
 
-    it('should show photo removal confirmation', () => {
+    it('should show photo removal confirmation', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -651,7 +651,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Confirm')).toBeInTheDocument()
     })
 
-    it('should remove photo when confirmed', () => {
+    it('should remove photo when confirmed', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -680,7 +680,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should cancel photo removal', () => {
+    it('should cancel photo removal', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -707,7 +707,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Face Search Integration', () => {
-    it('should navigate to search when clicking search photos button', () => {
+    it('should navigate to search when clicking search photos button', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -725,7 +725,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should disable search button when face search is disabled', () => {
+    it('should disable search button when face search is disabled', async () => {
       jest.mocked(apiService.getConfig).mockResolvedValue({
         roots: [],
         ocr_languages: [],
@@ -753,7 +753,7 @@ describe('PeoplePage', () => {
       expect(searchButton).toBeDisabled()
     })
 
-    it('should poll config status periodically', () => {
+    it('should poll config status periodically', async () => {
       renderComponent()
 
       expect(apiService.getConfig).toHaveBeenCalledTimes(1)
@@ -769,7 +769,7 @@ describe('PeoplePage', () => {
       })
     })
 
-    it('should handle config polling errors silently', () => {
+    it('should handle config polling errors silently', async () => {
       jest.mocked(apiService.getConfig).mockRejectedValue(new Error('Config error'))
 
       renderComponent()
@@ -784,7 +784,7 @@ describe('PeoplePage', () => {
   })
 
   describe('Edge Cases', () => {
-    it('should handle empty file list gracefully', () => {
+    it('should handle empty file list gracefully', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -797,7 +797,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Add Person')).toBeInTheDocument()
     })
 
-    it('should trim whitespace from person name', () => {
+    it('should trim whitespace from person name', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -810,7 +810,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    it('should prevent saving with whitespace-only name', () => {
+    it('should prevent saving with whitespace-only name', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 
@@ -823,7 +823,7 @@ describe('PeoplePage', () => {
       expect(screen.getByText('Person name cannot be empty')).toBeInTheDocument()
     })
 
-    it('should handle clicking save person button multiple times', () => {
+    it('should handle clicking save person button multiple times', async () => {
       const user = userEvent.setup({ delay: null })
       renderComponent()
 

@@ -54,7 +54,7 @@ export function RouteErrorBoundary() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {import.meta.env.DEV && error instanceof Error && error.stack && (
+          {process.env.NODE_ENV === 'development' && error instanceof Error && error.stack && (
             <details className="text-left">
               <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 mb-2">
                 Show error details

@@ -152,6 +152,40 @@ class ApiService {
     const requestId = logger.generateRequestId()
     const startTime = performance.now()
 
+    // Build headers (will be used for both fetch and logging)
+    // For FormData, don't set Content-Type (browser will set it with boundary)
+    const isFormData = options?.body instanceof FormData
+
+    // Create final headers as a Headers instance to avoid type issues with HeadersInit union
+    const finalHeaders = new Headers()
+    finalHeaders.set('X-Request-ID', requestId)
+    if (!isFormData) {
+      finalHeaders.set('Content-Type', 'application/json')
+    }
+    const optHeaders = options?.headers
+    if (optHeaders) {
+      if (optHeaders instanceof Headers) {
+        for (const [k, v] of optHeaders.entries()) {
+          finalHeaders.set(k, String(v))
+        }
+      } else if (Array.isArray(optHeaders)) {
+        for (const [k, v] of optHeaders) {
+          finalHeaders.set(k, String(v))
+        }
+      } else {
+        const record = optHeaders as Record<string, string>
+        for (const [k, v] of Object.entries(record)) {
+          finalHeaders.set(k, v)
+        }
+      }
+    }
+
+    // Normalize headers for logging only
+    const logHeaders: Record<string, string> = {}
+    for (const [k, v] of finalHeaders.entries()) {
+      logHeaders[k] = v
+    }
+
     // Log the request
     logger.logApiCall(
       options?.method || 'GET',
@@ -164,17 +198,13 @@ class ApiService {
             : options.body
           : undefined
         : undefined,
-      options?.headers as Record<string, string>
+      logHeaders
     )
 
     try {
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId,
-          ...options?.headers,
-        },
         ...options,
+        headers: finalHeaders,
       })
 
       const duration = performance.now() - startTime
