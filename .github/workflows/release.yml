@@ -32,7 +32,7 @@ jobs:
     outputs:
       ci_passed: ${{ steps.final.outputs.ci_passed }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Skip CI check (manual trigger only)
       if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_ci_check == 'true'
@@ -119,7 +119,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -186,7 +186,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Download artifacts
       uses: actions/download-artifact@v4
