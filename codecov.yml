@@ -1,0 +1,35 @@
+codecov:
+  require_ci_to_pass: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+        only_pulls: false
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - backend/src/main.py
+  - backend/src/__init__.py
+  - backend/src/core/__init__.py
+  - backend/src/api/__init__.py
+  - backend/src/db/__init__.py
+  - backend/src/db/migrations/__init__.py
+  - backend/src/models/__init__.py
+  - backend/src/services/__init__.py
+  - backend/src/workers/__init__.py
+  - frontend/src/main.tsx
+  - frontend/src/vite-env.d.ts
+  - frontend/src/setupTests.ts

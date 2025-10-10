@@ -2,7 +2,7 @@
 
 [![Quick CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml)
 [![E2E Tests](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml)
-[![Coverage Report](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
+[![Coverage Report](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
 [![Dependabot Updates](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates)
 
