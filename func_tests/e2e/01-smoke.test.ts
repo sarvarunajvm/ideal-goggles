@@ -58,6 +58,10 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
   });
 
   test('API documentation button is accessible', async ({ page }) => {
+    // Enable developer mode first (API Docs button only shows in developer mode)
+    await basePage.enableDeveloperMode();
+
+    // Now the API Docs button should be visible
     await expect(basePage.apiDocsButton).toBeVisible();
 
     // Click should open API docs (in new tab/window in real app)

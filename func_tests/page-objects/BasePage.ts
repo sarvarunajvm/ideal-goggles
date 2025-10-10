@@ -89,4 +89,27 @@ export class BasePage {
     await this.page.waitForLoadState('networkidle');
     await this.page.waitForTimeout(500); // Small buffer for animations
   }
+
+  async enableDeveloperMode() {
+    // Click the camera icon 6 times to trigger the developer mode prompt
+    const cameraIcon = this.page.locator('.gradient-gold');
+    for (let i = 0; i < 6; i++) {
+      await cameraIcon.click();
+      await this.page.waitForTimeout(50); // Small delay between clicks
+    }
+
+    // Wait for the code input dialog to appear
+    const codeInput = this.page.locator('input[type="password"]');
+    await codeInput.waitFor({ state: 'visible', timeout: 2000 });
+
+    // Enter the code
+    await codeInput.fill('1996');
+
+    // Click the submit button
+    const submitButton = this.page.locator('button:has-text("Submit")');
+    await submitButton.click();
+
+    // Wait for the dialog to close and developer mode to activate
+    await codeInput.waitFor({ state: 'hidden', timeout: 2000 });
+  }
 }
