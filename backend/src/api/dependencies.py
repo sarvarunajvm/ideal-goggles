@@ -437,44 +437,42 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
                 "errors": "Dynamic dependency installation is not supported in production builds.",
             }
 
-        # First try to find the installer script (for development)
+        # First try to find the unified setup script (for development)
         script_path = (
-            Path(__file__).parent.parent.parent
-            / "scripts"
-            / "install_ml_dependencies.py"
+            Path(__file__).parent.parent.parent / "scripts" / "setup_ml_models.py"
         )
 
         if script_path.exists():
-            # Use the script if available (development mode)
+            # Use the unified script if available (development mode)
             cmd = [sys.executable, str(script_path)]
 
-            if "all" not in request.components:
-                # Always skip tesseract since we're removing OCR
-                cmd.append("--skip-tesseract")
-                if "clip" not in request.components:
-                    cmd.append("--skip-clip")
-                if "face" not in request.components:
-                    cmd.append("--skip-face")
+            # For the API, we want to install dependencies
+            # User can verify separately via /dependencies/verify endpoint
+            cmd.append("--install-only")
 
-            logger.info(f"Running ML dependency installer script: {' '.join(cmd)}")
+            # Note: The new unified script doesn't have component-specific flags
+            # It installs all ML dependencies (CLIP + InsightFace)
+            # This is intentional as we want a complete ML setup
+
+            logger.info(f"Running ML setup script: {' '.join(cmd)}")
 
             result = subprocess.run(
                 cmd,
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=300,  # 5 minute timeout
+                timeout=600,  # 10 minute timeout for ML installation
             )
 
             if result.returncode == 0:
                 return {
                     "status": "success",
-                    "message": "Dependencies installed successfully",
+                    "message": "ML dependencies installed successfully. Use /dependencies/verify to verify functionality.",
                     "output": result.stdout,
                 }
             return {
                 "status": "partial",
-                "message": "Some dependencies may have failed to install",
+                "message": "Some ML dependencies may have failed to install. Check errors for details.",
                 "output": result.stdout,
                 "errors": result.stderr,
             }

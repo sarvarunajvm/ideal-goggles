@@ -122,17 +122,39 @@ check-style: lint typecheck ## Quality: Run all code quality checks
 # Build & Packaging
 # =============================================================================
 
-package: ## Build: Create standalone binary with PyInstaller
-	@echo "📦 Building standalone binary..."
+package: ## Build: Create standalone binary with PyInstaller (includes ML dependencies)
+	@echo "📦 Building standalone binary with ML dependencies..."
 	$(PYTHON) -m pip install --upgrade pip
 	pip install -e ".[dev]"
+	@echo "🤖 Installing ML dependencies and verifying models..."
+	$(PYTHON) scripts/setup_ml_models.py --all || (echo "❌ ML setup failed!" && exit 1)
+	@echo "📦 Packaging with PyInstaller..."
 	pip install pyinstaller
 	pyinstaller --clean ideal-goggles-backend.spec
 	@echo "✅ Binary created: dist/ideal-goggles-backend"
 
-check-ml: ## Build: Verify ML dependencies are available
+package-lite: ## Build: Create standalone binary WITHOUT ML dependencies (smaller size)
+	@echo "📦 Building lite standalone binary (no ML dependencies)..."
+	$(PYTHON) -m pip install --upgrade pip
+	pip install -e ".[dev]"
+	@echo "⚠️  Skipping ML dependencies (lite build)"
+	pip install pyinstaller
+	pyinstaller --clean ideal-goggles-backend.spec
+	@echo "✅ Lite binary created: dist/ideal-goggles-backend"
+	@echo "ℹ️  ML features will not be available in this build"
+
+install-ml: ## Build: Install ML dependencies for development/production builds
+	@echo "🤖 Installing ML dependencies..."
+	$(PYTHON) scripts/setup_ml_models.py --install-only
+	@echo "✅ ML dependencies installed!"
+
+verify-models: ## Build: Download and verify ML models actually work (not just installed)
+	@echo "🔍 Downloading and verifying ML models..."
+	$(PYTHON) scripts/setup_ml_models.py --verify-only
+
+check-ml: ## Build: Verify ML dependencies are available (quick check)
 	@echo "🔍 Checking ML dependencies..."
-	$(PYTHON) scripts/install_ml_dependencies.py --verify-only
+	$(PYTHON) scripts/setup_ml_models.py --verify-only
 
 # =============================================================================
 # Default target

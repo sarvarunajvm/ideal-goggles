@@ -14,9 +14,30 @@ FastAPI backend service for the Ideal Goggles photo management application.
 
 ## Installation
 
+### Basic Installation
+
 ```bash
 pip install -e ".[dev]"
 ```
+
+### ML Dependencies Installation
+
+For production builds or to use ML features (CLIP embeddings, face recognition):
+
+```bash
+# Install all ML dependencies and verify models work
+python scripts/setup_ml_models.py --all
+
+# Or use Makefile targets:
+make install-ml        # Install only
+make verify-models     # Verify only
+```
+
+The unified `setup_ml_models.py` script:
+- Installs PyTorch, CLIP, InsightFace, OpenCV, ONNX Runtime
+- Downloads required models (CLIP ViT-B/32, InsightFace buffalo_l)
+- **Verifies models actually work** with real inference tests
+- Optimizes for your platform (CPU/MPS/CUDA)
 
 ## Running
 

@@ -49,16 +49,15 @@ pnpm run dev
 Ideal Goggles works out of the box with basic search functionality. To enable advanced features like OCR, semantic search, and face recognition, install the optional ML dependencies:
 
 ```bash
-# Install all ML dependencies (OCR, semantic search, face recognition)
+# Install all ML dependencies (semantic search, face recognition)
+# This installs PyTorch, CLIP, InsightFace and verifies they work
+pnpm run backend:install-ml
+
+# Or use Make:
 make backend-install-ml
 
-# Or install specific components:
-cd backend
-python scripts/install_ml_dependencies.py --skip-face  # Install only OCR and CLIP
-python scripts/install_ml_dependencies.py --skip-clip  # Install only OCR and face recognition
-
-# Check installation status
-make backend-check-ml
+# Verify models work correctly
+pnpm run backend:verify-models
 ```
 
 **ML Features:**
@@ -67,6 +66,8 @@ make backend-check-ml
 - **InsightFace**: Face detection and recognition for people search
 
 These dependencies are optional and can be installed later if needed. The app will gracefully disable features that require missing dependencies.
+
+📖 **See [docs/ML_SETUP.md](docs/ML_SETUP.md) for complete ML setup guide, platform compatibility, and troubleshooting.**
 
 The app will launch with:
 - Backend API on http://localhost:5555
@@ -159,20 +160,48 @@ make dist-all         # Build for all platforms
 
 ## 📦 Building for Production
 
+**Production builds automatically include all ML dependencies** so end users don't need to install anything manually. All AI features (face recognition, semantic search, OCR) work out of the box.
+
 ### Build for your platform:
 
 ```bash
-# macOS (.dmg)
+# macOS (.dmg) - includes all ML features
 pnpm run dist:mac
 
-# Windows (.exe installer)
+# Windows (.exe installer) - includes all ML features
 pnpm run dist:win
 
-# All platforms
+# All platforms - includes all ML features
 pnpm run dist:all
 ```
 
 Built installers will be in the `dist-electron/` directory.
+
+### Build Options:
+
+**Full Build (Recommended - ~3-4 GB):**
+```bash
+# Backend is packaged with all ML dependencies
+pnpm run backend:package      # Full backend with ML
+pnpm run dist:mac             # Full macOS app
+```
+
+**Lite Build (~150 MB, no ML features):**
+```bash
+# For testing or when ML features are not needed
+pnpm run backend:package-lite # Backend without ML
+pnpm run dist:mac             # Lite macOS app
+```
+
+### What's Included in Production Builds:
+
+✅ **Face Recognition** - InsightFace models pre-installed
+✅ **Semantic Search** - PyTorch + CLIP models included
+✅ **OCR Text Search** - Tesseract with language packs
+✅ **Vector Search** - FAISS for fast similarity search
+✅ **All dependencies bundled** - End users install nothing
+
+📖 **For platform-specific build details and packaging strategy, see [docs/ML_SETUP.md](docs/ML_SETUP.md).**
 
 Functional tests live under `func_tests/`. To run:
 
@@ -213,13 +242,20 @@ We welcome contributions!
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
-See docs/DEVELOPER_GUIDE.md for detailed development guidelines.
+📖 **See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for detailed development guidelines.**
 
 ## 📚 Documentation
 
-- docs/USER_MANUAL.md - End user guide
-- docs/DEVELOPER_GUIDE.md - Developer documentation
-- [API Documentation](http://localhost:5555/docs) - When backend is running
+Complete documentation available in `/docs`:
+
+- **[docs/README.md](docs/README.md)** - Documentation index and navigation
+- **[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** - Complete user guide
+- **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)** - Developer setup and architecture
+- **[docs/ML_SETUP.md](docs/ML_SETUP.md)** - ML dependencies, packaging, and platforms
+- **[docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)** - Testing approach and priorities
+- **[docs/COVERAGE.md](docs/COVERAGE.md)** - CI/CD and coverage documentation
+- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** - Contribution guidelines
+- **[API Documentation](http://localhost:5555/docs)** - Interactive API docs (when backend is running)
 
 ## 🐛 Troubleshooting
 
