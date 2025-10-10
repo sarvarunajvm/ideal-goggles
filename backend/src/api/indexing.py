@@ -670,7 +670,7 @@ async def _run_processing_phases(workers, config, photos_to_process):
     _indexing_state["progress"]["processed_files"] = processed_count
 
     # Phase 5: Face detection (if enabled)
-    if config.get("face_search_enabled", False):
+    if config.get("face_search_enabled", True):
         _indexing_state["progress"]["current_phase"] = "faces"
         logger.info("Phase 5: Face detection")
 
@@ -832,12 +832,12 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         if "roots" not in config:
             config["roots"] = []
         if "face_search_enabled" not in config:
-            config["face_search_enabled"] = False
+            config["face_search_enabled"] = True
 
         return config
 
     except Exception:
-        return {"roots": [], "face_search_enabled": False}
+        return {"roots": [], "face_search_enabled": True}
 
 
 def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:

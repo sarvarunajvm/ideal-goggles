@@ -8,6 +8,7 @@ import { initializeAutoUpdater, checkForUpdatesManually } from './updater';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -31,6 +32,8 @@ if (!gotSingleInstanceLock) {
 // Backend management
 async function startBackend(): Promise<void> {
   console.log('[Backend] Starting backend initialization...');
+  updateSplashStatus('Setting up photo library...', 45);
+
   const checkPortInUse = (port: number, host = '127.0.0.1'): Promise<boolean> => {
     return new Promise((resolve) => {
       const socket = net.connect({ port, host });
@@ -86,17 +89,21 @@ async function startBackend(): Promise<void> {
 
       if (isDev) {
         console.log('[Backend] Development mode');
+        updateSplashStatus('Running in developer mode...', 50);
         if (portInUse) {
           console.log('[Backend] Port 5555 already in use (likely dev server running), skipping backend start');
+          updateSplashStatus('Connecting to photo library...', 60);
           resolve();
           return;
         }
         console.log('[Backend] Port 5555 is free, but in dev mode we expect external backend');
+        updateSplashStatus('Connecting to photo library...', 60);
         resolve();
         return;
       }
 
       console.log('[Backend] Production mode');
+      updateSplashStatus('Loading your photos...', 50);
 
       // In production, check if backend is already running
       if (portInUse) {
@@ -125,6 +132,7 @@ async function startBackend(): Promise<void> {
       }
 
       console.log('[Backend] Port 5555 is free, starting packaged backend...');
+      updateSplashStatus('Finding your photo library...', 55);
       console.log('[Backend] resourcesPath:', process.resourcesPath);
 
       const backendPath = join(process.resourcesPath, 'backend');
@@ -139,9 +147,11 @@ async function startBackend(): Promise<void> {
       if (!existsSync(backendExecutable)) {
         console.error('[Backend] Backend executable not found:', { backendExecutable });
         console.error('[Backend] Directory contents:', existsSync(backendPath) ? require('fs').readdirSync(backendPath) : 'Directory does not exist');
-        reject(new Error('Backend executable not found'));
+        reject(new Error('Could not find the photo library manager. Please reinstall Ideal Goggles.'));
         return;
       }
+
+      updateSplashStatus('Setting up your photos...', 60);
 
       // Compute writable data and cache directories under userData
       const userDataDir = app.getPath('userData');
@@ -191,12 +201,15 @@ async function startBackend(): Promise<void> {
         MODELS_DIR: backendEnv.MODELS_DIR,
       });
 
+      updateSplashStatus('Starting photo library...', 65);
+
       backendProcess = spawn(backendExecutable, [], {
         cwd: backendPath,
         env: backendEnv,
       });
 
       console.log('[Backend] Backend process spawned with PID:', backendProcess.pid);
+      updateSplashStatus('Loading your photo library...', 70);
 
       backendProcess.stdout?.on('data', (data) => {
         const msg = data.toString();
@@ -270,6 +283,130 @@ function stopBackend(): void {
   }
 }
 
+function createSplashWindow(): void {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  // Load splash screen HTML
+  const splashHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background: transparent;
+        }
+        .splash-container {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 12px;
+          padding: 40px;
+          text-align: center;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+          width: 360px;
+        }
+        .logo {
+          font-size: 48px;
+          margin-bottom: 20px;
+        }
+        h1 {
+          color: white;
+          font-size: 28px;
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+        .status {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          margin-bottom: 25px;
+          min-height: 20px;
+        }
+        .progress-bar {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          height: 4px;
+          overflow: hidden;
+          margin-bottom: 15px;
+        }
+        .progress-fill {
+          background: white;
+          height: 100%;
+          width: 0%;
+          transition: width 0.3s ease;
+        }
+        .spinner {
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          border-top: 3px solid white;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin: 0 auto;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="splash-container">
+        <div class="logo">📷</div>
+        <h1>Ideal Goggles</h1>
+        <div class="status" id="status">Initializing...</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress"></div>
+        </div>
+        <div class="spinner"></div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`);
+  splashWindow.center();
+
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
+function updateSplashStatus(message: string, progress: number = 0): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.executeJavaScript(`
+      document.getElementById('status').textContent = '${message}';
+      document.getElementById('progress').style.width = '${progress}%';
+    `);
+  }
+}
+
+function closeSplash(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
+
 function createWindow(): void {
   // Create the browser window
   mainWindow = new BrowserWindow({
@@ -298,6 +435,7 @@ function createWindow(): void {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    closeSplash(); // Close splash when main window is ready
 
     if (isDev) {
       mainWindow?.webContents.openDevTools();
@@ -445,28 +583,50 @@ app.whenReady().then(async () => {
   console.log('[App] Node version:', process.versions.node);
 
   try {
-    // Start backend first
-    console.log('[App] Starting backend...');
-    await startBackend();
-    console.log('[App] Backend started successfully!');
+    // Show splash screen immediately
+    console.log('[App] Creating splash screen...');
+    createSplashWindow();
+    updateSplashStatus('Starting up...', 10);
 
-    // Setup IPC handlers
+    // Setup IPC handlers early
     console.log('[App] Setting up IPC handlers...');
     setupIpcHandlers();
+    updateSplashStatus('Getting things ready...', 20);
 
     // Initialize auto-updater
     console.log('[App] Initializing auto-updater...');
     initializeAutoUpdater();
+    updateSplashStatus('Checking for updates...', 30);
 
-    // Expose the selected port to renderer via global shared object BEFORE creating the window,
-    // so preload can read it and expose window.BACKEND_PORT properly.
-    (global as any).BACKEND_PORT = BACKEND_PORT;
-    console.log('[App] Backend port exposed to global:', BACKEND_PORT);
+    // Start backend in background
+    console.log('[App] Starting backend...');
+    updateSplashStatus('Preparing your photo library...', 40);
 
-    // Create main window
-    console.log('[App] Creating main window...');
-    createWindow();
-    console.log('[App] Main window created!');
+    // Run backend startup with progress updates
+    startBackend().then(() => {
+      console.log('[App] Backend started successfully!');
+      updateSplashStatus('Almost ready...', 80);
+
+      // Expose the selected port to renderer via global shared object
+      (global as any).BACKEND_PORT = BACKEND_PORT;
+      console.log('[App] Backend port exposed to global:', BACKEND_PORT);
+
+      // Create main window
+      console.log('[App] Creating main window...');
+      updateSplashStatus('Opening Ideal Goggles...', 90);
+      createWindow();
+      console.log('[App] Main window created!');
+    }).catch((error) => {
+      console.error('[App] Backend startup failed:', error);
+      closeSplash();
+
+      // Show error dialog and quit
+      dialog.showErrorBox(
+        'Startup Error',
+        `Ideal Goggles couldn't start properly:\n\n${error}\n\nPlease try restarting the application.`
+      );
+      app.quit();
+    });
 
     app.on('activate', () => {
       // On macOS, re-create window when dock icon is clicked
@@ -477,6 +637,7 @@ app.whenReady().then(async () => {
     });
   } catch (error) {
     console.error('[App] Failed to start application:', error);
+    closeSplash();
 
     // Show error dialog and quit
     dialog.showErrorBox(

@@ -1,8 +1,11 @@
 """Dependency status and management endpoints."""
 
 import platform
+import signal
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -12,6 +15,10 @@ from ..core.logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+# Cache for dependency check results (package_name -> (installed, version, timestamp))
+_DEPENDENCY_CACHE: dict[str, tuple[bool, str | None, float]] = {}
+_CACHE_TTL = 300  # 5 minutes cache TTL
 
 
 class DependencyStatus(BaseModel):
@@ -52,12 +59,43 @@ def _to_str_or_none(value: Any) -> str | None:
         return None
 
 
+@contextmanager
+def timeout(seconds: int):
+    """Context manager for timeout on operations."""
+
+    def timeout_handler(signum, frame):
+        msg = f"Operation timed out after {seconds} seconds"
+        raise TimeoutError(msg)
+
+    # Only use signal timeout on Unix-like systems
+    if hasattr(signal, "SIGALRM"):
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+    else:
+        # On Windows, just yield without timeout
+        # The import itself should be fast enough
+        yield
+
+
 def check_python_package(package_name: str) -> tuple[bool, str | None]:
     """Check if a Python package is installed and get its version.
 
     Robust to unexpected import errors and non-string version attributes.
     Works for both normal and frozen (PyInstaller) environments.
+    Includes caching and timeout to prevent slow dependency checks.
     """
+    # Check cache first
+    current_time = time.time()
+    if package_name in _DEPENDENCY_CACHE:
+        installed, version, cached_time = _DEPENDENCY_CACHE[package_name]
+        if current_time - cached_time < _CACHE_TTL:
+            return installed, version
+
     # In frozen executables, we need to check if the package was bundled
     if getattr(sys, "frozen", False):
         # For frozen executables, check if package can be imported
@@ -65,37 +103,69 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
         try:
             import importlib
 
-            module = importlib.import_module(package_name)
-            version = getattr(module, "__version__", None)
-            if version is None and package_name == "sqlite3":
-                version = getattr(module, "version", None)
-            return True, _to_str_or_none(version)
+            # Use timeout to prevent hanging on problematic imports
+            with timeout(3):
+                module = importlib.import_module(package_name)
+                version = getattr(module, "__version__", None)
+                if version is None and package_name == "sqlite3":
+                    version = getattr(module, "version", None)
+                result = (True, _to_str_or_none(version))
+                _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+                return result
         except ImportError:
             # In production build, package is not bundled
-            return False, None
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
+        except TimeoutError:
+            logger.warning(
+                "Timeout checking python package '%s' in frozen env - marking as unavailable",
+                package_name,
+            )
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
         except Exception:
             logger.exception(
                 "Failed to check python package '%s' in frozen env", package_name
             )
-            return False, None
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
     else:
         # Development environment - normal import check
         try:
             import importlib
 
-            module = importlib.import_module(package_name)
-            # Many packages expose __version__, some use {pkg}.__version__ or version attributes
-            version = getattr(module, "__version__", None)
-            # Special cases where version may be exposed differently
-            if version is None and package_name == "sqlite3":
-                version = getattr(module, "version", None)
-            return True, _to_str_or_none(version)
+            # Use timeout to prevent hanging on problematic imports
+            with timeout(3):
+                module = importlib.import_module(package_name)
+                # Many packages expose __version__, some use {pkg}.__version__ or version attributes
+                version = getattr(module, "__version__", None)
+                # Special cases where version may be exposed differently
+                if version is None and package_name == "sqlite3":
+                    version = getattr(module, "version", None)
+                result = (True, _to_str_or_none(version))
+                _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+                return result
         except ImportError:
-            return False, None
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
+        except TimeoutError:
+            logger.warning(
+                "Timeout checking python package '%s' - marking as unavailable",
+                package_name,
+            )
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
         except Exception:
             # Catch-all to prevent a single misbehaving import from breaking the endpoint
             logger.exception("Failed to check python package '%s'", package_name)
-            return False, None
+            result = (False, None)
+            _DEPENDENCY_CACHE[package_name] = (*result, current_time)
+            return result
 
 
 def verify_model_functionality(model_type: str) -> dict[str, Any]:

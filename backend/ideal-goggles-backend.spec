@@ -28,6 +28,27 @@ def collect_ml_data_files():
     if torch_cache.exists() and os.path.getsize(torch_cache) < 100 * 1024 * 1024:  # Only if < 100MB
         datas.append((str(torch_cache), 'torch_models'))
 
+    # Bundle CLIP vocabulary file (critical for CLIP to work)
+    try:
+        import clip
+        clip_path = Path(clip.__file__).parent
+        vocab_file = clip_path / 'bpe_simple_vocab_16e6.txt.gz'
+        if vocab_file.exists():
+            datas.append((str(vocab_file), 'clip'))
+            print("✅ CLIP vocabulary file found and will be bundled")
+        else:
+            print("⚠️  CLIP vocabulary file not found - semantic search may not work")
+    except ImportError:
+        print("⚠️  CLIP not installed - semantic search will not be available")
+
+    # Bundle migrations directory
+    migrations_path = Path('src/db/migrations')
+    if migrations_path.exists():
+        datas.append((str(migrations_path), 'src/db/migrations'))
+        print("✅ Database migrations directory will be bundled")
+    else:
+        print("⚠️  Migrations directory not found")
+
     return datas
 
 a = Analysis(
@@ -53,6 +74,11 @@ a = Analysis(
         'sklearn',
         'sklearn.utils._typedefs',
         'sklearn.neighbors._partition_nodes',
+        # Scipy for InsightFace
+        'scipy',
+        'scipy.spatial',
+        'scipy.spatial.distance',
+        'scipy.linalg',
         # PyTorch and CLIP for semantic search
         'torch',
         'torch._C',
@@ -76,6 +102,8 @@ a = Analysis(
         'PIL',
         'PIL.Image',
         'PIL._imaging',
+        # EXIF extraction
+        'exifread',
         # FAISS dependencies
         'faiss',
         # SQLAlchemy
@@ -95,7 +123,6 @@ a = Analysis(
         # Exclude unnecessary packages to reduce size
         'matplotlib',
         'pandas',
-        'scipy',
         'jupyter',
         'notebook',
         'IPython',

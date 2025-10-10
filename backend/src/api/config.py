@@ -86,7 +86,7 @@ async def get_configuration() -> ConfigurationResponse:
 
         return ConfigurationResponse(
             roots=(config_data.get("roots") or get_default_photo_roots()),
-            face_search_enabled=config_data.get("face_search_enabled", False),
+            face_search_enabled=config_data.get("face_search_enabled", True),
             semantic_search_enabled=config_data.get("semantic_search_enabled", True),
             batch_size=config_data.get("batch_size", 50),
             thumbnail_size=config_data.get("thumbnail_size", "medium"),
@@ -263,7 +263,7 @@ async def get_default_configuration() -> dict[str, Any]:
     """
     return {
         "roots": [],
-        "face_search_enabled": False,
+        "face_search_enabled": True,
         "semantic_search_enabled": True,
         "batch_size": 50,
         "thumbnail_size": "medium",
@@ -339,7 +339,7 @@ async def reset_configuration() -> dict[str, Any]:
         # Reset to default values
         default_config = {
             "roots": [],
-            "face_search_enabled": False,
+            "face_search_enabled": True,
             "semantic_search_enabled": True,
             "thumbnail_size": "medium",
             "thumbnail_quality": 85,
@@ -412,7 +412,7 @@ def _get_config_defaults() -> dict[str, Any]:
     """Get default configuration values."""
     return {
         "roots": get_default_photo_roots(),
-        "face_search_enabled": False,
+        "face_search_enabled": True,
         "semantic_search_enabled": True,
         "batch_size": 50,
         "thumbnail_size": "medium",
@@ -454,7 +454,7 @@ def _get_config_from_db(db_manager) -> dict[str, Any]:
         # Return defaults on error
         return {
             "roots": get_default_photo_roots(),
-            "face_search_enabled": False,
+            "face_search_enabled": True,
             "thumbnail_size": "medium",
             "thumbnail_quality": 85,
             "index_version": "1",

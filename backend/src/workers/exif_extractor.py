@@ -43,11 +43,16 @@ class EXIFExtractor:
                 exif_data = EXIFData.from_exif_dict(photo.id, exif_dict)
                 self.stats["successful"] += 1
                 return exif_data
-            logger.debug(f"No EXIF data found in {photo.path}")
+            logger.warning(
+                f"No EXIF data found in {photo.path} (file_id={photo.id}, ext={photo.ext})"
+            )
             return None
 
         except Exception as e:
-            logger.warning(f"Failed to extract EXIF from {photo.path}: {e}")
+            logger.exception(
+                f"Failed to extract EXIF from {photo.path}: {type(e).__name__}: {e} "
+                f"(file_id={photo.id}, ext={photo.ext}, size={photo.size} bytes)"
+            )
             self.stats["failed"] += 1
             return None
 
@@ -86,7 +91,9 @@ class EXIFExtractor:
                 return decoded_exif
 
         except Exception as e:
-            logger.debug(f"PIL EXIF extraction failed for {file_path}: {e}")
+            logger.warning(
+                f"PIL EXIF extraction failed for {file_path}: {type(e).__name__}: {e}"
+            )
             return None
 
     async def extract_batch(self, photos: list[Photo]) -> list[EXIFData | None]:
@@ -189,6 +196,7 @@ class AdvancedEXIFExtractor(EXIFExtractor):
                 tags = self.exifread.process_file(f, details=False)
 
             if not tags:
+                logger.debug(f"No EXIF tags found with exifread for {file_path}")
                 return None
 
             # Convert exifread tags to standard format
@@ -216,7 +224,9 @@ class AdvancedEXIFExtractor(EXIFExtractor):
             return decoded_exif
 
         except Exception as e:
-            logger.debug(f"exifread extraction failed for {file_path}: {e}")
+            logger.warning(
+                f"exifread extraction failed for {file_path}: {type(e).__name__}: {e}"
+            )
             return None
 
 

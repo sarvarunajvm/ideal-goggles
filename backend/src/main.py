@@ -141,6 +141,58 @@ async def root() -> dict[str, Any]:
     }
 
 
+def _validate_startup_dependencies() -> None:
+    """Validate critical dependencies at startup."""
+    is_frozen = getattr(sys, "frozen", False)
+    logger.info(f"Running in {'frozen' if is_frozen else 'development'} mode")
+
+    issues = []
+
+    # Check critical ML dependencies
+    critical_deps = {
+        "clip": "Semantic search functionality",
+        "scipy": "Face detection (InsightFace dependency)",
+        "exifread": "Enhanced EXIF extraction",
+    }
+
+    for dep, feature in critical_deps.items():
+        try:
+            import importlib
+
+            importlib.import_module(dep)
+            logger.info(f"✅ {dep} available - {feature} enabled")
+        except ImportError:
+            msg = f"⚠️  {dep} not available - {feature} will be unavailable"
+            logger.warning(msg)
+            issues.append(msg)
+
+    if is_frozen and issues:
+        logger.warning(
+            "Some ML dependencies are missing in frozen build. "
+            "These features will not be available. "
+            "To enable them, rebuild with all dependencies included."
+        )
+
+    # Validate database migrations directory in frozen build
+    if is_frozen:
+        import os
+
+        base_path = (
+            Path(sys._MEIPASS)
+            if hasattr(sys, "_MEIPASS")
+            else Path(sys.executable).parent
+        )
+        migrations_path = base_path / "src" / "db" / "migrations"
+
+        if migrations_path.exists():
+            logger.info(f"✅ Database migrations directory found at {migrations_path}")
+        else:
+            logger.warning(
+                f"⚠️  Migrations directory not found at {migrations_path}. "
+                "Schema upgrades may not work properly."
+            )
+
+
 def main() -> None:
     """Run the application.
 
@@ -153,6 +205,9 @@ def main() -> None:
     logger.info(f"Debug mode: {settings.DEBUG}")
     logger.info(f"UI available: {_UI_AVAILABLE}")
     logger.info(f"Docs enabled: {_DOCS_ENABLED}")
+
+    # Validate dependencies at startup
+    _validate_startup_dependencies()
 
     try:
         uvicorn.run(
