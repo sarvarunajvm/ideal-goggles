@@ -79,6 +79,9 @@ a = Analysis(
         'scipy.spatial',
         'scipy.spatial.distance',
         'scipy.linalg',
+        # Matplotlib for InsightFace visualization
+        'matplotlib',
+        'matplotlib.pyplot',
         # PyTorch and CLIP for semantic search
         'torch',
         'torch._C',
@@ -121,7 +124,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[
         # Exclude unnecessary packages to reduce size
-        'matplotlib',
+        # Note: matplotlib is required by InsightFace, so we cannot exclude it
         'pandas',
         'jupyter',
         'notebook',

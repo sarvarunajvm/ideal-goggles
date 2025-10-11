@@ -92,6 +92,14 @@ export interface IndexStats {
   thumbnails?: Record<string, unknown>
 }
 
+export interface Person {
+  id: number
+  name: string
+  sample_count: number
+  created_at: string
+  active: boolean
+}
+
 export interface DependencyStatus {
   name: string
   installed: boolean
@@ -381,20 +389,40 @@ class ApiService {
   }
 
   // People endpoints
-  async getPeople(): Promise<Record<string, unknown>[]> {
-    return this.request('/people')
+  async getPeople(): Promise<Person[]> {
+    return this.request<Person[]>('/people')
   }
 
   async createPerson(
     name: string,
     sampleFileIds: number[]
-  ): Promise<Record<string, unknown>> {
-    return this.request('/people', {
+  ): Promise<Person> {
+    return this.request<Person>('/people', {
       method: 'POST',
       body: JSON.stringify({
         name,
         sample_file_ids: sampleFileIds,
       }),
+    })
+  }
+
+  async updatePerson(
+    personId: number,
+    updates: {
+      name?: string
+      active?: boolean
+      additional_sample_file_ids?: number[]
+    }
+  ): Promise<Person> {
+    return this.request<Person>(`/people/${personId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deletePerson(personId: number): Promise<void> {
+    return this.request<void>(`/people/${personId}`, {
+      method: 'DELETE',
     })
   }
 
@@ -406,6 +434,11 @@ class ApiService {
         top_k: topK,
       }),
     })
+  }
+
+  // Get indexed photos (for selecting sample photos when creating people)
+  async getIndexedPhotos(limit = 200): Promise<SearchResponse> {
+    return this.searchPhotos({ limit })
   }
 
   // Dependencies endpoints

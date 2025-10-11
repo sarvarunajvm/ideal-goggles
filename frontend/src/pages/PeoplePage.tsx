@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiService } from '../services/apiClient'
+import { apiService, Person, SearchResult } from '../services/apiClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,19 +9,11 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Upload, AlertCircle, Search as SearchIcon } from 'lucide-react'
-
-type Person = {
-  id: number
-  name: string
-  createdAt: string
-  active: boolean
-  photos: string[]
-}
+import { AlertCircle, Search as SearchIcon, X } from 'lucide-react'
+import { getThumbnailBaseUrl } from '../services/apiClient'
 
 export default function PeoplePage() {
   const [people, setPeople] = useState<Person[]>([])
@@ -30,19 +22,28 @@ export default function PeoplePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [nameInput, setNameInput] = useState('')
-  const [formPhotos, setFormPhotos] = useState<string[]>([])
   const [toast, setToast] = useState<{
     kind: 'Saved' | 'Deleted'
     id: number
   } | null>(null)
   const [faceSearchEnabled, setFaceSearchEnabled] = useState(true)
-  const [photoToRemove, setPhotoToRemove] = useState<{
-    personId: number
-    photoIndex: number
-  } | null>(null)
   const [editingPersonId, setEditingPersonId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
+
+  // Photo selection state
+  const [indexedPhotos, setIndexedPhotos] = useState<SearchResult[]>([])
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<number[]>([])
+  const [photoSearchQuery, setPhotoSearchQuery] = useState('')
+
   const navigate = useNavigate()
 
+  // Load people list
+  useEffect(() => {
+    loadPeople()
+  }, [])
+
+  // Check face search config
   useEffect(() => {
     let cancelled = false
     const check = async () => {
@@ -61,10 +62,46 @@ export default function PeoplePage() {
     }
   }, [])
 
+  const loadPeople = async () => {
+    try {
+      setLoading(true)
+      const peopleData = await apiService.getPeople()
+      setPeople(peopleData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load people')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadIndexedPhotos = async () => {
+    try {
+      setLoadingPhotos(true)
+      const params: any = { limit: 200 }
+      if (photoSearchQuery.trim()) {
+        params.q = photoSearchQuery.trim()
+      }
+      const response = await apiService.searchPhotos(params)
+      setIndexedPhotos(response.items)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load photos')
+    } finally {
+      setLoadingPhotos(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showForm) {
+      loadIndexedPhotos()
+    }
+  }, [showForm, photoSearchQuery])
+
   const resetForm = () => {
     setNameInput('')
-    setFormPhotos([])
+    setSelectedPhotoIds([])
+    setPhotoSearchQuery('')
     setEditingPersonId(null)
+    setError(null)
   }
 
   const openAddForm = () => {
@@ -72,54 +109,58 @@ export default function PeoplePage() {
     setShowForm(true)
   }
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return
-    const urls: string[] = []
-    for (const f of Array.from(files)) {
-      const url = URL.createObjectURL(f)
-      urls.push(url)
-    }
-    setFormPhotos(prev => [...prev, ...urls])
+  const togglePhotoSelection = (photoId: number) => {
+    setSelectedPhotoIds(prev => {
+      if (prev.includes(photoId)) {
+        return prev.filter(id => id !== photoId)
+      }
+      if (prev.length >= 10) {
+        setError('Maximum 10 sample photos allowed')
+        return prev
+      }
+      return [...prev, photoId]
+    })
   }
 
-  const savePerson = () => {
+  const savePerson = async () => {
     setError(null)
     if (!nameInput.trim()) {
       setError('Person name cannot be empty')
       return
     }
-    if (formPhotos.length === 0) {
+    if (selectedPhotoIds.length === 0) {
       setError('At least one photo is required')
       return
     }
 
-    if (editingPersonId) {
-      // Update existing person
-      setPeople(prev =>
-        prev.map(p =>
-          p.id === editingPersonId
-            ? { ...p, name: nameInput.trim(), photos: formPhotos }
-            : p
-        )
-      )
-      setToast({ kind: 'Saved', id: editingPersonId })
-    } else {
-      // Create new person
-      const now = new Date().toISOString()
-      const newPerson: Person = {
-        id: Date.now(),
-        name: nameInput.trim(),
-        createdAt: now,
-        active: true,
-        photos: formPhotos,
-      }
-      setPeople(prev => [...prev, newPerson])
-      setToast({ kind: 'Saved', id: newPerson.id })
-    }
+    try {
+      setLoading(true)
 
-    setShowForm(false)
-    resetForm()
-    setTimeout(() => setToast(null), 1200)
+      if (editingPersonId) {
+        // Update existing person
+        await apiService.updatePerson(editingPersonId, {
+          name: nameInput.trim(),
+          additional_sample_file_ids: selectedPhotoIds,
+        })
+        setToast({ kind: 'Saved', id: editingPersonId })
+      } else {
+        // Create new person
+        const newPerson = await apiService.createPerson(
+          nameInput.trim(),
+          selectedPhotoIds
+        )
+        setToast({ kind: 'Saved', id: newPerson.id })
+      }
+
+      await loadPeople()
+      setShowForm(false)
+      resetForm()
+      setTimeout(() => setToast(null), 1200)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save person')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const selected = useMemo(
@@ -127,45 +168,31 @@ export default function PeoplePage() {
     [people, selectedId]
   )
 
-  const updateSelected = (updater: (p: Person) => Person) => {
+  const deleteSelected = async () => {
     if (!selected) return
-    setPeople(prev => prev.map(p => (p.id === selected.id ? updater(p) : p)))
-    setToast({ kind: 'Saved', id: selected.id })
-    setTimeout(() => setToast(null), 1200)
-  }
 
-  const confirmRemovePhoto = () => {
-    if (!photoToRemove) return
-    const person = people.find(p => p.id === photoToRemove.personId)
-    if (!person) return
-
-    setPeople(prev =>
-      prev.map(p =>
-        p.id === photoToRemove.personId
-          ? {
-              ...p,
-              photos: p.photos.filter((_, i) => i !== photoToRemove.photoIndex),
-            }
-          : p
-      )
-    )
-    setPhotoToRemove(null)
-    setToast({ kind: 'Saved', id: photoToRemove.personId })
-    setTimeout(() => setToast(null), 1200)
-  }
-
-  const deleteSelected = () => {
-    if (!selected) return
-    setPeople(prev => prev.filter(p => p.id !== selected.id))
-    setSelectedId(null)
-    setToast({ kind: 'Deleted', id: selected.id })
-    setTimeout(() => setToast(null), 1200)
+    try {
+      setLoading(true)
+      await apiService.deletePerson(selected.id)
+      await loadPeople()
+      setSelectedId(null)
+      setToast({ kind: 'Deleted', id: selected.id })
+      setTimeout(() => setToast(null), 1200)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete person')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const filteredPeople = useMemo(() => {
     const q = search.toLowerCase()
     return people.filter(p => p.name.toLowerCase().includes(q))
   }, [people, search])
+
+  const selectedPhotos = useMemo(() => {
+    return indexedPhotos.filter(p => selectedPhotoIds.includes(p.file_id))
+  }, [indexedPhotos, selectedPhotoIds])
 
   return (
     <>
@@ -175,6 +202,7 @@ export default function PeoplePage() {
             <h1 className="text-3xl font-bold text-foreground">People</h1>
             <Button
               onClick={openAddForm}
+              disabled={loading}
               className="h-8 px-3 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-[1.02] !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
               ➕ Add Person
@@ -200,7 +228,7 @@ export default function PeoplePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
                     <Label htmlFor="person-name">Name</Label>
                     <Input
@@ -211,29 +239,90 @@ export default function PeoplePage() {
                       className="mt-1"
                     />
                   </div>
+
                   <div>
-                    <Label>Photos</Label>
-                    <div className="relative">
-                      <Button
-                        type="button"
-                        className="mr-2 !bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 transition-all"
-                        onClick={() =>
-                          document.getElementById('new-person-file')?.click()
-                        }
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Photos
-                      </Button>
-                      <input
-                        id="new-person-file"
-                        type="file"
-                        multiple
-                        className="hidden"
-                        onChange={e => handleFileSelect(e.target.files)}
+                    <Label>Select Sample Photos ({selectedPhotoIds.length}/10)</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Choose photos from your indexed library that contain this person
+                    </p>
+
+                    {/* Photo search */}
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        placeholder="Search photos by filename..."
+                        value={photoSearchQuery}
+                        onChange={e => setPhotoSearchQuery(e.target.value)}
                       />
                     </div>
+
+                    {/* Selected photos preview */}
+                    {selectedPhotos.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium mb-2">Selected photos:</p>
+                        <div className="grid grid-cols-5 gap-2" data-testid="photo-gallery">
+                          {selectedPhotos.map(photo => (
+                            <div key={photo.file_id} className="relative group">
+                              <img
+                                src={`${getThumbnailBaseUrl()}/${photo.thumb_path}`}
+                                alt={photo.filename}
+                                className="w-full aspect-square object-cover rounded border-2 border-primary"
+                              />
+                              <button
+                                onClick={() => togglePhotoSelection(photo.file_id)}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Available photos grid */}
+                    {loadingPhotos ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Loading photos...
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg p-3 max-h-96 overflow-y-auto">
+                        <div className="grid grid-cols-6 gap-2">
+                          {indexedPhotos.map(photo => {
+                            const isSelected = selectedPhotoIds.includes(photo.file_id)
+                            return (
+                              <div
+                                key={photo.file_id}
+                                className={`relative cursor-pointer rounded transition ${
+                                  isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-primary/50'
+                                }`}
+                                onClick={() => togglePhotoSelection(photo.file_id)}
+                              >
+                                <img
+                                  src={`${getThumbnailBaseUrl()}/${photo.thumb_path}`}
+                                  alt={photo.filename}
+                                  className="w-full aspect-square object-cover rounded"
+                                />
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-primary/20 rounded flex items-center justify-center">
+                                    <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                      ✓
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {indexedPhotos.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            No indexed photos found. Make sure your library is indexed first.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+
                 {error && (
                   <div
                     role="alert"
@@ -243,13 +332,14 @@ export default function PeoplePage() {
                     {error}
                   </div>
                 )}
+
                 <div className="mt-4 flex gap-2">
                   <Button
                     onClick={savePerson}
-                    disabled={!nameInput.trim() || formPhotos.length === 0}
+                    disabled={!nameInput.trim() || selectedPhotoIds.length === 0 || loading}
                     className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                   >
-                    Save Person
+                    {loading ? 'Saving...' : 'Save Person'}
                   </Button>
                   <Button
                     variant="secondary"
@@ -258,24 +348,11 @@ export default function PeoplePage() {
                       setShowForm(false)
                       resetForm()
                     }}
+                    disabled={loading}
                   >
                     Cancel
                   </Button>
                 </div>
-                {formPhotos.length > 0 && (
-                  <div className="mt-4" data-testid="photo-gallery">
-                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                      {formPhotos.map((src, idx) => (
-                        <img
-                          key={idx}
-                          src={src}
-                          alt="preview"
-                          className="w-full aspect-square object-cover rounded"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}
@@ -299,12 +376,12 @@ export default function PeoplePage() {
                   <CardTitle className="text-lg text-foreground">{person.name}</CardTitle>
                   <CardDescription>
                     <span data-testid="photo-count">
-                      {person.photos.length} sample photo
-                      {person.photos.length !== 1 ? 's' : ''}
+                      {person.sample_count} sample photo
+                      {person.sample_count !== 1 ? 's' : ''}
                     </span>
                     <br />
                     <span data-testid="enrolled-date">
-                      Added {new Date(person.createdAt).toLocaleDateString()}
+                      Added {new Date(person.created_at).toLocaleDateString()}
                     </span>
                   </CardDescription>
                 </CardHeader>
@@ -321,7 +398,6 @@ export default function PeoplePage() {
                     <Button
                       onClick={e => {
                         e.stopPropagation()
-                        setSelectedId(person.id)
                         if (faceSearchEnabled) {
                           navigate(`/?face=${person.id}`)
                         }
@@ -338,12 +414,12 @@ export default function PeoplePage() {
                         className="flex-1 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all"
                         onClick={e => {
                           e.stopPropagation()
-                          setSelectedId(person.id)
                           setEditingPersonId(person.id)
-                          setShowForm(true)
                           setNameInput(person.name)
-                          setFormPhotos(person.photos)
+                          setSelectedPhotoIds([])
+                          setShowForm(true)
                         }}
+                        disabled={loading}
                       >
                         Edit
                       </Button>
@@ -354,97 +430,28 @@ export default function PeoplePage() {
                           e.stopPropagation()
                           setSelectedId(person.id)
                         }}
+                        disabled={loading}
                       >
                         Delete
                       </Button>
                     </div>
                   </div>
                 </CardContent>
-
-                {selectedId === person.id && (
-                  <CardFooter className="flex-col items-start border-t pt-4">
-                    <div className="w-full">
-                      <div className="flex items-center justify-between mb-2">
-                        <Label>Photos</Label>
-                        <div>
-                          <Button
-                            className="!bg-gradient-to-r !from-[rgb(var(--green-rgb))] !to-[rgb(var(--green-rgb))] hover:!from-[rgb(var(--green-rgb))]/80 hover:!to-[rgb(var(--green-rgb))]/80 !text-black !border-[rgb(var(--green-rgb))]/50 !shadow-[var(--shadow-green)] hover:!shadow-[var(--shadow-green)] hover:scale-105 transition-all"
-                            onClick={e => {
-                              e.stopPropagation()
-                              document
-                                .getElementById(`file-${person.id}`)
-                                ?.click()
-                            }}
-                          >
-                            <Upload className="w-4 h-4 mr-2" /> Upload Photos
-                          </Button>
-                          <input
-                            id={`file-${person.id}`}
-                            type="file"
-                            multiple
-                            className="hidden"
-                            onChange={e => {
-                              const files = e.target.files
-                              if (!files) return
-                              const urls: string[] = []
-                              for (const f of Array.from(files)) {
-                                const url = URL.createObjectURL(f)
-                                urls.push(url)
-                              }
-                              updateSelected(p => ({
-                                ...p,
-                                photos: [...p.photos, ...urls],
-                              }))
-                            }}
-                          />
-                          <Button
-                            className="ml-2 !bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all"
-                            onClick={e => {
-                              e.stopPropagation()
-                              // The photos have already been added via updateSelected in the file input onChange
-                              setToast({ kind: 'Saved', id: person.id })
-                              setTimeout(() => setToast(null), 1200)
-                            }}
-                          >
-                            Save Person
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      data-testid="photo-gallery"
-                      className="grid grid-cols-3 gap-2 w-full"
-                    >
-                      {person.photos.map((src, idx) => (
-                        <div key={idx} className="relative group">
-                          <img
-                            src={src}
-                            alt="photo"
-                            className="w-full aspect-square object-cover rounded"
-                          />
-                          <Button
-                            data-testid="remove-photo"
-                            variant="secondary"
-                            size="sm"
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition h-auto py-0.5 px-2 text-xs"
-                            onClick={e => {
-                              e.stopPropagation()
-                              setPhotoToRemove({
-                                personId: person.id,
-                                photoIndex: idx,
-                              })
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardFooter>
-                )}
               </Card>
             ))}
           </div>
+
+          {filteredPeople.length === 0 && !loading && (
+            <div className="text-center py-16 text-muted-foreground">
+              {search ? 'No people found matching your search' : 'No people enrolled yet'}
+            </div>
+          )}
+
+          {loading && people.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              Loading people...
+            </div>
+          )}
 
           {/* Delete confirmation */}
           {selected && (
@@ -455,12 +462,14 @@ export default function PeoplePage() {
                   <Button
                     className="bg-gradient-to-r from-[rgb(var(--red-rgb))] to-[rgb(var(--red-rgb))] hover:from-[rgb(var(--red-rgb))]/80 hover:to-[rgb(var(--red-rgb))]/80 text-white border-[rgb(var(--red-rgb))]/50 shadow-[var(--shadow-red)] hover:shadow-[var(--shadow-red)] transition-all"
                     onClick={deleteSelected}
+                    disabled={loading}
                   >
                     Confirm Delete
                   </Button>
                   <Button
                     className="bg-gradient-to-r from-[rgb(var(--cyan-rgb))] to-[rgb(var(--cyan-rgb))] hover:from-[rgb(var(--cyan-rgb))]/80 hover:to-[rgb(var(--cyan-rgb))]/80 text-black border-[rgb(var(--cyan-rgb))]/50 shadow-[var(--shadow-cyan)] hover:shadow-[var(--shadow-cyan)] transition-all"
                     onClick={() => setSelectedId(null)}
+                    disabled={loading}
                   >
                     Cancel
                   </Button>
@@ -469,31 +478,7 @@ export default function PeoplePage() {
             </Card>
           )}
 
-          {/* Photo removal confirmation */}
-          {photoToRemove && (
-            <Card className="mt-6">
-              <CardContent className="pt-4">
-                <div className="font-medium mb-2">Remove this photo?</div>
-                <div className="flex gap-2">
-                  <Button
-                    id="confirm-remove-btn"
-                    className="bg-gradient-to-r from-[rgb(var(--red-rgb))] to-[rgb(var(--red-rgb))] hover:from-[rgb(var(--red-rgb))]/80 hover:to-[rgb(var(--red-rgb))]/80 text-white border-[rgb(var(--red-rgb))]/50 shadow-[var(--shadow-red)] hover:shadow-[var(--shadow-red)] transition-all"
-                    onClick={confirmRemovePhoto}
-                  >
-                    Confirm
-                  </Button>
-                  <Button
-                    className="bg-gradient-to-r from-[rgb(var(--cyan-rgb))] to-[rgb(var(--cyan-rgb))] hover:from-[rgb(var(--cyan-rgb))]/80 hover:to-[rgb(var(--cyan-rgb))]/80 text-black border-[rgb(var(--cyan-rgb))]/50 shadow-[var(--shadow-cyan)] hover:shadow-[var(--shadow-cyan)] transition-all"
-                    onClick={() => setPhotoToRemove(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Toast messages expected by tests */}
+          {/* Toast messages */}
           {toast && (
             <div
               role="alert"
