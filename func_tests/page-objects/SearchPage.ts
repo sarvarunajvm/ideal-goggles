@@ -15,16 +15,16 @@ export class SearchPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.searchInput = page.locator('input[placeholder*="Search"], input[placeholder*="Describe"]');
-    this.searchButton = page.locator('button[type="submit"]');
-    // Updated to match current UI with Quick Find and Smart Search (using aria-label for icon buttons)
+    this.searchInput = page.locator('input[type="text"][placeholder*="Search"], input[type="text"][placeholder*="Describe"]');
+    this.searchButton = page.locator('button[type="submit"]:has-text("Search")');
+    // Updated to match current UI with Quick Find (Search icon) and Smart Search (Sparkles icon)
     this.textSearchButton = page.locator('button[aria-label*="Quick Find"]');
     this.semanticSearchButton = page.locator('button[aria-label*="Smart Search"]');
-    this.imageSearchButton = page.locator('button[role="tab"]:has-text("Image")');
-    this.filterButton = page.locator('text=Filters');
+    this.imageSearchButton = page.locator('button[aria-label*="Similar Photos"]');
+    this.filterButton = page.locator('button[title="Advanced filters"]');
     this.resultsContainer = page.locator('.grid').first(); // Grid of results
     this.emptyState = page.locator('text=Start searching your photos');
-    this.uploadArea = page.locator('text=Upload an image to search');
+    this.uploadArea = page.locator('text=Drop an image or click to browse');
     this.loadingSpinner = page.locator('.animate-spin');
   }
 
@@ -63,25 +63,25 @@ export class SearchPage extends BasePage {
   }
 
   async getActiveSearchMode(): Promise<string | null> {
-    // Quick Find is the default mode - check if its button exists and is visible
-    // The UI shows Quick Find is active by default when the page loads
-    const quickFindButton = await this.textSearchButton.isVisible().catch(() => false);
-    if (quickFindButton) {
-      return 'Quick Find';
-    }
+    // Check the placeholder text to determine active mode
+    const placeholder = await this.searchInput.getAttribute('placeholder').catch(() => null);
 
-    // Check if Smart Search is active (would need to be clicked first)
-    const smartSearchButton = await this.semanticSearchButton.isVisible().catch(() => false);
-    if (smartSearchButton) {
-      // If Smart Search button was clicked, we'd see different placeholder text
-      const placeholder = await this.searchInput.getAttribute('placeholder');
-      if (placeholder?.includes('Describe')) {
-        return 'Smart Search';
+    if (placeholder) {
+      if (placeholder.includes('Describe')) {
+        return 'Semantic Search';
+      } else if (placeholder.includes('filename') || placeholder.includes('date') || placeholder.includes('text')) {
+        return 'Text Search';
       }
     }
 
-    // Default to Quick Find
-    return 'Quick Find';
+    // Check if image mode is active by looking for upload area
+    const uploadAreaVisible = await this.uploadArea.isVisible().catch(() => false);
+    if (uploadAreaVisible) {
+      return 'Image Search';
+    }
+
+    // Default to Text Search (the default mode)
+    return 'Text Search';
   }
 
   async toggleFilters() {

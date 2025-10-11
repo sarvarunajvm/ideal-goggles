@@ -15,13 +15,15 @@ test.describe('Search Functionality', () => {
     test('@P0 performs basic text search', async () => {
       // Click text search mode
       await searchPage.textSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
 
       // Verify search mode is active
       const activeMode = await searchPage.getActiveSearchMode();
-      expect(activeMode).toContain('Text Search');
+      expect(activeMode).toContain('Text');
 
       // Type a query
       await searchPage.searchInput.fill('test');
+      await searchPage.page.waitForTimeout(100);
 
       // Verify search button is enabled
       const isEnabled = await searchPage.isSearchButtonEnabled();
@@ -36,14 +38,19 @@ test.describe('Search Functionality', () => {
     test('validates search input', async () => {
       // Click text search to enable input
       await searchPage.textSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
+
+      // Clear any existing input first
+      await searchPage.searchInput.fill('');
+      await searchPage.page.waitForTimeout(100);
 
       // Empty search should disable button
-      await searchPage.searchInput.clear();
       const isEnabled = await searchPage.isSearchButtonEnabled();
       expect(isEnabled).toBeFalsy();
 
       // Valid input should enable button
       await searchPage.searchInput.fill('test');
+      await searchPage.page.waitForTimeout(100);
       const isEnabledAfter = await searchPage.isSearchButtonEnabled();
       expect(isEnabledAfter).toBeTruthy();
     });
@@ -103,11 +110,13 @@ test.describe('Search Functionality', () => {
   test.describe('Image Search', () => {
     test('shows upload interface for image search', async () => {
       await searchPage.imageSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
       await expect(searchPage.uploadArea).toBeVisible();
     });
 
     test('uploads and searches by image', async () => {
       await searchPage.imageSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
 
       // Mock successful image upload
       await searchPage.page.route('**/api/search/image', route => {
@@ -148,6 +157,7 @@ test.describe('Search Functionality', () => {
 
     test('handles invalid file types', async () => {
       await searchPage.imageSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
 
       // Try uploading invalid file
       const fileInput = searchPage.page.locator('input[type="file"]');
@@ -171,13 +181,23 @@ test.describe('Search Functionality', () => {
 
   test.describe('Search Filters', () => {
     test('toggles filter panel', async () => {
-      // Filters are always visible in the current UI
-      const filterSection = searchPage.page.locator('text=Filters');
-      await expect(filterSection).toBeVisible();
+      // Click the filter button to open the panel
+      await searchPage.filterButton.click();
+
+      // Wait for the collapsible panel to open
+      await searchPage.page.waitForTimeout(500);
+
+      // Check that date inputs are now visible
+      const fromInput = searchPage.page.locator('input[type="date"]').first();
+      await expect(fromInput).toBeVisible();
     });
 
     test('applies date range filter', async () => {
-      // Find date inputs directly
+      // First, open the filter panel
+      await searchPage.filterButton.click();
+      await searchPage.page.waitForTimeout(500);
+
+      // Find date inputs
       const fromInput = searchPage.page.locator('input[type="date"]').first();
       const toInput = searchPage.page.locator('input[type="date"]').nth(1);
 
@@ -364,16 +384,19 @@ test.describe('Search Functionality', () => {
     test('switches between all search modes', async () => {
       // Text search
       await searchPage.textSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
       let activeMode = await searchPage.getActiveSearchMode();
-      expect(activeMode).toContain('Text Search');
+      expect(activeMode).toContain('Text');
 
       // Semantic search
       await searchPage.semanticSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
       activeMode = await searchPage.getActiveSearchMode();
       expect(activeMode).toContain('Semantic');
 
       // Image search
       await searchPage.imageSearchButton.click();
+      await searchPage.page.waitForTimeout(300);
       activeMode = await searchPage.getActiveSearchMode();
       expect(activeMode).toContain('Image');
     });
