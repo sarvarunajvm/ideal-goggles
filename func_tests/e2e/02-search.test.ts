@@ -42,7 +42,7 @@ test.describe('Search Functionality', () => {
 
       // Clear any existing input first
       await searchPage.searchInput.fill('');
-      await searchPage.page.waitForTimeout(100);
+      await searchPage.page.waitForTimeout(500); // Increased wait for UI to update
 
       // Empty search should disable button
       const isEnabled = await searchPage.isSearchButtonEnabled();
