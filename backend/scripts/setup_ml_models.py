@@ -642,7 +642,9 @@ Examples:
         logger.info("Models are ready for production build!")
         sys.exit(0)
     else:
-        logger.error("\n[ERROR] ML setup failed - some components may not work correctly!")
+        logger.error(
+            "\n[ERROR] ML setup failed - some components may not work correctly!"
+        )
         sys.exit(1)
 
 

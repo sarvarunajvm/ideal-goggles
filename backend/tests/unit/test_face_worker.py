@@ -643,27 +643,6 @@ class TestStatistics:
 class TestFaceSearchEngine:
     """Test FaceSearchEngine functionality."""
 
-    @pytest.mark.skip(
-        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
-    )
-    @pytest.mark.asyncio
-    async def test_search_by_person(self, sample_face):
-        """Test searching photos by person."""
-
-    @pytest.mark.skip(
-        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
-    )
-    @pytest.mark.asyncio
-    async def test_search_by_person_no_matches(self, sample_face):
-        """Test searching by person with no matches."""
-
-    @pytest.mark.skip(
-        reason="Bug in source code: `if not target_person.face_vector` fails with numpy arrays"
-    )
-    @pytest.mark.asyncio
-    async def test_search_by_person_empty_inputs(self):
-        """Test searching by person with empty faces."""
-
     @pytest.mark.asyncio
     async def test_search_by_face_image(self, sample_face):
         """Test searching by face vector."""

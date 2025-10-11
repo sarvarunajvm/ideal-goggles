@@ -193,6 +193,23 @@ class TestStatsManagement:
                     assert manager.stats["total_vectors"] == 2000
                     assert manager.stats["index_size_mb"] == 1.0
 
+    @patch("src.services.faiss_manager.get_settings")
+    def test_save_stats_error_handling(self, mock_get_settings):
+        """Test error handling when saving stats fails."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    # Make stats_path unwritable to trigger exception
+                    with patch("builtins.open", side_effect=Exception("Write error")):
+                        # Should not raise exception
+                        manager._save_stats()
+
 
 class TestOptimizationDecision:
     """Test optimization decision logic."""
@@ -316,8 +333,30 @@ class TestOptimizationDecision:
 
                 assert manager.should_optimize() is False
 
+    @patch("src.services.faiss_manager.get_settings")
+    def test_should_optimize_invalid_datetime(self, mock_get_settings):
+        """Test should_optimize when last_optimization datetime is invalid."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
 
-@pytest.mark.skip(reason="Tests require faiss module which is an optional dependency")
+        mock_index = Mock()
+        mock_index.ntotal = 60000
+
+        mock_vector_service = Mock()
+        mock_vector_service.index = mock_index
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+
+                # Set invalid datetime string
+                manager.stats["last_optimization"] = "invalid-datetime"
+
+                # Should return True when datetime parsing fails
+                assert manager.should_optimize() is True
+
+
 class TestIndexOptimization:
     """Test index optimization functionality."""
 
@@ -385,10 +424,7 @@ class TestIndexOptimization:
 
     @pytest.mark.asyncio
     @patch("src.services.faiss_manager.get_settings")
-    @patch("src.services.faiss_manager.faiss")
-    async def test_perform_optimization_small_collection(
-        self, mock_faiss, mock_get_settings
-    ):
+    async def test_perform_optimization_small_collection(self, mock_get_settings):
         """Test optimization for small collection."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -428,10 +464,7 @@ class TestIndexOptimization:
 
     @pytest.mark.asyncio
     @patch("src.services.faiss_manager.get_settings")
-    @patch("src.services.faiss_manager.faiss")
-    async def test_perform_optimization_medium_collection(
-        self, mock_faiss, mock_get_settings
-    ):
+    async def test_perform_optimization_medium_collection(self, mock_get_settings):
         """Test optimization for medium collection."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -462,10 +495,7 @@ class TestIndexOptimization:
 
     @pytest.mark.asyncio
     @patch("src.services.faiss_manager.get_settings")
-    @patch("src.services.faiss_manager.faiss")
-    async def test_perform_optimization_large_collection(
-        self, mock_faiss, mock_get_settings
-    ):
+    async def test_perform_optimization_large_collection(self, mock_get_settings):
         """Test optimization for large collection."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -519,13 +549,11 @@ class TestIndexOptimization:
                 assert result is False
 
 
-@pytest.mark.skip(reason="Tests require faiss module which is an optional dependency")
 class TestIndexOptimizationMethods:
     """Test specific index optimization methods."""
 
     @patch("src.services.faiss_manager.get_settings")
-    @patch("src.services.faiss_manager.faiss")
-    def test_optimize_flat_index(self, mock_faiss, mock_get_settings):
+    def test_optimize_flat_index(self, mock_get_settings):
         """Test flat index optimization."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -541,20 +569,31 @@ class TestIndexOptimizationMethods:
 
         # Mock new index
         mock_new_index = Mock()
-        mock_faiss.IndexFlatIP.return_value = mock_new_index
 
         with patch.object(FAISSIndexManager, "_load_stats"):
             with patch.object(FAISSIndexManager, "_start_background_scheduler"):
                 manager = FAISSIndexManager()
 
-                result = manager._optimize_flat_index(mock_index)
+                # Patch faiss within the method
+                with patch("builtins.__import__") as mock_import:
+                    mock_faiss = Mock()
+                    mock_faiss.IndexFlatIP.return_value = mock_new_index
 
-                assert result == mock_new_index
-                mock_faiss.IndexFlatIP.assert_called_once_with(512)
+                    def import_side_effect(name, *args, **kwargs):
+                        if name == "faiss":
+                            return mock_faiss
+                        return __import__(name, *args, **kwargs)
 
-    @patch("src.services.faiss_manager.get_settings")
+                    mock_import.side_effect = import_side_effect
+
+                    result = manager._optimize_flat_index(mock_index)
+
+                    assert result == mock_new_index
+                    mock_faiss.IndexFlatIP.assert_called_once_with(512)
+
     @patch("src.services.faiss_manager.faiss")
-    def test_optimize_flat_index_non_clip(self, mock_faiss, mock_get_settings):
+    @patch("src.services.faiss_manager.get_settings")
+    def test_optimize_flat_index_non_clip(self, mock_get_settings, mock_faiss):
         """Test flat index optimization for non-CLIP embeddings."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -579,10 +618,9 @@ class TestIndexOptimizationMethods:
                 assert result == mock_new_index
                 mock_faiss.IndexFlatL2.assert_called_once_with(256)
 
-    @patch("src.services.faiss_manager.get_settings")
     @patch("src.services.faiss_manager.faiss")
-    @patch("src.services.faiss_manager.np")
-    def test_create_ivf_index_without_pq(self, mock_np, mock_faiss, mock_get_settings):
+    @patch("src.services.faiss_manager.get_settings")
+    def test_create_ivf_index_without_pq(self, mock_get_settings, mock_faiss):
         """Test IVF index creation without product quantization."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -610,9 +648,9 @@ class TestIndexOptimizationMethods:
                 mock_ivf_index.train.assert_called_once()
                 mock_ivf_index.add.assert_called()
 
-    @patch("src.services.faiss_manager.get_settings")
     @patch("src.services.faiss_manager.faiss")
-    def test_create_ivf_index_with_pq(self, mock_faiss, mock_get_settings):
+    @patch("src.services.faiss_manager.get_settings")
+    def test_create_ivf_index_with_pq(self, mock_get_settings, mock_faiss):
         """Test IVF index creation with product quantization."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -640,8 +678,7 @@ class TestIndexOptimizationMethods:
                 mock_ivf_pq_index.train.assert_called_once()
 
     @patch("src.services.faiss_manager.get_settings")
-    @patch("src.services.faiss_manager.faiss")
-    def test_create_ivf_index_error_handling(self, mock_faiss, mock_get_settings):
+    def test_create_ivf_index_error_handling(self, mock_get_settings):
         """Test error handling in IVF index creation."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -659,7 +696,6 @@ class TestIndexOptimizationMethods:
                 assert result is None
 
 
-@pytest.mark.skip(reason="Backup tests have mock issues")
 class TestBackupFunctionality:
     """Test backup and restore functionality."""
 
@@ -762,11 +798,13 @@ class TestBackupFunctionality:
             mock_settings.app_data_dir = temp_dir
             mock_get_settings.return_value = mock_settings
 
+            # Create current directory
+            current_dir = Path(temp_dir) / "current"
+            current_dir.mkdir(parents=True, exist_ok=True)
+
             mock_vector_service = Mock()
-            mock_vector_service.index_path = Path(temp_dir) / "current" / "index.faiss"
-            mock_vector_service.metadata_path = (
-                Path(temp_dir) / "current" / "metadata.pkl"
-            )
+            mock_vector_service.index_path = current_dir / "index.faiss"
+            mock_vector_service.metadata_path = current_dir / "metadata.pkl"
             mock_vector_service._load_index = Mock()
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1004,3 +1042,439 @@ class TestEdgeCases:
                 result = await manager.create_backup()
 
                 assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_perform_optimization_no_vector_service(self, mock_get_settings):
+        """Test _perform_optimization when no vector service available."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager()
+
+                result = await manager._perform_optimization()
+
+                assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_perform_optimization_exception(self, mock_get_settings):
+        """Test _perform_optimization when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        mock_index = Mock()
+        mock_index.ntotal = 5000
+        mock_index.d = 512
+
+        mock_vector_service = Mock()
+        mock_vector_service.index = mock_index
+        mock_vector_service.save_index.return_value = True
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+
+                with patch.object(
+                    manager, "create_backup", side_effect=Exception("Backup failed")
+                ):
+                    result = await manager._perform_optimization()
+
+                    assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_perform_optimization_optimized_index_none(self, mock_get_settings):
+        """Test _perform_optimization when optimized index is None."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        mock_index = Mock()
+        mock_index.ntotal = 5000
+        mock_index.d = 512
+
+        mock_vector_service = Mock()
+        mock_vector_service.index = mock_index
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+
+                with patch.object(manager, "create_backup", return_value=True):
+                    with patch.object(
+                        manager, "_optimize_flat_index", return_value=None
+                    ):
+                        result = await manager._perform_optimization()
+
+                        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_save_optimized_index_success(self, mock_get_settings):
+        """Test _save_optimized_index when successful."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_index = Mock()
+            mock_index.ntotal = 1000
+
+            mock_vector_service = Mock()
+            mock_vector_service.index = mock_index
+            mock_vector_service.save_index.return_value = True
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    await manager._save_optimized_index()
+
+                    mock_vector_service.save_index.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_save_optimized_index_failure(self, mock_get_settings):
+        """Test _save_optimized_index when save fails."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_index = Mock()
+            mock_index.ntotal = 1000
+
+            mock_vector_service = Mock()
+            mock_vector_service.index = mock_index
+            mock_vector_service.save_index.return_value = False
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    # Should not raise exception
+                    await manager._save_optimized_index()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_save_optimized_index_exception(self, mock_get_settings):
+        """Test _save_optimized_index when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        mock_vector_service = Mock()
+        mock_vector_service.index = Mock()
+        mock_vector_service.save_index.side_effect = Exception("Save failed")
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+
+                # Should not raise exception
+                await manager._save_optimized_index()
+
+    @patch("src.services.faiss_manager.get_settings")
+    def test_optimize_flat_index_error(self, mock_get_settings):
+        """Test _optimize_flat_index when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        mock_index = Mock()
+        mock_index.ntotal = 1000
+        mock_index.d = 512
+        mock_index.reconstruct_n.side_effect = Exception("Reconstruct failed")
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager()
+
+                result = manager._optimize_flat_index(mock_index)
+
+                assert result is None
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_create_backup_with_exception(self, mock_get_settings):
+        """Test create_backup when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        mock_vector_service = Mock()
+        mock_vector_service.save_index.side_effect = Exception("Save error")
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+
+                result = await manager.create_backup()
+
+                assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_restore_backup_missing_index_file(self, mock_get_settings):
+        """Test restoring from backup with missing index file."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    # Create backup directory but no index file
+                    backup_dir = manager.backup_path / "test_missing"
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+
+                    result = await manager.restore_backup("test_missing")
+
+                    assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_restore_backup_exception(self, mock_get_settings):
+        """Test restore_backup when exception occurs."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_vector_service = Mock()
+            mock_vector_service.index_path = Path(temp_dir) / "index.faiss"
+            mock_vector_service._load_index.side_effect = Exception("Load failed")
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    # Create backup
+                    backup_dir = manager.backup_path / "test_exception"
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+                    (backup_dir / "index.faiss").write_bytes(b"data")
+
+                    with patch.object(manager, "create_backup", return_value=True):
+                        result = await manager.restore_backup("test_exception")
+
+                        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_cleanup_old_backups_no_backups(self, mock_get_settings):
+        """Test _cleanup_old_backups when no backups exist."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    # Should not raise exception
+                    await manager._cleanup_old_backups()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_cleanup_old_backups_with_invalid_info(self, mock_get_settings):
+        """Test _cleanup_old_backups when backup has invalid info.json."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+                    manager.max_backups = 2
+
+                    # Create backup with invalid info
+                    backup_dir = manager.backup_path / "backup_invalid"
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+                    with open(backup_dir / "info.json", "w") as f:
+                        f.write("invalid json")
+
+                    await manager._cleanup_old_backups()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_cleanup_old_backups_removal_error(self, mock_get_settings):
+        """Test _cleanup_old_backups when removal fails."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+                    manager.max_backups = 1
+
+                    # Create multiple backups
+                    for i in range(3):
+                        backup_dir = manager.backup_path / f"backup_{i}"
+                        backup_dir.mkdir(parents=True, exist_ok=True)
+                        backup_time = datetime.now() - timedelta(hours=i)
+                        info = {"created_at": backup_time.isoformat()}
+                        with open(backup_dir / "info.json", "w") as f:
+                            json.dump(info, f)
+
+                    # Mock shutil.rmtree to fail
+                    with patch("shutil.rmtree", side_effect=Exception("Remove failed")):
+                        # Should not raise exception
+                        await manager._cleanup_old_backups()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_shutdown_with_exception(self, mock_get_settings):
+        """Test shutdown when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager()
+
+                with patch.object(
+                    manager, "_save_stats", side_effect=Exception("Save failed")
+                ):
+                    # Should not raise exception
+                    await manager.shutdown()
+
+    @patch("src.services.faiss_manager.get_settings")
+    def test_get_performance_stats_no_vector_service(self, mock_get_settings):
+        """Test get_performance_stats when no vector service."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    # Create index file
+                    manager.index_path.parent.mkdir(parents=True, exist_ok=True)
+                    manager.index_path.write_bytes(b"x" * 1024 * 1024)
+
+                    stats = manager.get_performance_stats()
+
+                    assert "total_vectors" in stats
+                    assert stats["index_size_mb"] == 1.0
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_cleanup_old_backups_exception_handling(self, mock_get_settings):
+        """Test _cleanup_old_backups when exception occurs."""
+        mock_settings = Mock()
+        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_get_settings.return_value = mock_settings
+
+        with patch.object(FAISSIndexManager, "_load_stats"):
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager()
+
+                # Make backup_path.exists() raise exception
+                with patch.object(Path, "exists", side_effect=Exception("Path error")):
+                    # Should not raise exception
+                    await manager._cleanup_old_backups()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_cleanup_old_backups_no_backup_path(self, mock_get_settings):
+        """Test _cleanup_old_backups when backup path doesn't exist."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    # Remove backup path
+                    if manager.backup_path.exists():
+                        shutil.rmtree(manager.backup_path)
+
+                    # Should handle gracefully
+                    await manager._cleanup_old_backups()
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_create_backup_without_metadata(self, mock_get_settings):
+        """Test create_backup when metadata_path is None."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_index = Mock()
+            mock_index.ntotal = 1000
+
+            mock_vector_service = Mock()
+            mock_vector_service.index = mock_index
+            mock_vector_service.save_index.return_value = True
+            mock_vector_service.index_path = Path(temp_dir) / "index.faiss"
+            mock_vector_service.metadata_path = None  # No metadata
+
+            mock_vector_service.index_path.parent.mkdir(parents=True, exist_ok=True)
+            mock_vector_service.index_path.write_bytes(b"data")
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    with patch.object(manager, "_cleanup_old_backups"):
+                        result = await manager.create_backup()
+
+                        assert result is True
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_restore_backup_without_metadata(self, mock_get_settings):
+        """Test restoring backup when metadata file doesn't exist."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.app_data_dir = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            current_dir = Path(temp_dir) / "current"
+            current_dir.mkdir(parents=True, exist_ok=True)
+
+            mock_vector_service = Mock()
+            mock_vector_service.index_path = current_dir / "index.faiss"
+            mock_vector_service.metadata_path = None
+            mock_vector_service._load_index = Mock()
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    # Create backup without metadata
+                    backup_dir = manager.backup_path / "test_no_metadata"
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+                    (backup_dir / "index.faiss").write_bytes(b"data")
+
+                    with patch.object(manager, "create_backup", return_value=True):
+                        result = await manager.restore_backup("test_no_metadata")
+
+                        assert result is True

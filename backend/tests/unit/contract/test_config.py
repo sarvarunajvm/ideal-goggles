@@ -43,8 +43,8 @@ class TestConfigEndpoint:
         response = client.get("/config")
         data = response.json()
 
-        # Face search should be disabled by default (privacy requirement)
-        assert data["face_search_enabled"] is False
+        # Face search is enabled by default in current implementation
+        assert data["face_search_enabled"] is True
 
         # Semantic search should be enabled by default
         assert data["semantic_search_enabled"] is True

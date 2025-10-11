@@ -90,15 +90,10 @@ describe('API Client Service', () => {
 
       const result = await apiService.getHealth()
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/health',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-            'X-Request-ID': 'test-request-id'
-          })
-        })
-      )
+      const callArgs = (global.fetch as jest.Mock).mock.calls[0]
+      const headers = callArgs[1].headers as Headers
+      expect(headers.get('Content-Type')).toBe('application/json')
+      expect(headers.get('X-Request-ID')).toBe('test-request-id')
       expect(result).toEqual(mockHealth)
     })
   })
@@ -654,15 +649,10 @@ describe('API Client Service', () => {
 
       await apiService.getHealth()
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-            'X-Request-ID': expect.any(String)
-          })
-        })
-      )
+      const callArgs = (global.fetch as jest.Mock).mock.calls[0]
+      const headers = callArgs[1].headers as Headers
+      expect(headers.get('Content-Type')).toBe('application/json')
+      expect(headers.get('X-Request-ID')).toBeTruthy()
     })
 
     test('handles FormData correctly', async () => {
@@ -677,7 +667,8 @@ describe('API Client Service', () => {
       const callArgs = (global.fetch as jest.Mock).mock.calls[0]
       expect(callArgs[1].body).toBeInstanceOf(FormData)
       // FormData should not have Content-Type header (browser sets it)
-      expect(callArgs[1].headers['Content-Type']).toBeUndefined()
+      const headers = callArgs[1].headers as Headers
+      expect(headers.get('Content-Type')).toBeNull()
     })
 
     test('merges custom headers', async () => {
@@ -690,7 +681,8 @@ describe('API Client Service', () => {
       await apiService.getHealth()
 
       const callArgs = (global.fetch as jest.Mock).mock.calls[0]
-      expect(callArgs[1].headers).toHaveProperty('X-Request-ID')
+      const headers = callArgs[1].headers as Headers
+      expect(headers.get('X-Request-ID')).toBeTruthy()
     })
   })
 
@@ -715,7 +707,8 @@ describe('API Client Service', () => {
           thumbnail_size: '256'
         }),
         expect.objectContaining({
-          'Content-Type': 'application/json'
+          'x-request-id': 'test-request-id',
+          'content-type': 'application/json'
         })
       )
     })

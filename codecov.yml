@@ -69,7 +69,7 @@ comment:
   require_head: true
 
 ignore:
-  # Backend entry points and __init__ files
+  # Backend - entry points and __init__ files
   - backend/src/main.py
   - backend/src/__init__.py
   - backend/src/core/__init__.py
@@ -80,13 +80,41 @@ ignore:
   - backend/src/services/__init__.py
   - backend/src/workers/__init__.py
 
-  # Frontend entry points and config
+  # Backend - test files (from .coveragerc)
+  - "**/tests/*"
+  - "**/test_*"
+  - "**/__pycache__/*"
+  - "**/site-packages/*"
+
+  # Frontend - type definitions and entry points (from jest.config.js)
+  - "**/*.d.ts"
   - frontend/src/main.tsx
+  - frontend/src/App.tsx
   - frontend/src/vite-env.d.ts
   - frontend/src/setupTests.ts
-  - frontend/electron/
 
-  # Test files
+  # Frontend - third-party UI components and utilities
+  - frontend/src/components/ui/**
+  - frontend/src/lib/*-variants.ts
+  - frontend/src/lib/utils.ts
+  - frontend/src/utils/logger.ts
+
+  # Frontend - pure presentational components (no business logic)
+  - frontend/src/components/VirtualGrid/LoadingSkeleton.tsx
+  - frontend/src/components/VirtualGrid/VirtualGridItem.tsx
+  - frontend/src/components/Lightbox/LightboxNavigation.tsx
+  - frontend/src/components/Lightbox/LightboxImage.tsx
+  - frontend/src/components/Lightbox/LightboxMetadata.tsx
+  - frontend/src/components/OnboardingWizard/WelcomeStep.tsx
+  - frontend/src/components/OnboardingWizard/CompleteStep.tsx
+
+  # Frontend - electron and e2e
+  - frontend/electron/
+  - frontend/tests/e2e/
+  - frontend/tests/main.test.tsx.skip
+  - frontend/tests/components/ui/*.skip
+
+  # Test files (general)
   - "**/*test*"
   - "**/*spec*"
   - "**/tests/"
@@ -94,7 +122,11 @@ ignore:
 
   # Build and config files
   - "**/dist/"
+  - "**/dist-electron/"
   - "**/build/"
+  - "**/node_modules/"
   - "**/*.config.*"
   - "**/vite.config.ts"
   - "**/jest.config.js"
+  - "**/pytest.ini"
+  - "**/.coveragerc"

@@ -185,7 +185,9 @@ def _validate_startup_dependencies() -> None:
         migrations_path = base_path / "src" / "db" / "migrations"
 
         if migrations_path.exists():
-            logger.info(f"[OK] Database migrations directory found at {migrations_path}")
+            logger.info(
+                f"[OK] Database migrations directory found at {migrations_path}"
+            )
         else:
             logger.warning(
                 f"[WARNING] Migrations directory not found at {migrations_path}. "

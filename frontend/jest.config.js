@@ -26,6 +26,7 @@ module.exports = {
     '!src/components/ui/**',              // Third-party UI library (shadcn/ui)
     '!src/lib/*-variants.ts',            // CSS variant definitions
     '!src/lib/utils.ts',                 // Trivial cn() utility
+    '!src/utils/logger.ts',              // Logger uses import.meta incompatible with Jest, mocked globally
     // Pure presentational components (no business logic)
     '!src/components/VirtualGrid/LoadingSkeleton.tsx',
     '!src/components/VirtualGrid/VirtualGridItem.tsx',

@@ -347,7 +347,7 @@ class FaceSearchEngine:
         self, target_person: Person, all_faces: list[Face], top_k: int = 50
     ) -> list[dict[str, Any]]:
         """Search for photos containing a specific person."""
-        if not target_person.face_vector or not all_faces:
+        if target_person.face_vector is None or not all_faces:
             return []
 
         matches = []

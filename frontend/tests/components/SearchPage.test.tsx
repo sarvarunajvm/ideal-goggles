@@ -34,7 +34,9 @@ jest.mock('../../src/services/apiClient', () => ({
       items: [],
       took_ms: 150
     })
-  }
+  },
+  getThumbnailBaseUrl: jest.fn(() => '/thumbnails'),
+  getApiBaseUrl: jest.fn(() => '/api')
 }))
 
 // Mock OS integration
@@ -110,16 +112,24 @@ describe('SearchPage Component', () => {
   })
 
   test('triggers search when Enter key is pressed', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+
+    apiService.semanticSearch.mockResolvedValue({
+      query: 'test query',
+      total_matches: 0,
+      items: [],
+      took_ms: 50
+    })
+
     const user = userEvent.setup()
     renderSearchPage()
 
     const searchInput = screen.getByPlaceholderText(/describe what you're looking for/i)
     await user.type(searchInput, 'test query{Enter}')
 
-    // Wait for search to be called
+    // Wait for search to be called (semantic is default mode)
     await waitFor(() => {
-      const { apiService } = require('../../src/services/apiClient')
-      expect(apiService.searchPhotos).toHaveBeenCalled()
+      expect(apiService.semanticSearch).toHaveBeenCalled()
     })
   })
 
@@ -127,7 +137,7 @@ describe('SearchPage Component', () => {
     const { apiService } = require('../../src/services/apiClient')
 
     // Make search take longer
-    apiService.searchPhotos.mockImplementation(() =>
+    apiService.semanticSearch.mockImplementation(() =>
       new Promise(resolve => setTimeout(() => resolve({
         query: 'test',
         total_matches: 0,
@@ -152,7 +162,7 @@ describe('SearchPage Component', () => {
   test('displays search results', async () => {
     const { apiService } = require('../../src/services/apiClient')
 
-    apiService.searchPhotos.mockResolvedValue({
+    apiService.semanticSearch.mockResolvedValue({
       query: 'test',
       total_matches: 2,
       items: [
@@ -180,13 +190,22 @@ describe('SearchPage Component', () => {
     const searchInput = screen.getByPlaceholderText(/describe what you're looking for/i)
     await user.type(searchInput, 'test{Enter}')
 
-    // Wait for results to appear - look for the results header text
+    // Wait for results to appear - UI shows "N results" not "N photos found"
     await waitFor(() => {
-      expect(screen.getByText(/2 photos found/)).toBeInTheDocument()
+      expect(screen.getByText(/2 results/)).toBeInTheDocument()
     })
   })
 
   test('handles empty search results', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+
+    apiService.semanticSearch.mockResolvedValue({
+      query: 'nonexistent',
+      total_matches: 0,
+      items: [],
+      took_ms: 50
+    })
+
     const user = userEvent.setup()
     renderSearchPage()
 
@@ -194,7 +213,7 @@ describe('SearchPage Component', () => {
     await user.type(searchInput, 'nonexistent{Enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(/0 photo found/)).toBeInTheDocument()
+      expect(screen.getByText(/0 results/)).toBeInTheDocument()
     })
   })
 
@@ -206,8 +225,10 @@ describe('SearchPage Component', () => {
     const imageButton = screen.getByLabelText(/Similar Photos - Find visually similar images/i)
     await user.click(imageButton)
 
-    // The button click switches mode - just verify button exists
-    expect(imageButton).toBeInTheDocument()
+    // After switching to image mode, the UI changes to show file upload area
+    await waitFor(() => {
+      expect(screen.getByText(/Drop an image or click to browse/i)).toBeInTheDocument()
+    })
   })
 
   test('handles file drop for reverse image search', async () => {
@@ -239,7 +260,7 @@ describe('SearchPage Component', () => {
 
   test('displays error message on search failure', async () => {
     const { apiService } = require('../../src/services/apiClient')
-    apiService.searchPhotos.mockRejectedValue(new Error('Search failed'))
+    apiService.semanticSearch.mockRejectedValue(new Error('Search failed'))
 
     const user = userEvent.setup()
     renderSearchPage()
@@ -248,15 +269,17 @@ describe('SearchPage Component', () => {
     await user.type(searchInput, 'test{Enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(/Search Error/)).toBeInTheDocument()
+      // Error message appears in the error banner
+      expect(screen.getByText(/Search failed/)).toBeInTheDocument()
     })
   })
 
   test('filters are available', () => {
     renderSearchPage()
 
-    // Should have filter controls
-    expect(screen.getByText(/filters/i)).toBeInTheDocument()
+    // Should have filter button (has filter icon, text "Advanced filters" in title)
+    const filterButton = screen.getByTitle(/Advanced filters/i)
+    expect(filterButton).toBeInTheDocument()
   })
 
   test('status bar shows indexing status', () => {

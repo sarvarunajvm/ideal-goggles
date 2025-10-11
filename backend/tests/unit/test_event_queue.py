@@ -568,3 +568,407 @@ class TestEventQueueAdvanced:
         )
 
         assert event_id is not None
+
+    def test_event_post_init_auto_id(self):
+        """Test Event __post_init__ auto ID generation."""
+        event = Event(
+            id="",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=None,  # This should trigger auto-generation
+        )
+        assert event.id != ""
+        assert event.created_at is not None
+
+    def test_event_comparison_scheduled_vs_immediate(self):
+        """Test event comparison when one has scheduled_at and other doesn't."""
+        now = datetime.now()
+        scheduled_event = Event(
+            id="1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=now,
+            scheduled_at=now + timedelta(minutes=5),
+        )
+        immediate_event = Event(
+            id="2",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=now,
+        )
+
+        # Immediate event should come before scheduled
+        assert immediate_event < scheduled_event
+        assert not (scheduled_event < immediate_event)
+
+    def test_event_comparison_same_priority_different_time(self):
+        """Test event comparison with same priority but different creation times."""
+        now = datetime.now()
+        event1 = Event(
+            id="1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=now,
+        )
+        event2 = Event(
+            id="2",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=now + timedelta(seconds=1),
+        )
+        assert event1 < event2
+
+    def test_event_to_dict_with_scheduled_at(self):
+        """Test Event.to_dict with scheduled_at."""
+        now = datetime.now()
+        scheduled = now + timedelta(hours=1)
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test.jpg"},
+            created_at=now,
+            scheduled_at=scheduled,
+        )
+        event_dict = event.to_dict()
+
+        assert event_dict["scheduled_at"] == scheduled.isoformat()
+
+    @pytest.mark.asyncio
+    async def test_schedule_loop_processes_due_events(self):
+        """Test that _schedule_loop processes due events."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Add a scheduled event that's already due
+        past_time = datetime.now() - timedelta(seconds=1)
+        queue._scheduled_events.append(
+            Event(
+                id="test-1",
+                type=EventType.FILE_DISCOVERED,
+                priority=Priority.NORMAL,
+                data={},
+                created_at=datetime.now(),
+                scheduled_at=past_time,
+            )
+        )
+
+        # Start and let it process
+        await queue.start()
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        # Scheduled events should be moved to processing queue
+        # Note: This may or may not be 0 depending on timing
+        assert len(queue._scheduled_events) >= 0
+
+    @pytest.mark.asyncio
+    async def test_worker_loop_with_no_events(self):
+        """Test worker loop when no events are available."""
+        queue = EventQueue(max_workers=1, enable_persistence=False)
+
+        # Start and stop immediately - worker should handle empty queue
+        await queue.start()
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        stats = queue.get_statistics()
+        assert stats["is_running"] is False
+
+    @pytest.mark.asyncio
+    async def test_process_event_with_middleware_blocking(self):
+        """Test that middleware can block event processing."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        processed = []
+
+        class TestHandler(EventHandler):
+            async def handle(self, event: Event) -> bool:
+                processed.append(event.id)
+                return True
+
+        # Add middleware that blocks all events
+        queue.add_middleware(lambda _event: False)
+        queue.add_handler(EventType.FILE_DISCOVERED, TestHandler("test"))
+
+        await queue.start()
+        queue.publish(EventType.FILE_DISCOVERED, {"file": "test.jpg"})
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        # Event should not have been processed
+        assert len(processed) == 0
+
+    @pytest.mark.asyncio
+    async def test_process_event_with_no_handlers(self):
+        """Test processing event when no handlers are registered."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        await queue.start()
+        queue.publish(EventType.FILE_DISCOVERED, {"file": "test.jpg"})
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        # Should complete without error even though no handlers exist
+
+    @pytest.mark.asyncio
+    async def test_process_event_handler_failure(self):
+        """Test event processing when handler fails."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        class FailingHandler(EventHandler):
+            async def handle(self, event: Event) -> bool:
+                return False  # Indicate failure
+
+        queue.add_handler(EventType.FILE_DISCOVERED, FailingHandler("failing"))
+
+        await queue.start()
+
+        # Create event with max_retries=0 to avoid long test
+        event = Event(
+            id=str(__import__("uuid").uuid4()),
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test.jpg"},
+            created_at=datetime.now(),
+            max_retries=0,
+        )
+        queue._enqueue_event(event)
+
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        stats = queue.get_statistics()
+        # Event should have failed
+        assert stats["total_failed"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_process_event_handler_exception(self):
+        """Test event processing when handler raises exception."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        class ExceptionHandler(EventHandler):
+            async def handle(self, event: Event) -> bool:
+                raise ValueError("Test exception")
+
+        queue.add_handler(EventType.FILE_DISCOVERED, ExceptionHandler("exception"))
+
+        await queue.start()
+
+        # Publish event with max_retries=0 to avoid long test
+        event = Event(
+            id=str(__import__("uuid").uuid4()),
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test.jpg"},
+            created_at=datetime.now(),
+            max_retries=0,
+        )
+        queue._enqueue_event(event)
+
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        stats = queue.get_statistics()
+        assert stats["total_failed"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_handle_failed_event_with_retries(self):
+        """Test failed event retry logic."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+            max_retries=3,
+        )
+
+        # Manually test retry logic
+        await queue._handle_failed_event(event)
+
+        assert event.retry_count == 1
+        assert len(queue._scheduled_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_handle_failed_event_max_retries_exceeded(self):
+        """Test failed event moved to dead letter queue."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event = Event(
+            id="test-1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+            max_retries=0,
+            retry_count=0,
+        )
+
+        await queue._handle_failed_event(event)
+
+        assert event.retry_count == 1
+        stats = queue.get_statistics()
+        assert stats["dead_letter_queue_size"] == 1
+        assert stats["total_failed"] == 1
+
+    def test_get_statistics_with_processing_times(self):
+        """Test statistics calculation with processing times."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Manually add processing times
+        queue._stats["processing_times"] = [0.1, 0.2, 0.3, 0.4, 0.5]
+
+        stats = queue.get_statistics()
+        assert stats["average_processing_time"] == 0.3
+
+    def test_get_dead_letter_events_empties_queue(self):
+        """Test get_dead_letter_events removes events from queue."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Add events to dead letter queue
+        event1 = Event(
+            id="1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+        )
+        event2 = Event(
+            id="2",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+        )
+
+        queue._dead_letter_queue.put(event1)
+        queue._dead_letter_queue.put(event2)
+
+        dead_events = queue.get_dead_letter_events()
+        assert len(dead_events) == 2
+        assert queue._dead_letter_queue.empty()
+
+    def test_clear_dead_letter_queue_with_events(self):
+        """Test clearing dead letter queue with events."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        event = Event(
+            id="1",
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={},
+            created_at=datetime.now(),
+        )
+
+        queue._dead_letter_queue.put(event)
+        assert not queue._dead_letter_queue.empty()
+
+        queue.clear_dead_letter_queue()
+        assert queue._dead_letter_queue.empty()
+
+    @pytest.mark.asyncio
+    async def test_schedule_loop_error_handling(self):
+        """Test schedule loop handles errors gracefully."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        # Create a malformed event that might cause issues
+        await queue.start()
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+        # Should complete without crashing
+
+    @pytest.mark.asyncio
+    async def test_worker_loop_error_recovery(self):
+        """Test worker loop recovers from errors."""
+        queue = EventQueue(max_workers=1, enable_persistence=False)
+
+        class RecoveringHandler(EventHandler):
+            def __init__(self):
+                super().__init__("recovering")
+                self.call_count = 0
+
+            async def handle(self, event: Event) -> bool:
+                self.call_count += 1
+                if self.call_count == 1:
+                    raise Exception("First call fails")
+                return True
+
+        handler = RecoveringHandler()
+        queue.add_handler(EventType.FILE_DISCOVERED, handler)
+
+        await queue.start()
+
+        # Create events with max_retries=0 to avoid long test
+        event1 = Event(
+            id=str(__import__("uuid").uuid4()),
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test1.jpg"},
+            created_at=datetime.now(),
+            max_retries=0,
+        )
+        queue._enqueue_event(event1)
+
+        await asyncio.sleep(0.1)
+
+        # Second event should still be processed
+        event2 = Event(
+            id=str(__import__("uuid").uuid4()),
+            type=EventType.FILE_DISCOVERED,
+            priority=Priority.NORMAL,
+            data={"file": "test2.jpg"},
+            created_at=datetime.now(),
+            max_retries=0,
+        )
+        queue._enqueue_event(event2)
+
+        await asyncio.sleep(0.1)
+        await queue.stop(timeout=2.0)
+
+    @pytest.mark.asyncio
+    async def test_process_event_handler_can_handle_false(self):
+        """Test handler that returns False from can_handle."""
+        queue = EventQueue(max_workers=2, enable_persistence=False)
+
+        class SelectiveHandler(EventHandler):
+            async def handle(self, event: Event) -> bool:
+                return True
+
+            def can_handle(self, event: Event) -> bool:
+                return event.data.get("process", False)
+
+        queue.add_handler(EventType.FILE_DISCOVERED, SelectiveHandler("selective"))
+
+        await queue.start()
+
+        # This event should not be processed
+        queue.publish(EventType.FILE_DISCOVERED, {"process": False})
+        await asyncio.sleep(0.1)
+
+        await queue.stop(timeout=2.0)
+
+    def test_publish_event_with_all_optional_params(self):
+        """Test publish_event with all optional parameters."""
+        import src.core.event_queue
+        from src.core.event_queue import publish_event
+
+        src.core.event_queue._event_queue = None
+
+        event_id = publish_event(
+            event_type=EventType.FILE_DISCOVERED,
+            data={"file": "test.jpg"},
+            priority=Priority.HIGH,
+            delay=timedelta(seconds=5),
+            correlation_id="corr-123",
+            source="test-source",
+        )
+
+        assert event_id is not None

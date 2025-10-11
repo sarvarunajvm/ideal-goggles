@@ -1,0 +1,52 @@
+[run]
+source = src
+omit =
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */site-packages/*
+
+[report]
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods:
+    @(abc\.)?abstractmethod
+
+    # Don't complain about FAISS-specific code (optional dependency):
+    import faiss
+    except ImportError.*faiss
+
+    # Don't complain about background scheduler loops:
+    while True:
+
+    # Don't complain about type checking blocks:
+    if TYPE_CHECKING:
+
+    # Don't complain about protocol methods:
+    @runtime_checkable
+
+    # Exclude daemon thread infinite loops
+    def scheduler\(\):
+
+ignore_errors = False
+precision = 2
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml

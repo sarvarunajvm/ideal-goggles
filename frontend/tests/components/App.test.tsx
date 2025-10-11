@@ -24,8 +24,10 @@ describe('App Component', () => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
     jest.clearAllMocks();
   });
@@ -41,9 +43,9 @@ describe('App Component', () => {
       );
     });
 
-    // Should show loading message
-    expect(screen.getByText(/Starting local backend/i)).toBeInTheDocument();
-    expect(screen.getByText(/⏳/)).toBeInTheDocument();
+    // Should show loading message with new UI text
+    expect(screen.getByText(/Getting everything ready/i)).toBeInTheDocument();
+    expect(screen.getByText(/preparing your photo library/i)).toBeInTheDocument();
   });
 
   test('renders main app when backend is ready', async () => {
@@ -77,8 +79,8 @@ describe('App Component', () => {
       );
     });
 
-    // Should show backend URL or /api
-    expect(screen.getByText(/\/api|127\.0\.0\.1/)).toBeInTheDocument();
+    // New UI shows helpful tips instead of backend URL
+    expect(screen.getByText(/personal photo search engine/i)).toBeInTheDocument();
   });
 
   test('retries backend connection periodically', async () => {
@@ -98,7 +100,7 @@ describe('App Component', () => {
     });
 
     // Initially shows loading
-    expect(screen.getByText(/Starting local backend/i)).toBeInTheDocument();
+    expect(screen.getByText(/Getting everything ready/i)).toBeInTheDocument();
 
     // Advance timers to trigger retries
     await act(async () => {
@@ -115,7 +117,7 @@ describe('App Component', () => {
 
     // Should eventually render the app
     await waitFor(() => {
-      expect(screen.queryByText(/Starting local backend/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Getting everything ready/i)).not.toBeInTheDocument();
     });
   });
 
@@ -144,15 +146,8 @@ describe('App Component', () => {
       );
     });
 
-    await waitFor(() => {
-      expect(mockElectronAPI.getBackendLogPath).toHaveBeenCalled();
-      expect(mockElectronAPI.getBackendPort).toHaveBeenCalled();
-    });
-
-    // Should show log path when available
-    await waitFor(() => {
-      expect(screen.getByText(/\/logs\/backend\.log/)).toBeInTheDocument();
-    });
+    // In Electron context, loading screen should still show
+    expect(screen.getByText(/Getting everything ready/i)).toBeInTheDocument();
 
     // Clean up
     delete (window as any).electronAPI;
