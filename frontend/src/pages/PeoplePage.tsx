@@ -88,7 +88,10 @@ export default function PeoplePage() {
       setError('Person name cannot be empty')
       return
     }
-    // Allow saving without photos - photos can be added later
+    if (formPhotos.length === 0) {
+      setError('At least one photo is required')
+      return
+    }
 
     if (editingPersonId) {
       // Update existing person
@@ -243,7 +246,7 @@ export default function PeoplePage() {
                 <div className="mt-4 flex gap-2">
                   <Button
                     onClick={savePerson}
-                    disabled={!nameInput.trim()}
+                    disabled={!nameInput.trim() || formPhotos.length === 0}
                     className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
                   >
                     Save Person
