@@ -99,15 +99,27 @@ Updated versions in:
     throw error;
   }
 
-  // Step 5: Show next steps
+  // Step 5: Push tag and changes
   console.log('\n✨ Release prepared successfully!');
-  console.log('\nNext steps:');
-  console.log('1. Push the changes and tag:');
-  console.log(`   git push origin main && git push origin ${tagName}`);
-  console.log('\n2. Or push everything at once:');
-  console.log('   pnpm run release:push');
-  console.log('\n3. Create a GitHub release:');
-  console.log(`   gh release create ${tagName} --generate-notes`);
+  console.log('\n📤 Pushing changes and tag to remote...');
+
+  try {
+    exec('git push origin main');
+    exec(`git push origin ${tagName}`);
+    console.log(`✅ Successfully pushed tag ${tagName} to remote`);
+    console.log('\n🚀 GitHub Actions will now automatically:');
+    console.log('   1. Run CI checks (Quick CI + E2E Tests)');
+    console.log('   2. Build packages for all platforms');
+    console.log('   3. Create a GitHub release with artifacts');
+    console.log(`\n📊 Monitor progress at: https://github.com/${exec('git config --get remote.origin.url', true).replace(/.*github\.com[:/](.*)\.git/, '$1')}/actions`);
+  } catch (error) {
+    console.error('\n❌ Failed to push to remote');
+    console.error('You can manually push with:');
+    console.log(`   git push origin main && git push origin ${tagName}`);
+    console.log('\nOr use:');
+    console.log('   pnpm run release:push');
+    process.exit(1);
+  }
 }
 
 // Handle script execution

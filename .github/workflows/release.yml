@@ -16,6 +16,10 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.25)'
+        required: true
+        type: string
       skip_ci_check:
         description: 'Skip CI verification (for testing only)'
         required: false
@@ -191,9 +195,19 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v4
 
+    - name: Determine tag name
+      id: tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tag_name=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.tag.outputs.tag_name }}
         files: |
           macos-dmg/*.dmg
           windows-installer/*.exe
