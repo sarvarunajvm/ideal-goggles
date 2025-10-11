@@ -1,8 +1,8 @@
 """Production-ready logging configuration for the Ideal Goggles API."""
 
+import contextlib
 import logging
 import logging.handlers
-import contextlib
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -139,9 +139,7 @@ def setup_logging(
         try:
             syslog_handler = logging.handlers.SysLogHandler(address="/dev/log")
             # Ensure we set a concrete level value, not a mock
-            warning_level = (
-                logging.WARNING if isinstance(logging.WARNING, int) else 30
-            )
+            warning_level = logging.WARNING if isinstance(logging.WARNING, int) else 30
             # Some tests mock SysLogHandler; set both via method and attribute
             with contextlib.suppress(Exception):
                 syslog_handler.setLevel(warning_level)

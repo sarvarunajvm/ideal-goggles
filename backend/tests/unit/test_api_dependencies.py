@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.dependencies import (
-    DependencyStatus,
     _DEPENDENCY_CACHE,
+    DependencyStatus,
     check_python_package,
     check_system_command,
     router,
@@ -64,7 +64,11 @@ class TestCheckPythonPackage:
         """Test checking a package that is not installed."""
         import importlib
 
-        with patch.object(importlib, "import_module", side_effect=ImportError("No module named 'test_package'")):
+        with patch.object(
+            importlib,
+            "import_module",
+            side_effect=ImportError("No module named 'test_package'"),
+        ):
             installed, version = check_python_package("test_package")
             assert installed is False
             assert version is None
@@ -73,7 +77,9 @@ class TestCheckPythonPackage:
         """Test handling of unexpected import errors."""
         import importlib
 
-        with patch.object(importlib, "import_module", side_effect=Exception("Unexpected error")):
+        with patch.object(
+            importlib, "import_module", side_effect=Exception("Unexpected error")
+        ):
             installed, version = check_python_package("test_package")
             assert installed is False
             assert version is None

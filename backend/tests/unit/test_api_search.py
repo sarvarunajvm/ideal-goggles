@@ -151,7 +151,14 @@ class TestSearchPhotos:
         with patch("src.api.search.get_request_id") as mock_request_id:
             mock_request_id.return_value = "test-request-id"
 
-            result = await search_photos(q="vacation", from_date=None, to_date=None, folder=None, limit=50, offset=0)
+            result = await search_photos(
+                q="vacation",
+                from_date=None,
+                to_date=None,
+                folder=None,
+                limit=50,
+                offset=0,
+            )
 
             assert isinstance(result, SearchResults)
             assert result.query == "vacation"
@@ -185,7 +192,12 @@ class TestSearchPhotos:
             mock_request_id.return_value = "test-request-id"
 
             result = await search_photos(
-                q="test", from_date=None, to_date=None, folder="/vacation", limit=50, offset=0
+                q="test",
+                from_date=None,
+                to_date=None,
+                folder="/vacation",
+                limit=50,
+                offset=0,
             )
 
             assert result.total_matches == 0
@@ -198,7 +210,9 @@ class TestSearchPhotos:
         with patch("src.api.search.get_request_id") as mock_request_id:
             mock_request_id.return_value = "test-request-id"
 
-            result = await search_photos(q=None, from_date=None, to_date=None, folder=None, limit=50, offset=0)
+            result = await search_photos(
+                q=None, from_date=None, to_date=None, folder=None, limit=50, offset=0
+            )
 
             assert result.query == ""
 
@@ -226,7 +240,9 @@ class TestSemanticSearch:
 
         with (
             patch("src.api.search.DependencyChecker.check_clip") as mock_check_clip,
-            patch("src.workers.embedding_worker.CLIPEmbeddingWorker") as mock_worker_class,
+            patch(
+                "src.workers.embedding_worker.CLIPEmbeddingWorker"
+            ) as mock_worker_class,
         ):
             mock_check_clip.return_value = (True, None)
 
@@ -265,7 +281,9 @@ class TestSemanticSearch:
 
         with (
             patch("src.api.search.DependencyChecker.check_clip") as mock_check_clip,
-            patch("src.workers.embedding_worker.CLIPEmbeddingWorker") as mock_worker_class,
+            patch(
+                "src.workers.embedding_worker.CLIPEmbeddingWorker"
+            ) as mock_worker_class,
         ):
             mock_check_clip.return_value = (True, None)
 
@@ -286,7 +304,9 @@ class TestSemanticSearch:
 
         with (
             patch("src.api.search.DependencyChecker.check_clip") as mock_check_clip,
-            patch("src.workers.embedding_worker.CLIPEmbeddingWorker") as mock_worker_class,
+            patch(
+                "src.workers.embedding_worker.CLIPEmbeddingWorker"
+            ) as mock_worker_class,
         ):
             mock_check_clip.return_value = (True, None)
 
@@ -321,14 +341,17 @@ class TestImageSearch:
             upload_file.read = AsyncMock(return_value=b"fake image content")
 
             import sys
+
             mock_clip = MagicMock()
             mock_torch = MagicMock()
-            sys.modules['clip'] = mock_clip
-            sys.modules['torch'] = mock_torch
+            sys.modules["clip"] = mock_clip
+            sys.modules["torch"] = mock_torch
 
             try:
                 with (
-                    patch("src.workers.embedding_worker.CLIPEmbeddingWorker") as mock_worker_class,
+                    patch(
+                        "src.workers.embedding_worker.CLIPEmbeddingWorker"
+                    ) as mock_worker_class,
                     patch("src.models.photo.Photo") as mock_photo_class,
                 ):
                     mock_worker = MagicMock()
@@ -346,10 +369,10 @@ class TestImageSearch:
                     assert isinstance(result, SearchResults)
                     assert "Image:" in result.query
             finally:
-                if 'clip' in sys.modules:
-                    del sys.modules['clip']
-                if 'torch' in sys.modules:
-                    del sys.modules['torch']
+                if "clip" in sys.modules:
+                    del sys.modules["clip"]
+                if "torch" in sys.modules:
+                    del sys.modules["torch"]
 
         finally:
             os.unlink(temp_path)
@@ -373,11 +396,12 @@ class TestImageSearch:
         upload_file.content_type = "image/jpeg"
 
         import sys
+
         # Ensure clip and torch are not in sys.modules to simulate them not being installed
-        if 'clip' in sys.modules:
-            del sys.modules['clip']
-        if 'torch' in sys.modules:
-            del sys.modules['torch']
+        if "clip" in sys.modules:
+            del sys.modules["clip"]
+        if "torch" in sys.modules:
+            del sys.modules["torch"]
 
         with pytest.raises(HTTPException) as exc_info:
             await image_search(file=upload_file, top_k=10)
@@ -394,14 +418,17 @@ class TestImageSearch:
         upload_file.read = AsyncMock(return_value=b"fake image")
 
         import sys
+
         mock_clip = MagicMock()
         mock_torch = MagicMock()
-        sys.modules['clip'] = mock_clip
-        sys.modules['torch'] = mock_torch
+        sys.modules["clip"] = mock_clip
+        sys.modules["torch"] = mock_torch
 
         try:
             with (
-                patch("src.workers.embedding_worker.CLIPEmbeddingWorker") as mock_worker_class,
+                patch(
+                    "src.workers.embedding_worker.CLIPEmbeddingWorker"
+                ) as mock_worker_class,
                 patch("src.api.search.tempfile.NamedTemporaryFile") as mock_temp,
                 patch("src.models.photo.Photo"),
             ):
@@ -422,10 +449,10 @@ class TestImageSearch:
 
                     assert exc_info.value.status_code == 400
         finally:
-            if 'clip' in sys.modules:
-                del sys.modules['clip']
-            if 'torch' in sys.modules:
-                del sys.modules['torch']
+            if "clip" in sys.modules:
+                del sys.modules["clip"]
+            if "torch" in sys.modules:
+                del sys.modules["torch"]
 
 
 class TestFaceSearch:

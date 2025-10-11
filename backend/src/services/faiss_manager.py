@@ -18,10 +18,13 @@ from ..core.config import get_settings
 # Expose a module-level 'faiss' symbol so tests can patch it
 try:  # pragma: no cover - import guard
     import faiss as _faiss  # type: ignore[import-not-found]
+
     faiss = _faiss
 except Exception:  # pragma: no cover - faiss may not be installed in tests
+
     class _FaissPlaceholder:  # type: ignore[misc]
         pass
+
     faiss = _FaissPlaceholder()  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
