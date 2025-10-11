@@ -341,6 +341,17 @@ jobs:
           echo "P0 critical test suite not found, skipping..."
         fi
 
+    - name: Upload test results to Codecov Test Analytics (P0 E2E)
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./func_tests/test-results/junit.xml
+        flags: p0-e2e
+        name: p0-e2e-tests
+        fail_ci_if_error: false
+        verbose: true
+
     - name: Upload P0 test results
       uses: actions/upload-artifact@v4
       if: always()

@@ -56,6 +56,10 @@ flags:
     paths:
       - func_tests/
     carryforward: false
+  p0-e2e:
+    paths:
+      - func_tests/
+    carryforward: false
 
 comment:
   layout: "reach, diff, flags, files, footer"
