@@ -13,7 +13,8 @@ class TestPeopleCreateEndpoint:
         payload = {"name": "John Smith", "sample_file_ids": [1, 2, 3]}
         response = client.post("/people", json=payload)
         # Expect 201 if face search works, 403 if disabled, 503 if enabled but not available
-        assert response.status_code in [201, 403, 503]
+        # 400 if no faces detected in sample photos
+        assert response.status_code in [201, 400, 403, 503]
 
     def test_people_create_validates_required_fields(self, client: TestClient) -> None:
         """Test that people create validates required fields."""
@@ -34,8 +35,9 @@ class TestPeopleCreateEndpoint:
         payload = {"name": "John Smith", "sample_file_ids": [1, 2, 3]}
 
         # First creation should succeed (if face search works) or be rejected (if disabled/unavailable)
+        # 400 if no faces detected in sample photos
         response1 = client.post("/people", json=payload)
-        assert response1.status_code in [201, 403, 503]
+        assert response1.status_code in [201, 400, 403, 503]
 
         # If first succeeded, duplicate name should fail
         if response1.status_code == 201:
@@ -50,4 +52,5 @@ class TestPeopleCreateEndpoint:
         response = client.post("/people", json=payload)
 
         # Should fail if face search is not enabled (privacy principle)
-        assert response.status_code in [201, 403]  # 403 if not enabled
+        # 400 if no faces detected in sample photos
+        assert response.status_code in [201, 400, 403]  # 403 if not enabled

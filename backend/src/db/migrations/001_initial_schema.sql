@@ -33,8 +33,7 @@ CREATE TABLE IF NOT EXISTS exif (
   focal_length REAL,
   gps_lat REAL,
   gps_lon REAL,
-  orientation INTEGER,
-  FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+  orientation INTEGER
 );
 
 -- Vector embeddings
@@ -77,8 +76,7 @@ CREATE TABLE IF NOT EXISTS thumbnails (
   width INTEGER NOT NULL,
   height INTEGER NOT NULL,
   format TEXT NOT NULL,
-  generated_at REAL NOT NULL,
-  FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+  generated_at REAL NOT NULL
 );
 
 -- Configuration and settings

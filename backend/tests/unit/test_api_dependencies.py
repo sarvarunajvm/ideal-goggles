@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.api.dependencies import (
     DependencyStatus,
+    _DEPENDENCY_CACHE,
     check_python_package,
     check_system_command,
     router,
@@ -20,67 +21,74 @@ client = TestClient(app)
 class TestCheckPythonPackage:
     """Test check_python_package function."""
 
-    @patch("importlib.import_module")
-    def test_check_installed_package_with_version(self, mock_import):
+    def setup_method(self):
+        """Clear dependency cache before each test."""
+        _DEPENDENCY_CACHE.clear()
+
+    def test_check_installed_package_with_version(self):
         """Test checking an installed package with __version__."""
+        import importlib
+
         mock_module = Mock()
         mock_module.__version__ = "1.2.3"
-        mock_import.return_value = mock_module
 
-        installed, version = check_python_package("test_package")
-        assert installed is True
-        assert version == "1.2.3"
+        with patch.object(importlib, "import_module", return_value=mock_module):
+            installed, version = check_python_package("test_package")
+            assert installed is True
+            assert version == "1.2.3"
 
-    @patch("importlib.import_module")
-    def test_check_installed_package_no_version(self, mock_import):
+    def test_check_installed_package_no_version(self):
         """Test checking an installed package without version info."""
+        import importlib
+
         mock_module = Mock(spec=[])  # No __version__ attribute
-        mock_import.return_value = mock_module
 
-        installed, version = check_python_package("test_package")
-        assert installed is True
-        assert version is None
+        with patch.object(importlib, "import_module", return_value=mock_module):
+            installed, version = check_python_package("test_package")
+            assert installed is True
+            assert version is None
 
-    @patch("importlib.import_module")
-    def test_check_sqlite3_special_case(self, mock_import):
+    def test_check_sqlite3_special_case(self):
         """Test special case for sqlite3 version attribute."""
+        import importlib
+
         mock_module = Mock(spec=["version"])
         mock_module.version = "2.6.0"
-        mock_import.return_value = mock_module
 
-        installed, version = check_python_package("sqlite3")
-        assert installed is True
-        assert version == "2.6.0"
+        with patch.object(importlib, "import_module", return_value=mock_module):
+            installed, version = check_python_package("sqlite3")
+            assert installed is True
+            assert version == "2.6.0"
 
-    @patch("importlib.import_module")
-    def test_check_package_not_installed(self, mock_import):
+    def test_check_package_not_installed(self):
         """Test checking a package that is not installed."""
-        mock_import.side_effect = ImportError("No module named 'test_package'")
+        import importlib
 
-        installed, version = check_python_package("test_package")
-        assert installed is False
-        assert version is None
+        with patch.object(importlib, "import_module", side_effect=ImportError("No module named 'test_package'")):
+            installed, version = check_python_package("test_package")
+            assert installed is False
+            assert version is None
 
-    @patch("importlib.import_module")
-    def test_check_package_import_error(self, mock_import):
+    def test_check_package_import_error(self):
         """Test handling of unexpected import errors."""
-        mock_import.side_effect = Exception("Unexpected error")
+        import importlib
 
-        installed, version = check_python_package("test_package")
-        assert installed is False
-        assert version is None
+        with patch.object(importlib, "import_module", side_effect=Exception("Unexpected error")):
+            installed, version = check_python_package("test_package")
+            assert installed is False
+            assert version is None
 
-    @patch("importlib.import_module")
-    def test_check_package_non_string_version(self, mock_import):
+    def test_check_package_non_string_version(self):
         """Test handling of non-string version attributes."""
+        import importlib
+
         mock_module = Mock()
         mock_module.__version__ = 123  # Non-string version
 
-        mock_import.return_value = mock_module
-
-        installed, version = check_python_package("test_package")
-        assert installed is True
-        assert version == "123"
+        with patch.object(importlib, "import_module", return_value=mock_module):
+            installed, version = check_python_package("test_package")
+            assert installed is True
+            assert version == "123"
 
 
 class TestCheckSystemCommand:

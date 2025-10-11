@@ -407,11 +407,17 @@ class EventQueue:
             try:
                 # Get next event (with timeout to allow for shutdown)
                 try:
-                    event = self._event_queue.get(timeout=1.0)
+                    # Run the blocking get() in executor to allow cancellation
+                    loop = asyncio.get_event_loop()
+                    event = await loop.run_in_executor(
+                        None, lambda: self._event_queue.get(timeout=0.1)
+                    )
                     with self._lock:
                         self._stats["queue_size"] = self._event_queue.qsize()
                         self._stats["active_workers"] += 1
                 except:
+                    # Check if we should continue or break
+                    await asyncio.sleep(0.1)
                     continue  # Timeout or queue empty
 
                 try:

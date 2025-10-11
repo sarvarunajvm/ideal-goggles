@@ -268,7 +268,7 @@ class TestGetConfigDefaults:
         defaults = _get_config_defaults()
 
         assert isinstance(defaults["roots"], list)
-        assert defaults["face_search_enabled"] is False
+        assert defaults["face_search_enabled"] is True
         assert defaults["semantic_search_enabled"] is True
         assert defaults["batch_size"] == 50
         assert defaults["thumbnail_size"] == "medium"
@@ -285,7 +285,7 @@ class TestGetConfigFromDb:
 
         # Should return defaults
         assert isinstance(config["roots"], list)
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
         assert config["semantic_search_enabled"] is True
 
     def test_get_config_from_db_with_data(self, db_manager):
@@ -329,7 +329,7 @@ class TestGetConfigFromDb:
         assert config["batch_size"] == 75
         # Should also have defaults for other settings
         assert isinstance(config["roots"], list)
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
 
     def test_get_config_from_db_database_error(self, db_manager):
         """Test handling database error."""
@@ -348,7 +348,7 @@ class TestGetConfigFromDb:
 
         # Should return defaults on error
         assert isinstance(config["roots"], list)
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
 
 
 class TestUpdateConfigInDb:
@@ -443,7 +443,7 @@ class TestGetConfiguration:
         result = await get_configuration()
 
         assert isinstance(result.roots, list)
-        assert result.face_search_enabled is False
+        assert result.face_search_enabled is True
         assert result.semantic_search_enabled is True
         assert result.batch_size == 50
         assert result.thumbnail_size == "medium"
@@ -464,7 +464,7 @@ class TestGetConfiguration:
 
         assert isinstance(result, ConfigurationResponse)
         assert isinstance(result.roots, list)
-        assert result.face_search_enabled is False
+        assert result.face_search_enabled is True
         assert result.semantic_search_enabled is True
 
 
@@ -595,7 +595,7 @@ class TestGetDefaultConfiguration:
         result = await get_default_configuration()
 
         assert result["roots"] == []
-        assert result["face_search_enabled"] is False
+        assert result["face_search_enabled"] is True
         assert result["semantic_search_enabled"] is True
         assert result["batch_size"] == 50
         assert result["thumbnail_size"] == "medium"
@@ -708,14 +708,14 @@ class TestResetConfiguration:
         assert "configuration" in result
         # reset_configuration sets roots to empty list []
         assert result["configuration"]["roots"] == []
-        assert result["configuration"]["face_search_enabled"] is False
+        assert result["configuration"]["face_search_enabled"] is True
         assert result["configuration"]["thumbnail_size"] == "medium"
 
         # Verify in database - after reset, _get_config_from_db may return default roots
         config = _get_config_from_db(db_manager)
         # roots should be a list (could be empty or default photo roots)
         assert isinstance(config["roots"], list)
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
 
     async def test_reset_configuration_database_error(
         self, mock_db_manager, db_manager

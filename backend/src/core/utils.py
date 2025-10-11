@@ -216,8 +216,9 @@ def sanitize_filename(filename: str) -> str:
     sanitized = re.sub(r'[<>:"/\\|?*]', "_", filename)
     # Remove leading/trailing dots and spaces
     sanitized = sanitized.strip(". ")
-    # Ensure it's not empty
-    if not sanitized:
+    # Ensure it's meaningful (not empty or only underscores)
+    if not sanitized or re.fullmatch(r"_+", sanitized):
+        # If original had only invalid characters or whitespace/dots
         sanitized = "unnamed"
     return sanitized
 

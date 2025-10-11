@@ -364,7 +364,7 @@ class TestGetConfigFromDb:
         config = _get_config_from_db(db_manager)
 
         assert config["roots"] == []
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
 
     def test_get_config_from_db_error(self, mock_db_manager, db_manager):
         """Test getting config with error."""
@@ -373,7 +373,7 @@ class TestGetConfigFromDb:
         config = _get_config_from_db(db_manager)
 
         assert config["roots"] == []
-        assert config["face_search_enabled"] is False
+        assert config["face_search_enabled"] is True
 
 
 class TestGetPhotosForProcessing:

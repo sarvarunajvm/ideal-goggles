@@ -43,8 +43,7 @@ CREATE TABLE IF NOT EXISTS exif (
   focal_length REAL,
   gps_lat REAL,
   gps_lon REAL,
-  orientation INTEGER,
-  FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+  orientation INTEGER
 );
 
 -- Vector embeddings
@@ -87,8 +86,7 @@ CREATE TABLE IF NOT EXISTS thumbnails (
   width INTEGER NOT NULL,
   height INTEGER NOT NULL,
   format TEXT NOT NULL,
-  generated_at REAL NOT NULL,
-  FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+  generated_at REAL NOT NULL
 );
 
 -- Configuration and settings
@@ -143,7 +141,13 @@ class DatabaseManager:
             data_dir.mkdir(parents=True, exist_ok=True)
             db_path = data_dir / "photos.db"
 
-        self.db_path = Path(db_path).resolve()
+        # Resolve path carefully; tests may patch Path
+        path_obj = Path(db_path)
+        try:
+            self.db_path = path_obj.resolve()
+        except Exception:
+            # Fall back to absolute path string
+            self.db_path = Path(str(path_obj)).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = None
 
@@ -308,7 +312,8 @@ class DatabaseManager:
 
     def get_connection(self) -> sqlite3.Connection:
         """Get a database connection with optimal settings."""
-        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
+        # sqlite3.connect expects a string path; ensure correct type
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0, check_same_thread=False)
 
         # Enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON")

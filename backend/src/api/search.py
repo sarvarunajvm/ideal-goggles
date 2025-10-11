@@ -252,6 +252,12 @@ async def image_search(
     start_time = datetime.now()
 
     try:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image file"
+            )
+
         # Check if CLIP dependencies are available
         try:
             import clip
@@ -260,12 +266,6 @@ async def image_search(
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Image search unavailable: CLIP dependencies not installed ({e})",
-            )
-
-        # Validate file type
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image file"
             )
 
         # Save uploaded file temporarily

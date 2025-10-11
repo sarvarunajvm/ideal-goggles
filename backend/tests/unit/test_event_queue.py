@@ -553,6 +553,10 @@ class TestEventQueueAdvanced:
 
         assert queue1 is queue2
 
+        # Cleanup: Shutdown the executor to prevent hanging
+        queue1._executor.shutdown(wait=False)
+        src.core.event_queue._event_queue = None
+
     def test_publish_event_convenience_function(self):
         """Test publish_event convenience function."""
         # Reset global
@@ -568,6 +572,11 @@ class TestEventQueueAdvanced:
         )
 
         assert event_id is not None
+
+        # Cleanup: Shutdown the executor to prevent hanging
+        if src.core.event_queue._event_queue:
+            src.core.event_queue._event_queue._executor.shutdown(wait=False)
+        src.core.event_queue._event_queue = None
 
     def test_event_post_init_auto_id(self):
         """Test Event __post_init__ auto ID generation."""
@@ -972,3 +981,8 @@ class TestEventQueueAdvanced:
         )
 
         assert event_id is not None
+
+        # Cleanup: Shutdown the executor to prevent hanging
+        if src.core.event_queue._event_queue:
+            src.core.event_queue._event_queue._executor.shutdown(wait=False)
+        src.core.event_queue._event_queue = None

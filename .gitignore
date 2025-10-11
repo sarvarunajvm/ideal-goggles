@@ -110,3 +110,4 @@ frontend/DESIGN_TOKENS.md
 /func_tests/blob-report
 BUGS.md
 clientsystem
+*.resolve()'*

@@ -28,7 +28,7 @@ class TestLogEntry:
         assert log_entry.message == "Debug message"
         assert log_entry.context == {"key": "value"}
         assert log_entry.timestamp == "2022-01-01T12:00:00Z"
-        assert log_entry.userAgent == "Mozilla/5.0"
+        assert log_entry.user_agent == "Mozilla/5.0"
         assert log_entry.url == "http://example.com"
         assert log_entry.error is None
 
@@ -85,7 +85,7 @@ class TestLogEntry:
         )
 
         assert log_entry.context is None
-        assert log_entry.userAgent is None
+        assert log_entry.user_agent is None
         assert log_entry.url is None
         assert log_entry.error is None
 
@@ -107,10 +107,10 @@ class TestErrorReport:
 
         assert error_report.message == "Component crashed"
         assert "Error: Something went wrong" in error_report.stack
-        assert "ErrorBoundary" in error_report.componentStack
-        assert error_report.componentName == "PhotoGrid"
+        assert "ErrorBoundary" in error_report.component_stack
+        assert error_report.component_name == "PhotoGrid"
         assert error_report.timestamp == "2022-01-01T12:00:00Z"
-        assert error_report.userAgent == "Mozilla/5.0"
+        assert error_report.user_agent == "Mozilla/5.0"
         assert error_report.url == "http://example.com/photos"
 
     def test_error_report_optional_fields(self):
@@ -122,9 +122,9 @@ class TestErrorReport:
 
         assert error_report.message == "Error occurred"
         assert error_report.stack is None
-        assert error_report.componentStack is None
-        assert error_report.componentName is None
-        assert error_report.userAgent is None
+        assert error_report.component_stack is None
+        assert error_report.component_name is None
+        assert error_report.user_agent is None
         assert error_report.url is None
 
 

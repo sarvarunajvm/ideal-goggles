@@ -29,16 +29,40 @@ async def health_check() -> dict[str, Any]:
         result = db_manager.execute_query(test_query)
         db_healthy = result and len(result) > 0 and result[0][0] == 1
 
-        # Basic health response
-        return {
-            "status": "healthy" if db_healthy else "degraded",
+    except Exception as e:
+        # Do not fail the health endpoint; return degraded status and error info
+        db_healthy = False
+        db_error = f"Database check failed: {e!s}"
+    else:
+        db_error = None
+
+    # Basic health response augmented with system and dependency information
+    try:
+        system_info = _get_system_info()
+        deps_health = _check_dependencies()
+
+        status = (
+            "healthy"
+            if (db_healthy and deps_health.get("critical_available", True))
+            else "degraded"
+        )
+
+        response = {
+            "status": status,
             "timestamp": datetime.now().isoformat(),
             "version": "1.0.8",
             "service": "ideal-goggles-api",
+            "system": system_info,
             "database": {"healthy": db_healthy},
+            "dependencies": deps_health,
         }
 
+        if db_error:
+            response["database"]["error"] = db_error
+
+        return response
     except Exception as e:
+        # If system info or dependency checks fail, report service unavailable
         raise HTTPException(status_code=503, detail=f"Health check failed: {e!s}")
 
 

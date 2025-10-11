@@ -15,6 +15,15 @@ import numpy as np
 
 from ..core.config import get_settings
 
+# Expose a module-level 'faiss' symbol so tests can patch it
+try:  # pragma: no cover - import guard
+    import faiss as _faiss  # type: ignore[import-not-found]
+    faiss = _faiss
+except Exception:  # pragma: no cover - faiss may not be installed in tests
+    class _FaissPlaceholder:  # type: ignore[misc]
+        pass
+    faiss = _FaissPlaceholder()  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +169,9 @@ class FAISSIndexManager:
     async def _perform_optimization(self) -> bool:
         """Internal method to perform index optimization."""
         try:
-            import faiss
+            if getattr(faiss, "IndexFlatL2", None) is None:
+                msg = "faiss not available"
+                raise RuntimeError(msg)
 
             if not self.vector_service or not self.vector_service.index:
                 logger.warning("No vector service or index available for optimization")
@@ -217,7 +228,9 @@ class FAISSIndexManager:
     def _optimize_flat_index(self, index):
         """Optimize a flat index by rebuilding it."""
         try:
-            import faiss
+            if getattr(faiss, "IndexFlatL2", None) is None:
+                msg = "faiss not available"
+                raise RuntimeError(msg)
 
             # Extract all vectors
             vectors = index.reconstruct_n(0, index.ntotal)
@@ -243,7 +256,9 @@ class FAISSIndexManager:
     def _create_ivf_index(self, index, use_pq: bool = False):
         """Create an optimized IVF index."""
         try:
-            import faiss
+            if getattr(faiss, "IndexFlatL2", None) is None:
+                msg = "faiss not available"
+                raise RuntimeError(msg)
 
             num_vectors = index.ntotal
             dimension = index.d

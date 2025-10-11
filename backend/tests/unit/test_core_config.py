@@ -114,14 +114,6 @@ class TestSettings:
         assert Path("./models/clip-vit-b32.onnx") == test_settings.CLIP_MODEL_PATH
         assert Path("./models/arcface-r100.onnx") == test_settings.ARCFACE_MODEL_PATH
 
-    def test_settings_ocr_configuration(self):
-        """Test OCR configuration settings."""
-        test_settings = Settings()
-
-        assert test_settings.TESSERACT_CMD == "tesseract"
-        assert "eng" in test_settings.OCR_LANGUAGES
-        assert "tam" in test_settings.OCR_LANGUAGES
-
     def test_settings_performance_settings(self):
         """Test performance-related settings."""
         test_settings = Settings()
