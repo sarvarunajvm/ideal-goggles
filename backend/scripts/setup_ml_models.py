@@ -56,7 +56,7 @@ class MLSetup:
         elif level == "WARNING":
             logger.warning(message)
         elif level == "SUCCESS":
-            logger.info(f"✅ {message}")
+            logger.info(f"[OK] {message}")
         else:
             logger.info(message)
 
@@ -239,9 +239,9 @@ class MLSetup:
 
         logger.info("=" * 60)
         if success:
-            logger.info("✅ ALL DEPENDENCIES INSTALLED")
+            logger.info("[OK] ALL DEPENDENCIES INSTALLED")
         else:
-            logger.warning("⚠️  SOME DEPENDENCIES FAILED TO INSTALL")
+            logger.warning("[WARNING] SOME DEPENDENCIES FAILED TO INSTALL")
         logger.info("=" * 60)
 
         return success
@@ -260,7 +260,7 @@ class MLSetup:
             import clip
             import torch
 
-            logger.info("✓ PyTorch and CLIP packages installed")
+            logger.info("[OK] PyTorch and CLIP packages installed")
 
             # Determine device
             if torch.cuda.is_available():
@@ -279,7 +279,7 @@ class MLSetup:
             model.eval()  # Set to eval mode (from embedding_worker.py:46)
 
             download_time = time.time() - start_time
-            logger.info(f"✓ Model downloaded and loaded ({download_time:.2f}s)")
+            logger.info(f"[OK] Model downloaded and loaded ({download_time:.2f}s)")
 
             self.model_results["clip"]["downloaded"] = True
 
@@ -312,8 +312,8 @@ class MLSetup:
             norm = float(np.linalg.norm(image_embedding))
             assert 0.99 < norm < 1.01, f"Embedding not normalized: norm={norm}"
 
-            logger.info(f"  ✓ Image embedding: {len(image_embedding)} dimensions")
-            logger.info(f"  ✓ Normalized: {norm:.4f}")
+            logger.info(f"  [OK] Image embedding: {len(image_embedding)} dimensions")
+            logger.info(f"  [OK] Normalized: {norm:.4f}")
 
             # Test text embedding (what we do in _generate_text_embedding_sync)
             test_text = clip.tokenize(["a photo of a cat"]).to(device)
@@ -333,16 +333,16 @@ class MLSetup:
                 0.99 < text_norm < 1.01
             ), f"Text embedding not normalized: norm={text_norm}"
 
-            logger.info(f"  ✓ Text embedding: {len(text_embedding)} dimensions")
-            logger.info(f"  ✓ Normalized: {text_norm:.4f}")
+            logger.info(f"  [OK] Text embedding: {len(text_embedding)} dimensions")
+            logger.info(f"  [OK] Normalized: {text_norm:.4f}")
 
             # Test similarity computation (verify the model produces sensible results)
             similarity = float(np.dot(image_embedding, text_embedding))
-            logger.info(f"  ✓ Image-text similarity: {similarity:.4f}")
+            logger.info(f"  [OK] Image-text similarity: {similarity:.4f}")
             assert -1.0 <= similarity <= 1.0, f"Similarity out of range: {similarity}"
 
             self.model_results["clip"]["verified"] = True
-            logger.info("✅ CLIP model verified - WORKING CORRECTLY")
+            logger.info("[SUCCESS] CLIP model verified - WORKING CORRECTLY")
 
             # Clean up
             del model, preprocess, test_image, test_text
@@ -353,13 +353,13 @@ class MLSetup:
 
         except AssertionError as e:
             error_msg = f"CLIP verification failed: {e}"
-            logger.exception("❌ %s", error_msg)
+            logger.exception("[ERROR] %s", error_msg)
             self.model_results["clip"]["error"] = error_msg
             return False
 
         except Exception as e:
             error_msg = f"CLIP download/verification failed: {e}"
-            logger.exception("❌ %s", error_msg)
+            logger.exception("[ERROR] %s", error_msg)
             self.model_results["clip"]["error"] = error_msg
             return False
 
@@ -374,7 +374,7 @@ class MLSetup:
             import insightface
             from insightface.app import FaceAnalysis
 
-            logger.info("✓ InsightFace, OpenCV, and ONNX Runtime installed")
+            logger.info("[OK] InsightFace, OpenCV, and ONNX Runtime installed")
 
             # Download the EXACT model we use (from face_worker.py:54-58)
             logger.info("Downloading InsightFace buffalo_l model...")
@@ -390,7 +390,7 @@ class MLSetup:
             face_app.prepare(ctx_id=0, det_size=(640, 640))
 
             download_time = time.time() - start_time
-            logger.info(f"✓ Model downloaded and initialized ({download_time:.2f}s)")
+            logger.info(f"[OK] Model downloaded and initialized ({download_time:.2f}s)")
 
             self.model_results["insightface"]["downloaded"] = True
 
@@ -404,7 +404,7 @@ class MLSetup:
             faces = face_app.get(test_image)
 
             logger.info(
-                f"  ✓ Face detection executed (found {len(faces)} faces in random test image)"
+                f"  [OK] Face detection executed (found {len(faces)} faces in random test image)"
             )
 
             # Verify the model structure is correct
@@ -414,7 +414,7 @@ class MLSetup:
             face_template[100:300, 200:400] = 150  # Darker oval region
 
             faces = face_app.get(face_template)
-            logger.info(f"  ✓ Detection on template: {len(faces)} faces")
+            logger.info(f"  [OK] Detection on template: {len(faces)} faces")
 
             # The model should be able to process images without crashing
             # Even if it doesn't detect faces in our synthetic image, it should return an empty list
@@ -426,7 +426,7 @@ class MLSetup:
             ), "FaceAnalysis missing 'models' attribute"
             assert len(face_app.models) > 0, "No models loaded in FaceAnalysis"
 
-            logger.info(f"  ✓ Loaded {len(face_app.models)} model components")
+            logger.info(f"  [OK] Loaded {len(face_app.models)} model components")
 
             # Test with a real face detection scenario
             # Create a simple face-like pattern that might trigger detection
@@ -445,7 +445,7 @@ class MLSetup:
 
             if len(faces) > 0:
                 logger.info(
-                    f"  ✓ Face detected in synthetic image: {len(faces)} face(s)"
+                    f"  [OK] Face detected in synthetic image: {len(faces)} face(s)"
                 )
 
                 # Verify face structure (from _detect_faces_sync in face_worker.py)
@@ -479,29 +479,29 @@ class MLSetup:
                 assert 0.99 < norm < 1.01, f"Embedding not normalized: norm={norm}"
 
                 logger.info(
-                    f"  ✓ Embedding verified: {len(embedding)} dims, norm={norm:.4f}"
+                    f"  [OK] Embedding verified: {len(embedding)} dims, norm={norm:.4f}"
                 )
             else:
                 # Model works but didn't detect our synthetic face - that's okay
                 logger.info(
                     "  Info: No face detected in synthetic image (expected for simple pattern)"
                 )
-                logger.info("  ✓ Model can process images without errors")
+                logger.info("  [OK] Model can process images without errors")
 
             self.model_results["insightface"]["verified"] = True
-            logger.info("✅ InsightFace model verified - WORKING CORRECTLY")
+            logger.info("[SUCCESS] InsightFace model verified - WORKING CORRECTLY")
 
             return True
 
         except AssertionError as e:
             error_msg = f"InsightFace verification failed: {e}"
-            logger.exception("❌ %s", error_msg)
+            logger.exception("[ERROR] %s", error_msg)
             self.model_results["insightface"]["error"] = error_msg
             return False
 
         except Exception as e:
             error_msg = f"InsightFace download/verification failed: {e}"
-            logger.exception("❌ %s", error_msg)
+            logger.exception("[ERROR] %s", error_msg)
             self.model_results["insightface"]["error"] = error_msg
             return False
 
@@ -530,24 +530,24 @@ class MLSetup:
         all_verified = True
 
         for model_name, result in self.model_results.items():
-            status_emoji = "✅" if result["verified"] else "❌"
+            status_marker = "[OK]" if result["verified"] else "[FAIL]"
             logger.info(f"\n{model_name.upper()}:")
-            logger.info(f"  Downloaded: {'✓' if result['downloaded'] else '✗'}")
-            logger.info(f"  Verified:   {'✓' if result['verified'] else '✗'}")
+            logger.info(f"  Downloaded: {'[OK]' if result['downloaded'] else '[FAIL]'}")
+            logger.info(f"  Verified:   {'[OK]' if result['verified'] else '[FAIL]'}")
 
             if result["error"]:
                 logger.info(f"  Error: {result['error']}")
 
-            logger.info(f"  Status: {status_emoji}")
+            logger.info(f"  Status: {status_marker}")
 
             if not result["verified"]:
                 all_verified = False
 
         logger.info("\n%s", "=" * 60)
         if all_verified:
-            logger.info("✅ ALL MODELS VERIFIED AND WORKING")
+            logger.info("[SUCCESS] ALL MODELS VERIFIED AND WORKING")
         else:
-            logger.error("❌ SOME MODELS FAILED VERIFICATION")
+            logger.error("[ERROR] SOME MODELS FAILED VERIFICATION")
         logger.info("=" * 60)
 
         return all_verified
@@ -638,11 +638,11 @@ Examples:
 
     # Final result
     if success:
-        logger.info("\n✅ ML setup completed successfully!")
+        logger.info("\n[SUCCESS] ML setup completed successfully!")
         logger.info("Models are ready for production build!")
         sys.exit(0)
     else:
-        logger.error("\n❌ ML setup failed - some components may not work correctly!")
+        logger.error("\n[ERROR] ML setup failed - some components may not work correctly!")
         sys.exit(1)
 
 

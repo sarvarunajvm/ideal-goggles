@@ -135,6 +135,7 @@ jobs:
     - name: Run all backend tests with coverage
       run: |
         # Use standardized package.json script for backend coverage
+        # Add JUnit XML output for test analytics
         pnpm run backend:coverage || true
       continue-on-error: true
 
@@ -160,6 +161,17 @@ jobs:
         files: ./backend/coverage.xml
         flags: backend
         name: backend-coverage
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload test results to Codecov Test Analytics (backend)
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./backend/test-results-${{ matrix.python-version }}.xml
+        flags: backend
+        name: backend-tests
         fail_ci_if_error: false
         verbose: true
 
@@ -217,6 +229,11 @@ jobs:
         JEST_JUNIT_OUTPUT_DIR: ./test-results
         JEST_JUNIT_OUTPUT_NAME: junit-${{ matrix.node-version }}.xml
 
+    - name: Build frontend and generate bundle stats
+      run: |
+        pnpm run build:frontend
+      continue-on-error: true
+
     - name: Upload coverage to Codecov (frontend)
       uses: codecov/codecov-action@v4
       with:
@@ -225,6 +242,29 @@ jobs:
         files: ./frontend/coverage/lcov.info
         flags: frontend
         name: frontend-coverage
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload bundle stats to Codecov
+      uses: codecov/codecov-action@v4
+      if: always()
+      with:
+        use_oidc: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./frontend/dist/stats.html
+        flags: bundle
+        name: bundle-stats
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload test results to Codecov Test Analytics (frontend)
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./frontend/test-results/junit-${{ matrix.node-version }}.xml
+        flags: frontend
+        name: frontend-tests
         fail_ci_if_error: false
         verbose: true
 

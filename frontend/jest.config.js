@@ -53,4 +53,15 @@ module.exports = {
     },
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setupTests.ts'],
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: '<rootDir>/test-results',  // Relative to rootDir (frontend/)
+      outputName: 'junit-20.xml',  // Matches Node version 20
+      classNameTemplate: '{filepath}',
+      titleTemplate: '{title}',
+      ancestorSeparator: ' > ',
+      usePathForSuiteName: true,
+    }],
+  ],
 };

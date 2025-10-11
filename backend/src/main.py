@@ -160,9 +160,9 @@ def _validate_startup_dependencies() -> None:
             import importlib
 
             importlib.import_module(dep)
-            logger.info(f"✅ {dep} available - {feature} enabled")
+            logger.info(f"[OK] {dep} available - {feature} enabled")
         except ImportError:
-            msg = f"⚠️  {dep} not available - {feature} will be unavailable"
+            msg = f"[WARNING] {dep} not available - {feature} will be unavailable"
             logger.warning(msg)
             issues.append(msg)
 
@@ -185,10 +185,10 @@ def _validate_startup_dependencies() -> None:
         migrations_path = base_path / "src" / "db" / "migrations"
 
         if migrations_path.exists():
-            logger.info(f"✅ Database migrations directory found at {migrations_path}")
+            logger.info(f"[OK] Database migrations directory found at {migrations_path}")
         else:
             logger.warning(
-                f"⚠️  Migrations directory not found at {migrations_path}. "
+                f"[WARNING] Migrations directory not found at {migrations_path}. "
                 "Schema upgrades may not work properly."
             )
 

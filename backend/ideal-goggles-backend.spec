@@ -16,7 +16,7 @@ def collect_ml_data_files():
         if models_path.exists():
             datas.append((str(models_path), 'insightface/models'))
     except (ImportError, AttributeError):
-        print("⚠️  InsightFace not installed - face detection will not be available")
+        print("[WARNING] InsightFace not installed - face detection will not be available")
 
     # Try to find CLIP models (if pre-downloaded)
     clip_cache = Path.home() / '.cache' / 'clip'
@@ -35,19 +35,19 @@ def collect_ml_data_files():
         vocab_file = clip_path / 'bpe_simple_vocab_16e6.txt.gz'
         if vocab_file.exists():
             datas.append((str(vocab_file), 'clip'))
-            print("✅ CLIP vocabulary file found and will be bundled")
+            print("[OK] CLIP vocabulary file found and will be bundled")
         else:
-            print("⚠️  CLIP vocabulary file not found - semantic search may not work")
+            print("[WARNING] CLIP vocabulary file not found - semantic search may not work")
     except ImportError:
-        print("⚠️  CLIP not installed - semantic search will not be available")
+        print("[WARNING] CLIP not installed - semantic search will not be available")
 
     # Bundle migrations directory
     migrations_path = Path('src/db/migrations')
     if migrations_path.exists():
         datas.append((str(migrations_path), 'src/db/migrations'))
-        print("✅ Database migrations directory will be bundled")
+        print("[OK] Database migrations directory will be bundled")
     else:
-        print("⚠️  Migrations directory not found")
+        print("[WARNING] Migrations directory not found")
 
     return datas
 

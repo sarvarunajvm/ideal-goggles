@@ -89,7 +89,9 @@ test-performance: ## Testing: Run performance tests only (slow)
 
 coverage: ## Coverage: Generate coverage report for all tests
 	@echo "📊 Generating coverage report..."
-	pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
+	@PY_VERSION=$$($(PYTHON) -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'); \
+	pytest --cov=src --cov-report=xml:coverage.xml --cov-report=html --cov-report=term-missing \
+          --junitxml=test-results-$$PY_VERSION.xml || true
 	@echo "📄 Coverage report: htmlcov/index.html"
 
 coverage-unit: ## Coverage: Coverage report for unit tests only

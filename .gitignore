@@ -57,6 +57,13 @@ test-results.json
 test-results/
 frontend/electron/dist/
 
+# Test results (JUnit XML for Codecov Test Analytics)
+backend/test-results-*.xml
+
+# Bundle analysis
+**/stats.html
+**/stats.json
+
 # Shared package build artifacts
 electron/dist/
 tests/fixtures/images/
