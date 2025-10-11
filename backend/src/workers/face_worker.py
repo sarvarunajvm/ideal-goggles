@@ -109,7 +109,7 @@ class FaceDetectionWorker:
             # Load image
             img = cv2.imread(file_path)
             if img is None:
-                logger.debug(f"Could not load image: {file_path}")
+                logger.warning(f"Could not load image: {file_path}")
                 return []
 
             # Convert BGR to RGB
@@ -117,6 +117,8 @@ class FaceDetectionWorker:
 
             # Detect faces
             faces = self.face_app.get(img_rgb)
+
+            logger.debug(f"InsightFace detected {len(faces)} raw faces in {file_path}")
 
             detections = []
             for face in faces:
@@ -141,11 +143,16 @@ class FaceDetectionWorker:
                             ),
                         }
                     )
+                else:
+                    logger.debug(f"Face filtered out due to low confidence: {confidence:.3f} < {self.detection_threshold}")
+
+            if len(faces) > 0 and len(detections) == 0:
+                logger.warning(f"InsightFace detected {len(faces)} faces but all were filtered out (confidence < {self.detection_threshold})")
 
             return detections
 
         except Exception as e:
-            logger.debug(f"InsightFace detection failed for {file_path}: {e}")
+            logger.warning(f"InsightFace detection failed for {file_path}: {e}", exc_info=True)
             return []
 
     async def recognize_faces(
