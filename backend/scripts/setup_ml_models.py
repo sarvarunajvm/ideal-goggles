@@ -171,7 +171,13 @@ class MLSetup:
         logger.info("Installing CLIP Dependencies")
         logger.info("=" * 60)
 
-        # Install PyTorch first
+        # Install numpy<2.0 FIRST (before PyTorch) to avoid compatibility issues
+        numpy_package = {"numpy": "<2.0.0"}
+        if not self.install_python_packages(numpy_package):
+            self.log("Failed to install compatible numpy version", "ERROR")
+            return False
+
+        # Install PyTorch
         torch_packages = self.get_torch_packages()
         if not self.install_python_packages(torch_packages):
             self.install_results["pytorch"] = False
@@ -196,11 +202,11 @@ class MLSetup:
         logger.info("Installing InsightFace Dependencies")
         logger.info("=" * 60)
 
+        # Note: numpy<2.0.0 is already installed in install_clip()
         face_packages = {
             "opencv-python-headless": ">=4.5.0",
             "onnxruntime": ">=1.10.0",
             "insightface": ">=0.7.0",
-            "numpy": "<2.0.0",  # InsightFace compatibility
         }
 
         result = self.install_python_packages(face_packages)
