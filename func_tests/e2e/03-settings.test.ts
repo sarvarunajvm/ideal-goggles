@@ -16,11 +16,11 @@ test.describe('Settings and Configuration', () => {
       const testFolder = '/tmp/test-photos-new';
       await settingsPage.addRootFolder(testFolder);
 
-      // Should add folder to the list
-      await settingsPage.page.waitForTimeout(500);
+      // Should add folder to the list (auto-saves)
+      await settingsPage.page.waitForTimeout(1500);
       const folders = await settingsPage.getRootFolders();
-      // At least verify the UI accepted the input
-      await expect(settingsPage.folderInput).toHaveValue('');
+      // Verify the folder was added
+      expect(folders).toContain(testFolder);
     });
 
     test('removes a root folder', async () => {
@@ -39,27 +39,32 @@ test.describe('Settings and Configuration', () => {
     });
 
     test('validates folder paths', async () => {
-      // Try empty path
-      await settingsPage.folderInput.fill('');
-      // Add button should be disabled for empty input
-      const isDisabled = await settingsPage.addFolderButton.isDisabled();
-      expect(isDisabled).toBeTruthy();
-
-      // Valid path should enable button
-      await settingsPage.folderInput.fill('/valid/path');
+      // The new UI uses a dialog prompt, so validation works differently
+      // The Add button is always enabled, validation happens in the dialog
       const isEnabled = await settingsPage.addFolderButton.isEnabled();
       expect(isEnabled).toBeTruthy();
     });
 
     test('handles duplicate folders', async () => {
-      // Just verify the add folder UI works
+      // Verify duplicate prevention in the UI
       const testFolder = '/tmp/duplicate-test';
-      await settingsPage.folderInput.fill(testFolder);
-      await settingsPage.addFolderButton.click();
-      await settingsPage.page.waitForTimeout(500);
 
-      // Input should be cleared after adding
-      await expect(settingsPage.folderInput).toHaveValue('');
+      // Add folder first time
+      await settingsPage.addRootFolder(testFolder);
+      await settingsPage.page.waitForTimeout(1500);
+
+      const foldersAfterFirst = await settingsPage.getRootFolders();
+      const countAfterFirst = foldersAfterFirst.filter(f => f === testFolder).length;
+
+      // Try adding same folder again
+      await settingsPage.addRootFolder(testFolder);
+      await settingsPage.page.waitForTimeout(1500);
+
+      const foldersAfterSecond = await settingsPage.getRootFolders();
+      const countAfterSecond = foldersAfterSecond.filter(f => f === testFolder).length;
+
+      // Should still only have one instance
+      expect(countAfterSecond).toBe(countAfterFirst);
     });
   });
 
@@ -76,6 +81,10 @@ test.describe('Settings and Configuration', () => {
     });
 
     test('shows indexing progress', async () => {
+      // Verify status badge is visible
+      const statusSection = settingsPage.page.locator('text=Status').locator('..');
+      await expect(statusSection).toBeVisible();
+
       // Get status to see if UI shows it
       const status = await settingsPage.getIndexingStatus();
       expect(status.status).toBeTruthy();
@@ -137,44 +146,19 @@ test.describe('Settings and Configuration', () => {
   });
 
   test.describe('Performance Settings', () => {
-    test('sets batch size', async () => {
-      const batchSizes = [10, 50, 100, 200];
-
-      for (const size of batchSizes) {
-        await settingsPage.setBatchSize(size);
-        const config = await settingsPage.getConfiguration();
-        expect(parseInt(config.batchSize)).toBe(size);
-      }
+    test.skip('sets batch size', async () => {
+      // Batch size control removed from UI in recent update
+      // This test is skipped until the feature is re-added
     });
 
-    test('validates batch size limits', async () => {
-      // Navigate to Search Features tab first
-      await settingsPage.page.locator('button:has-text("Search Features")').click();
-      await settingsPage.page.waitForTimeout(500);
-
-      const invalidSizes = [-1, 0, 10000];
-
-      for (const size of invalidSizes) {
-        await settingsPage.batchSizeInput.clear();
-        await settingsPage.batchSizeInput.fill(size.toString());
-        await settingsPage.saveButton.click();
-
-        // Should show error or use default
-        const errorAlert = settingsPage.page.locator('[role="alert"]');
-        if (await errorAlert.isVisible()) {
-          expect(await errorAlert.textContent()).toBeTruthy();
-        }
-      }
+    test.skip('validates batch size limits', async () => {
+      // Batch size control removed from UI in recent update
+      // This test is skipped until the feature is re-added
     });
 
-    test('sets thumbnail size', async () => {
-      const sizes = ['small', 'medium', 'large'];
-
-      for (const size of sizes) {
-        await settingsPage.setThumbnailSize(size);
-        const config = await settingsPage.getConfiguration();
-        expect(config.thumbnailSize).toBe(size);
-      }
+    test.skip('sets thumbnail size', async () => {
+      // Thumbnail size control removed from UI in recent update
+      // This test is skipped until the feature is re-added
     });
   });
 
@@ -185,8 +169,7 @@ test.describe('Settings and Configuration', () => {
       await settingsPage.toggleOCR(preset.ocr_enabled);
       await settingsPage.toggleFaceSearch(preset.face_search_enabled);
       await settingsPage.toggleSemanticSearch(preset.semantic_search_enabled);
-      await settingsPage.setBatchSize(preset.batch_size);
-      await settingsPage.setThumbnailSize(preset.thumbnail_size);
+      // Batch size and thumbnail size removed from UI
 
       const config = await settingsPage.getConfiguration();
       expect(config.ocrEnabled).toBe(preset.ocr_enabled);
@@ -200,8 +183,7 @@ test.describe('Settings and Configuration', () => {
       await settingsPage.toggleOCR(preset.ocr_enabled);
       await settingsPage.toggleFaceSearch(preset.face_search_enabled);
       await settingsPage.toggleSemanticSearch(preset.semantic_search_enabled);
-      await settingsPage.setBatchSize(preset.batch_size);
-      await settingsPage.setThumbnailSize(preset.thumbnail_size);
+      // Batch size and thumbnail size removed from UI
 
       const config = await settingsPage.getConfiguration();
       expect(config.ocrEnabled).toBe(preset.ocr_enabled);
@@ -238,19 +220,16 @@ test.describe('Settings and Configuration', () => {
 
   test.describe('Settings Persistence', () => {
     test('persists settings after page reload', async ({ page }) => {
-      // Make changes
+      // Make changes (auto-saves)
       await settingsPage.toggleOCR(true);
-      await settingsPage.setBatchSize(75);
+      await settingsPage.toggleFaceSearch(false);
 
-      // Verify values are set before saving
+      // Verify values are set
       const configBefore = await settingsPage.getConfiguration();
-      expect(parseInt(configBefore.batchSize)).toBe(75);
+      expect(configBefore.ocrEnabled).toBeTruthy();
+      expect(configBefore.faceSearchEnabled).toBeFalsy();
 
-      // Save the configuration
-      await settingsPage.saveButton.click();
-      await settingsPage.waitForSaveComplete();
-
-      // Wait for saves to complete
+      // Wait for auto-save to complete
       await page.waitForTimeout(2000);
 
       // Reload page
@@ -264,13 +243,15 @@ test.describe('Settings and Configuration', () => {
       // Settings should persist
       const config = await settingsPage.getConfiguration();
       expect(config.ocrEnabled).toBeTruthy();
-      // Skip batch size check for now - appears to be a known issue with persistence
-      // expect(parseInt(config.batchSize)).toBe(75);
+      expect(config.faceSearchEnabled).toBeFalsy();
     });
 
     test('syncs settings with backend', async () => {
-      // Change settings via UI
+      // Change settings via UI (auto-saves)
       await settingsPage.toggleFaceSearch(true);
+
+      // Wait for auto-save
+      await settingsPage.page.waitForTimeout(1500);
 
       // Just verify the setting was saved
       const config = await settingsPage.getConfiguration();
