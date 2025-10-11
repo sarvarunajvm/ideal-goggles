@@ -121,6 +121,18 @@ class ThumbnailGenerator:
         try:
             from PIL import Image, ImageOps
 
+            # Register HEIF opener if processing HEIC/HEIF files
+            if photo.path.lower().endswith((".heic", ".heif")):
+                try:
+                    import pillow_heif
+
+                    pillow_heif.register_heif_opener()
+                except ImportError:
+                    logger.warning(
+                        f"pillow-heif not available, cannot process {photo.path}"
+                    )
+                    return None
+
             # Load original image
             with Image.open(photo.path) as img:
                 # Get original dimensions
@@ -337,6 +349,18 @@ class SmartThumbnailGenerator(ThumbnailGenerator):
         """Enhanced thumbnail generation with adaptive quality."""
         try:
             from PIL import Image, ImageOps
+
+            # Register HEIF opener if processing HEIC/HEIF files
+            if photo.path.lower().endswith((".heic", ".heif")):
+                try:
+                    import pillow_heif
+
+                    pillow_heif.register_heif_opener()
+                except ImportError:
+                    logger.warning(
+                        f"pillow-heif not available, cannot process {photo.path}"
+                    )
+                    return None
 
             with Image.open(photo.path) as img:
                 original_width, original_height = img.size

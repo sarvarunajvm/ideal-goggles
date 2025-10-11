@@ -87,7 +87,16 @@ class Photo:
         if not self.path or not Path(self.path).is_absolute():
             errors.append("Path must be absolute")
 
-        if self.ext not in [".jpg", ".jpeg", ".png", ".tiff", ".tif"]:
+        if self.ext not in [
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".tiff",
+            ".tif",
+            ".webp",
+            ".heic",
+            ".heif",
+        ]:
             errors.append(f"Unsupported file extension: {self.ext}")
 
         if self.size <= 0:

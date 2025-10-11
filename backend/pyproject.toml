@@ -33,6 +33,9 @@ dependencies = [
     "arq>=0.26.0",
     "fakeredis>=2.23.0",
     "send2trash>=1.8.0",
+    "exifread>=3.0.0",
+    "matplotlib>=3.7.0",
+    "pillow-heif>=0.13.0",
 ]
 
 [project.optional-dependencies]

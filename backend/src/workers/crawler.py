@@ -41,7 +41,16 @@ class CrawlResult:
 class PhotoFileHandler(FileSystemEventHandler):
     """File system event handler for photo files."""
 
-    SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
+    SUPPORTED_EXTENSIONS = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".tiff",
+        ".tif",
+        ".webp",
+        ".heic",
+        ".heif",
+    }
 
     def __init__(self, crawler: "FileCrawler"):
         self.crawler = crawler
