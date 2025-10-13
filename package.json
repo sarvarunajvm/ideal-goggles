@@ -102,7 +102,7 @@
     "electron-builder": "^26.0.12",
     "electron-builder-squirrel-windows": "26.0.12",
     "eslint": "^9.36.0",
-    "eslint-plugin-react-hooks": "^6.1.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.23",
     "globals": "^16.4.0",
     "identity-obj-proxy": "^3.0.0",
@@ -143,7 +143,7 @@
     "electron-log": "^5.2.4",
     "electron-updater": "^6.3.9",
     "framer-motion": "^12.23.22",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.545.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.3",
@@ -192,8 +192,12 @@
           ]
         }
       ],
+      "icon": "build-resources/icon.ico",
+      "legalTrademarks": "Ideal Goggles Team",
+      "requestedExecutionLevel": "asInvoker",
       "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
@@ -205,12 +209,17 @@
         }
       ],
       "category": "public.app-category.photography",
+      "icon": "build-resources/icon.icns",
+      "darkModeSupport": true,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "identity": null,
       "entitlements": "build-resources/entitlements.mac.plist",
       "entitlementsInherit": "build-resources/entitlements.mac.plist",
-      "singleArchFiles": "**/*"
+      "singleArchFiles": "**/*",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "type": "distribution",
+      "minimumSystemVersion": "10.15"
     },
     "linux": {
       "target": [
@@ -238,28 +247,48 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ideal-goggles",
-      "uninstallDisplayName": "ideal-goggles"
+      "shortcutName": "Ideal Goggles",
+      "uninstallDisplayName": "Ideal Goggles",
+      "installerIcon": "build-resources/icon.ico",
+      "uninstallerIcon": "build-resources/icon.ico",
+      "installerHeaderIcon": "build-resources/icon.ico",
+      "installerSidebar": "build-resources/installer-sidebar.bmp",
+      "uninstallerSidebar": "build-resources/installer-sidebar.bmp",
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": true,
+      "displayLanguageSelector": false,
+      "installerLanguages": ["en_US"],
+      "language": "en_US",
+      "warningsAsErrors": false,
+      "include": "build-resources/installer.nsh"
     },
     "dmg": {
-      "title": "ideal-goggles",
-      "iconSize": 100,
+      "title": "Ideal Goggles ${version}",
+      "iconSize": 80,
+      "iconTextSize": 12,
       "format": "UDZO",
-      "background": null,
-      "writeUpdateInfo": false,
+      "background": "build-resources/dmg-background.png",
+      "window": {
+        "width": 600,
+        "height": 400
+      },
       "contents": [
         {
-          "x": 110,
-          "y": 150
+          "x": 150,
+          "y": 205,
+          "type": "file"
         },
         {
-          "x": 240,
-          "y": 150,
+          "x": 450,
+          "y": 205,
           "type": "link",
           "path": "/Applications"
         }
       ],
-      "internetEnabled": false
+      "internetEnabled": false,
+      "sign": false
     },
     "appImage": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"
@@ -270,12 +299,15 @@
       "description": "Privacy-focused local photo search and organization with AI capabilities.",
       "maintainer": "Ideal Goggles Team"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "ideal-goggles",
-      "repo": "ideal-goggles",
-      "releaseType": "release"
-    }
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ideal-goggles",
+        "repo": "ideal-goggles",
+        "releaseType": "release",
+        "publishAutoUpdate": true
+      }
+    ]
   },
   "packageManager": "pnpm@10.17.1"
 }

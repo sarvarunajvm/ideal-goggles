@@ -40,6 +40,22 @@ const electronAPI = {
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  // Auto-updater operations
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getUpdateChannel: () => ipcRenderer.invoke('get-update-channel'),
+  setUpdateChannel: (channel: 'stable' | 'beta') => ipcRenderer.invoke('set-update-channel', channel),
+
+  // Update event listeners
+  onUpdateAvailable: (callback: (info: { version: string; releaseNotes?: string; releaseName?: string; releaseDate?: string }) => void) => {
+    ipcRenderer.on('update-available', (_, info) => callback(info));
+  },
+  onUpdateDownloadProgress: (callback: (progress: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => {
+    ipcRenderer.on('update-download-progress', (_, progress) => callback(progress));
+  },
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
+    ipcRenderer.on('update-downloaded', (_, info) => callback(info));
+  },
 };
 
 // Security: Only expose specific API methods to the renderer process

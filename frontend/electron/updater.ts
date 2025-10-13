@@ -1,8 +1,12 @@
-import { app, dialog } from 'electron';
+import { app, dialog, BrowserWindow } from 'electron';
 
 // Lazily resolve autoUpdater and logger to avoid hard dependency in dev
 let autoUpdater: any = null;
 let log: any = null;
+
+// Update channel configuration (stable/beta)
+export type UpdateChannel = 'stable' | 'beta';
+let currentChannel: UpdateChannel = 'stable';
 
 function ensureAutoUpdater(): boolean {
   if (autoUpdater && log) return true;
@@ -20,11 +24,28 @@ function ensureAutoUpdater(): boolean {
     // Auto-update configuration
     autoUpdater.autoDownload = false; // Ask user before downloading
     autoUpdater.autoInstallOnAppQuit = true; // Install updates on quit
+
+    // Set update channel
+    autoUpdater.allowPrerelease = currentChannel === 'beta';
+
     return true;
   } catch (e) {
     console.warn('[Updater] Auto-updater unavailable:', (e as any)?.message || e);
     return false;
   }
+}
+
+// Set update channel
+export function setUpdateChannel(channel: UpdateChannel) {
+  currentChannel = channel;
+  if (autoUpdater) {
+    autoUpdater.allowPrerelease = channel === 'beta';
+  }
+}
+
+// Get current update channel
+export function getUpdateChannel(): UpdateChannel {
+  return currentChannel;
 }
 
 export function initializeAutoUpdater() {
@@ -57,12 +78,37 @@ function setupUpdateListeners() {
   autoUpdater.on('update-available', (info: any) => {
     log.info('Update available:', info.version);
 
+    // Notify renderer process
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        releaseName: info.releaseName,
+        releaseDate: info.releaseDate,
+      });
+    }
+
+    // Format release notes
+    let releaseNotesText = '';
+    if (info.releaseNotes) {
+      if (typeof info.releaseNotes === 'string') {
+        releaseNotesText = info.releaseNotes;
+      } else if (Array.isArray(info.releaseNotes)) {
+        releaseNotesText = info.releaseNotes.map((note: any) => note.note || note).join('\n');
+      }
+    }
+
+    const detailText = releaseNotesText
+      ? `Would you like to download it now?\n\nWhat's new:\n${releaseNotesText.substring(0, 300)}${releaseNotesText.length > 300 ? '...' : ''}\n\nThe update will be installed when you quit the app.`
+      : 'Would you like to download it now? The update will be installed when you quit the app.';
+
     dialog
       .showMessageBox({
         type: 'info',
         title: 'Update Available',
         message: `A new version (${info.version}) is available!`,
-        detail: 'Would you like to download it now? The update will be installed when you quit the app.',
+        detail: detailText,
         buttons: ['Download', 'Later'],
         defaultId: 0,
         cancelId: 1,
@@ -86,10 +132,29 @@ function setupUpdateListeners() {
   autoUpdater.on('download-progress', (progressObj: any) => {
     const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}%`;
     log.info(logMessage);
+
+    // Notify renderer process of download progress
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send('update-download-progress', {
+        percent: progressObj.percent,
+        transferred: progressObj.transferred,
+        total: progressObj.total,
+        bytesPerSecond: progressObj.bytesPerSecond,
+      });
+    }
   });
 
   autoUpdater.on('update-downloaded', (info: any) => {
     log.info('Update downloaded:', info.version);
+
+    // Notify renderer process
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send('update-downloaded', {
+        version: info.version,
+      });
+    }
 
     dialog
       .showMessageBox({

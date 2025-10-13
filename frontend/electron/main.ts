@@ -4,7 +4,7 @@ import { createWriteStream, readFileSync } from 'fs';
 import net from 'net';
 import { spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync } from 'fs';
-import { initializeAutoUpdater, checkForUpdatesManually } from './updater';
+import { initializeAutoUpdater, checkForUpdatesManually, setUpdateChannel, getUpdateChannel, UpdateChannel } from './updater';
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;
@@ -363,6 +363,17 @@ function setupIpcHandlers(): void {
   // Check for updates manually
   ipcMain.handle('check-for-updates', () => {
     checkForUpdatesManually();
+  });
+
+  // Get update channel
+  ipcMain.handle('get-update-channel', () => {
+    return getUpdateChannel();
+  });
+
+  // Set update channel
+  ipcMain.handle('set-update-channel', (_, channel: UpdateChannel) => {
+    setUpdateChannel(channel);
+    return getUpdateChannel();
   });
 
   // Get backend log file path

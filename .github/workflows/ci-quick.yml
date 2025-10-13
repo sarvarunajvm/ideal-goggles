@@ -154,7 +154,7 @@ jobs:
         fi
 
     - name: Upload coverage to Codecov (backend)
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         use_oidc: true
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -235,7 +235,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload coverage to Codecov (frontend)
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         use_oidc: true
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -246,7 +246,7 @@ jobs:
         verbose: true
 
     - name: Upload bundle stats to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       if: always()
       with:
         use_oidc: true
@@ -378,7 +378,7 @@ jobs:
 
     steps:
     - name: Download test results
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: test-results
 
