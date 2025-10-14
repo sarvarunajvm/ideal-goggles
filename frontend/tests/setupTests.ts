@@ -44,6 +44,12 @@ global.fetch = jest.fn(() =>
   } as Response)
 )
 
+// Polyfill minimal Request for react-router data APIs
+// JSDOM does not include the full fetch API Request by default in this setup
+;(global as any).Request = (global as any).Request || class Request {
+  constructor(..._args: any[]) {}
+}
+
 // Ensure timers are available globally
 global.setInterval = global.setInterval || jest.fn()
 global.clearInterval = global.clearInterval || jest.fn()

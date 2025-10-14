@@ -33,7 +33,8 @@ jest.mock('../../src/services/apiClient', () => ({
       total_matches: 0,
       items: [],
       took_ms: 150
-    })
+    }),
+    getConfig: jest.fn().mockResolvedValue({ roots: ['/photos'] })
   },
   getThumbnailBaseUrl: jest.fn(() => '/thumbnails'),
   getApiBaseUrl: jest.fn(() => '/api')
@@ -280,6 +281,154 @@ describe('SearchPage Component', () => {
     // Should have filter button (has filter icon, text "Advanced filters" in title)
     const filterButton = screen.getByTitle(/Advanced filters/i)
     expect(filterButton).toBeInTheDocument()
+  })
+
+  test('opens filters and applies text search with filters', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    const user = userEvent.setup()
+    renderSearchPage()
+
+    // Switch to text mode (Quick Find)
+    await user.click(
+      screen.getByLabelText(/Quick Find - Search by filename, date, or text/i)
+    )
+
+    // Open filters
+    await user.click(screen.getByTitle(/Advanced filters/i))
+
+    // Fill filters
+    const fromInput = screen.getByPlaceholderText('From') as HTMLInputElement
+    const toInput = screen.getByPlaceholderText('To') as HTMLInputElement
+    const folderInput = screen.getByPlaceholderText('Folder path...') as HTMLInputElement
+    const limitInput = screen.getByDisplayValue('50') as HTMLInputElement
+
+    await user.clear(fromInput)
+    await user.type(fromInput, '2024-01-01')
+    await user.clear(toInput)
+    await user.type(toInput, '2024-12-31')
+    await user.clear(folderInput)
+    await user.type(folderInput, 'Vacation')
+    // Use change event to avoid intermediate values causing parse issues
+    fireEvent.change(limitInput, { target: { value: '100' } })
+
+    // Perform search
+    const searchInput = screen.getByPlaceholderText(/Search by filename, date, or text/i)
+    await user.type(searchInput, 'beach{Enter}')
+
+    await waitFor(() => {
+      expect(apiService.searchPhotos).toHaveBeenCalledWith({
+        q: 'beach',
+        from: '2024-01-01',
+        to: '2024-12-31',
+        folder: 'Vacation',
+        limit: 100,
+      })
+    })
+  })
+
+  test('semantic search failure falls back to text mode and shows setup message', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.semanticSearch.mockRejectedValue(new Error('Semantic search failed'))
+
+    const user = userEvent.setup()
+    renderSearchPage()
+
+    const searchInput = screen.getByPlaceholderText(/describe what you're looking for/i)
+    await user.type(searchInput, 'test{Enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Smart search needs additional setup/i)).toBeInTheDocument()
+    })
+
+    // Mode should switch to text (placeholder changes)
+    expect(
+      screen.getByPlaceholderText(/Search by filename, date, or text/i)
+    ).toBeInTheDocument()
+  })
+
+  test('image search failure falls back to text mode and shows setup message', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.imageSearch.mockRejectedValue(new Error('Image search failed'))
+
+    const user = userEvent.setup()
+    renderSearchPage()
+
+    // Switch to image mode
+    await user.click(
+      screen.getByLabelText(/Similar Photos - Find visually similar images/i)
+    )
+
+    // Upload a file
+    const fileInputs = document.querySelectorAll('input[type="file"]')
+    expect(fileInputs.length).toBeGreaterThan(0)
+    const input = fileInputs[0] as HTMLInputElement
+    const file = new File(['x'], 'x.jpg', { type: 'image/jpeg' })
+    fireEvent.change(input, { target: { files: [file] } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Photo similarity search needs additional setup/i)).toBeInTheDocument()
+    })
+
+    // Mode should switch to text
+    expect(
+      screen.getByPlaceholderText(/Search by filename, date, or text/i)
+    ).toBeInTheDocument()
+  })
+
+  test('shows welcome empty state when no folders configured', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.getConfig.mockResolvedValue({ roots: [] })
+
+    renderSearchPage()
+
+    // Wait for config check effect
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome to Ideal Goggles/i)).toBeInTheDocument()
+    })
+
+    // Settings button is present
+    expect(screen.getByText(/Go to Settings/i)).toBeInTheDocument()
+  })
+
+  test('opens lightbox at clicked photo index', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.semanticSearch.mockResolvedValue({
+      query: 'test',
+      total_matches: 2,
+      items: [
+        { file_id: 1, path: '/photos/1.jpg', filename: '1.jpg', thumb_path: '/t/1.jpg' },
+        { file_id: 2, path: '/photos/2.jpg', filename: '2.jpg', thumb_path: '/t/2.jpg' },
+      ],
+      took_ms: 120,
+    })
+
+    const user = userEvent.setup()
+    renderSearchPage()
+
+    const searchInput = screen.getByPlaceholderText(/describe what you're looking for/i)
+    await user.type(searchInput, 'test{Enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 results/)).toBeInTheDocument()
+    })
+
+    const { useLightboxStore } = require('../../src/stores/lightboxStore')
+    const openMock = jest.fn()
+    // Override store action to a mock we can assert on
+    useLightboxStore.setState({ openLightbox: openMock })
+
+    // Click second result card
+    const secondCard = screen.getByText('2.jpg')
+    await user.click(secondCard)
+
+    await waitFor(() => {
+      expect(openMock).toHaveBeenCalled()
+    })
+
+    const args = openMock.mock.calls[0]
+    expect(args[1]).toBe(1)
+    expect(args[0]).toHaveLength(2)
+    expect(args[0][1].filename).toBe('2.jpg')
   })
 
   test('status bar shows indexing status', () => {

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Lightbox } from '@/components/Lightbox/Lightbox';
 import { useLightboxStore } from '@/stores/lightboxStore';
 import type { Photo } from '@/types';
@@ -230,7 +230,9 @@ describe('Lightbox', () => {
       useLightboxStore.getState().openLightbox(mockPhotos, 0);
       const { rerender } = render(<Lightbox />);
 
-      useLightboxStore.getState().closeLightbox();
+      act(() => {
+        useLightboxStore.getState().closeLightbox();
+      });
       rerender(<Lightbox />);
 
       // Verify listeners are cleaned up by checking no errors occur
@@ -283,7 +285,9 @@ describe('Lightbox', () => {
       useLightboxStore.getState().openLightbox(mockPhotos, 0);
       const { rerender } = render(<Lightbox />);
 
-      useLightboxStore.getState().closeLightbox();
+      act(() => {
+        useLightboxStore.getState().closeLightbox();
+      });
       rerender(<Lightbox />);
 
       await waitFor(() => {
@@ -320,7 +324,9 @@ describe('Lightbox', () => {
 
       expect(screen.getByTestId('lightbox-image')).toHaveTextContent('photo1.jpg');
 
-      useLightboxStore.getState().nextPhoto();
+      act(() => {
+        useLightboxStore.getState().nextPhoto();
+      });
       rerender(<Lightbox />);
 
       expect(screen.getByTestId('lightbox-image')).toHaveTextContent('photo2.jpg');
@@ -332,7 +338,9 @@ describe('Lightbox', () => {
 
       expect(screen.getByTestId('lightbox-metadata')).toHaveTextContent('photo1.jpg metadata');
 
-      useLightboxStore.getState().nextPhoto();
+      act(() => {
+        useLightboxStore.getState().nextPhoto();
+      });
       rerender(<Lightbox />);
 
       expect(screen.getByTestId('lightbox-metadata')).toHaveTextContent('photo2.jpg metadata');
@@ -344,7 +352,9 @@ describe('Lightbox', () => {
 
       expect(screen.getByText('1 / 3')).toBeInTheDocument();
 
-      useLightboxStore.getState().nextPhoto();
+      act(() => {
+        useLightboxStore.getState().nextPhoto();
+      });
       rerender(<Lightbox />);
 
       expect(screen.getByText('2 / 3')).toBeInTheDocument();
