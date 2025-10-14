@@ -32,12 +32,12 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
+    // Note: Don't reset errorCount here - it's managed in componentDidCatch
     return {
       hasError: true,
       error,
-      errorCount: 0,
     }
   }
 
@@ -97,7 +97,7 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: undefined,
       errorInfo: undefined,
-      errorCount: 0,
+      // Don't reset errorCount - we want to track total errors across resets
     })
   }
 
