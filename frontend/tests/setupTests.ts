@@ -44,6 +44,12 @@ global.fetch = jest.fn(() =>
   } as Response)
 )
 
+// Ensure timers are available globally
+global.setInterval = global.setInterval || jest.fn()
+global.clearInterval = global.clearInterval || jest.fn()
+global.setTimeout = global.setTimeout || jest.fn()
+global.clearTimeout = global.clearTimeout || jest.fn()
+
 // Mock the logger module
 jest.mock('../src/utils/logger', () => ({
   logger: {
