@@ -233,9 +233,9 @@ export function IndexingStep() {
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <div className="flex-1">
                 <p className="font-medium text-foreground">
-                  {status ? getPhaseLabel(status.progress.current_phase) : 'Starting...'}
+                  {status?.progress ? getPhaseLabel(status.progress.current_phase) : 'Starting...'}
                 </p>
-                {status && status.progress.processed_files > 0 && (
+                {status?.progress && status.progress.processed_files > 0 && (
                   <p className="text-xs text-muted-foreground mt-1">
                     {status.progress.processed_files < 100
                       ? "Great start! Your photos are being processed..."
@@ -256,7 +256,7 @@ export function IndexingStep() {
                 <div className="flex items-center space-x-2">
                   <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
                   <span className="text-sm font-medium text-primary">
-                    {status ? getPhaseLabel(status.progress.current_phase) : 'Starting...'}
+                    {status?.progress ? getPhaseLabel(status.progress.current_phase) : 'Starting...'}
                   </span>
                 </div>
                 {status?.progress && status?.progress.total_files > 0 && (
@@ -302,7 +302,7 @@ export function IndexingStep() {
                 </p>
 
                 {/* Phase progress breakdown - only show when we have status */}
-                {status && status.progress.total_files > 0 && (
+                {status?.progress && status.progress.total_files > 0 && (
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="text-center">
                       <div className="h-1 bg-muted rounded-full overflow-hidden">
@@ -368,7 +368,7 @@ export function IndexingStep() {
             <div className="flex-1">
               <p className="text-sm font-bold text-green-400">Skip the wait!</p>
               <p className="text-xs text-foreground/90">
-                {status?.progress.processed_files ? `${status.progress.processed_files} photos ready to search.` : ''} Continue while we finish in the background.
+                {status?.progress?.processed_files ? `${status.progress.processed_files} photos ready to search.` : ''} Continue while we finish in the background.
               </p>
             </div>
             <Button
