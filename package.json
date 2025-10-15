@@ -1,6 +1,6 @@
 {
   "name": "ideal-goggles",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "Ideal Goggles desktop application",
   "author": "Ideal Goggles Team",
   "main": "frontend/electron/dist/main.js",
@@ -259,7 +259,9 @@
       "runAfterFinish": true,
       "menuCategory": true,
       "displayLanguageSelector": false,
-      "installerLanguages": ["en_US"],
+      "installerLanguages": [
+        "en_US"
+      ],
       "language": "en_US",
       "warningsAsErrors": false,
       "include": "build-resources/installer.nsh"
