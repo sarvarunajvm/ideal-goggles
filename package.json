@@ -260,10 +260,6 @@
       "runAfterFinish": true,
       "menuCategory": true,
       "displayLanguageSelector": false,
-      "installerLanguages": [
-        "en_US"
-      ],
-      "language": "en_US",
       "warningsAsErrors": false,
       "include": "build-resources/installer.nsh"
     },
