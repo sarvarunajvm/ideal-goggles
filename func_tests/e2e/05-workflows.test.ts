@@ -20,43 +20,6 @@ test.describe('End-to-End Workflows', () => {
     await apiClient.dispose();
   });
 
-  test.skip('complete photo indexing and search workflow', async ({ page }) => {
-    // SKIP: Indexing button UI has changed - need to update selectors
-    // 1. Navigate to settings
-    settingsPage = new SettingsPage(page);
-    await settingsPage.goto('/settings');
-
-    // 2. Add root folders
-    const testFolders = JSON.parse(process.env.TEST_FOLDERS || '[]');
-    if (testFolders.length > 0) {
-      await settingsPage.addRootFolder(testFolders[0]);
-    }
-
-    // 3. Configure search features
-    await settingsPage.toggleSemanticSearch(true);
-    await settingsPage.toggleFaceSearch(true);
-    await settingsPage.setBatchSize(50);
-
-    // 4. Start indexing
-    await settingsPage.startIndexing(true);
-
-    // 5. Wait for indexing to start
-    await settingsPage.waitForIndexingStart();
-
-    // 6. Navigate to search while indexing
-    searchPage = new SearchPage(page);
-    await searchPage.navigateToSearch();
-
-    // 7. Perform searches with different modes
-    await searchPage.performTextSearch('test');
-    await searchPage.performSemanticSearch('beautiful landscape photo');
-
-    // 8. Go back to settings to check indexing status
-    await settingsPage.navigateToSettings();
-    const status = await settingsPage.getIndexingStatus();
-    expect(status.status).toBeTruthy();
-  });
-
   test('person enrollment and face search workflow', async ({ page }) => {
     // 1. Create test images
     const testImages = await TestData.createTestImages(5);
@@ -93,8 +56,7 @@ test.describe('End-to-End Workflows', () => {
     await page.waitForLoadState('networkidle');
 
     const minimalPreset = TestData.CONFIG_PRESETS.minimal;
-    await settingsPage.toggleOCR(minimalPreset.ocr_enabled);
-    await page.waitForTimeout(500);
+    // OCR has been removed from the application
     await settingsPage.toggleFaceSearch(minimalPreset.face_search_enabled);
     await page.waitForTimeout(500);
     await settingsPage.toggleSemanticSearch(minimalPreset.semantic_search_enabled);
@@ -112,8 +74,7 @@ test.describe('End-to-End Workflows', () => {
     await page.waitForLoadState('networkidle');
 
     const fullPreset = TestData.CONFIG_PRESETS.full;
-    await settingsPage.toggleOCR(fullPreset.ocr_enabled);
-    await page.waitForTimeout(500);
+    // OCR has been removed from the application
     await settingsPage.toggleFaceSearch(fullPreset.face_search_enabled);
     await page.waitForTimeout(500);
     await settingsPage.toggleSemanticSearch(fullPreset.semantic_search_enabled);
@@ -143,39 +104,6 @@ test.describe('End-to-End Workflows', () => {
     await expect(searchPage.uploadArea).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip('error recovery workflow', async ({ page }) => {
-    // SKIP: Connection status indicator element not found - UI has changed
-    settingsPage = new SettingsPage(page);
-    searchPage = new SearchPage(page);
-
-    // Load the page first before simulating errors
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    // 1. Simulate backend connection issues
-    await page.route('**/api/health', route => {
-      route.abort('failed');
-    });
-
-    // Wait for the UI to reflect the disconnected state
-    await page.waitForTimeout(2000);
-
-    // 2. App should show disconnected state
-    const statusClass = await searchPage.connectionStatus.first().getAttribute('class');
-    expect(statusClass).toContain('bg-red-500');
-
-    // 3. Restore connection
-    await page.unroute('**/api/health');
-
-    // 4. Refresh and verify recovery
-    await page.reload();
-    await searchPage.waitForConnection();
-
-    // 5. Verify functionality is restored
-    await searchPage.performTextSearch('recovery test');
-    await expect(searchPage.navBar).toBeVisible();
-  });
-
   test('multi-user workflow simulation', async ({ page, context }) => {
     // Simulate multiple users by opening multiple tabs
     const pages = [page];
@@ -195,7 +123,8 @@ test.describe('End-to-End Workflows', () => {
           await settings.goto('/settings');
           await p.waitForLoadState('networkidle', { timeout: 30000 });
           await p.waitForTimeout(1000);
-          await settings.toggleOCR(true);
+          // Toggle semantic search instead of OCR (which has been removed)
+          await settings.toggleSemanticSearch(true);
           await p.waitForTimeout(500);
         } else if (index === 1) {
           // User 2: Search operations
@@ -283,15 +212,13 @@ test.describe('End-to-End Workflows', () => {
 
     // 2. Measure search performance
     await searchPage.navigateToSearch();
-    const startTime = Date.now();
     await searchPage.performTextSearch('performance test');
-    const baselineTime = Date.now() - startTime;
 
     // 3. Optimize settings for performance
     await settingsPage.navigateToSettings();
     await settingsPage.setBatchSize(100);
     await settingsPage.setThumbnailSize('small');
-    await settingsPage.toggleOCR(false); // Disable heavy features
+    // OCR has been removed from the application - no need to toggle it
 
     // 4. Re-measure performance
     await searchPage.navigateToSearch();

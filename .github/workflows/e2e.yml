@@ -127,7 +127,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+        # No additional system dependencies needed (OCR removed)
 
     - name: Install all dependencies
       run: |

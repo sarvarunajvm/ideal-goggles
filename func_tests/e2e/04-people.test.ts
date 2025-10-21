@@ -60,13 +60,17 @@ test.describe('People Management', () => {
       await peoplePage.addPersonButton.click();
       await peoplePage.personNameInput.fill('Test Person');
 
-      // Without photos, save button should be disabled
+      // Wait for form to load
+      await peoplePage.page.waitForTimeout(1000);
+
+      // Without photos selected, save button should be disabled
       const isDisabled = await peoplePage.savePersonButton.isDisabled();
       expect(isDisabled).toBeTruthy();
 
-      // After adding a photo, it should be enabled
-      const fileInput = peoplePage.page.locator('input#new-person-file');
-      await fileInput.setInputFiles([testImages[0]]);
+      // After selecting a photo from the grid, it should be enabled
+      const photoGrid = peoplePage.page.locator('.grid.grid-cols-6 > div');
+      await photoGrid.first().waitFor({ state: 'visible', timeout: 5000 });
+      await photoGrid.first().click();
       await peoplePage.page.waitForTimeout(500);
       const isEnabled = await peoplePage.savePersonButton.isEnabled();
       expect(isEnabled).toBeTruthy();

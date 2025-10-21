@@ -114,16 +114,6 @@ test.describe('Settings and Configuration', () => {
   });
 
   test.describe('Feature Toggles', () => {
-    test('toggles OCR feature', async () => {
-      await settingsPage.toggleOCR(true);
-      let config = await settingsPage.getConfiguration();
-      expect(config.ocrEnabled).toBeTruthy();
-
-      await settingsPage.toggleOCR(false);
-      config = await settingsPage.getConfiguration();
-      expect(config.ocrEnabled).toBeFalsy();
-    });
-
     test('toggles face search feature', async () => {
       await settingsPage.toggleFaceSearch(true);
       let config = await settingsPage.getConfiguration();
@@ -145,34 +135,18 @@ test.describe('Settings and Configuration', () => {
     });
   });
 
-  test.describe('Performance Settings', () => {
-    test.skip('sets batch size', async () => {
-      // Batch size control removed from UI in recent update
-      // This test is skipped until the feature is re-added
-    });
-
-    test.skip('validates batch size limits', async () => {
-      // Batch size control removed from UI in recent update
-      // This test is skipped until the feature is re-added
-    });
-
-    test.skip('sets thumbnail size', async () => {
-      // Thumbnail size control removed from UI in recent update
-      // This test is skipped until the feature is re-added
-    });
-  });
 
   test.describe('Configuration Presets', () => {
     test('applies minimal configuration preset', async () => {
       const preset = TestData.CONFIG_PRESETS.minimal;
 
-      await settingsPage.toggleOCR(preset.ocr_enabled);
+      // OCR has been removed from the application
       await settingsPage.toggleFaceSearch(preset.face_search_enabled);
       await settingsPage.toggleSemanticSearch(preset.semantic_search_enabled);
       // Batch size and thumbnail size removed from UI
 
       const config = await settingsPage.getConfiguration();
-      expect(config.ocrEnabled).toBe(preset.ocr_enabled);
+      // No longer checking OCR
       expect(config.faceSearchEnabled).toBe(preset.face_search_enabled);
       expect(config.semanticSearchEnabled).toBe(preset.semantic_search_enabled);
     });
@@ -180,13 +154,13 @@ test.describe('Settings and Configuration', () => {
     test('applies full configuration preset', async () => {
       const preset = TestData.CONFIG_PRESETS.full;
 
-      await settingsPage.toggleOCR(preset.ocr_enabled);
+      // OCR has been removed from the application
       await settingsPage.toggleFaceSearch(preset.face_search_enabled);
       await settingsPage.toggleSemanticSearch(preset.semantic_search_enabled);
       // Batch size and thumbnail size removed from UI
 
       const config = await settingsPage.getConfiguration();
-      expect(config.ocrEnabled).toBe(preset.ocr_enabled);
+      // No longer checking OCR
       expect(config.faceSearchEnabled).toBe(preset.face_search_enabled);
       expect(config.semanticSearchEnabled).toBe(preset.semantic_search_enabled);
     });
@@ -195,7 +169,7 @@ test.describe('Settings and Configuration', () => {
   test.describe('Reset Configuration', () => {
     test('resets configuration to defaults', async () => {
       // Make some changes first
-      await settingsPage.toggleOCR(true);
+      await settingsPage.toggleFaceSearch(true);
 
       // Reset configuration
       await settingsPage.resetConfiguration();
@@ -221,12 +195,12 @@ test.describe('Settings and Configuration', () => {
   test.describe('Settings Persistence', () => {
     test('persists settings after page reload', async ({ page }) => {
       // Make changes (auto-saves)
-      await settingsPage.toggleOCR(true);
+      await settingsPage.toggleSemanticSearch(true);
       await settingsPage.toggleFaceSearch(false);
 
       // Verify values are set
       const configBefore = await settingsPage.getConfiguration();
-      expect(configBefore.ocrEnabled).toBeTruthy();
+      expect(configBefore.semanticSearchEnabled).toBeTruthy();
       expect(configBefore.faceSearchEnabled).toBeFalsy();
 
       // Wait for auto-save to complete
@@ -242,7 +216,7 @@ test.describe('Settings and Configuration', () => {
 
       // Settings should persist
       const config = await settingsPage.getConfiguration();
-      expect(config.ocrEnabled).toBeTruthy();
+      expect(config.semanticSearchEnabled).toBeTruthy();
       expect(config.faceSearchEnabled).toBeFalsy();
     });
 

@@ -3,12 +3,23 @@
 
 !macro customHeader
   ; Custom installer header
-  !define MUI_HEADERIMAGE
-  !define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\nsis3-metro.bmp"
-  !define MUI_HEADERIMAGE_RIGHT
+  ; Only define header image if not already set by electron-builder
+  !ifndef MUI_HEADERIMAGE
+    !define MUI_HEADERIMAGE
+  !endif
+  !ifndef MUI_HEADERIMAGE_BITMAP
+    !define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\nsis3-metro.bmp"
+  !endif
+  !ifndef MUI_HEADERIMAGE_RIGHT
+    !define MUI_HEADERIMAGE_RIGHT
+  !endif
 
   ; Custom welcome and finish pages
-  !define MUI_WELCOMEFINISHPAGE_BITMAP "${BUILD_RESOURCES_DIR}\installer-sidebar.bmp"
+  ; Electron-builder already defines MUI_WELCOMEFINISHPAGE_BITMAP via package.json (installerSidebar).
+  ; Guard to avoid duplicate definition error.
+  !ifndef MUI_WELCOMEFINISHPAGE_BITMAP
+    !define MUI_WELCOMEFINISHPAGE_BITMAP "${BUILD_RESOURCES_DIR}\installer-sidebar.bmp"
+  !endif
 
   ; Custom text
   !define MUI_WELCOMEPAGE_TITLE "Welcome to Ideal Goggles Setup"

@@ -69,11 +69,6 @@ test.describe('Search Functionality', () => {
         expect(isEnabled).toBeTruthy();
       }
     });
-
-    test('supports pagination', async () => {
-      // Skip - pagination needs actual search results
-      test.skip();
-    });
   });
 
   test.describe('Semantic Search', () => {

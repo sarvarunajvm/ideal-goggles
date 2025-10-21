@@ -48,6 +48,20 @@ async function globalSetup(config: FullConfig) {
     const testFolders = await TestData.createTestFolders();
     console.log(`Created ${testFolders.length} test folders`);
 
+    // Add test folders to backend configuration and index them
+    console.log('Adding test folders to backend and indexing...');
+    await apiClient.setRootFolders(testFolders);
+    await apiClient.startIndexing(true); // Full index
+
+    // Wait for indexing to complete so photos are available
+    console.log('Waiting for indexing to complete...');
+    const indexed = await apiClient.waitForIndexingComplete(120000); // 2 minute timeout
+    if (indexed) {
+      console.log('Indexing completed successfully');
+    } else {
+      console.log('Warning: Indexing did not complete in time');
+    }
+
     // Store test data paths for tests to use
     process.env.TEST_IMAGES = JSON.stringify(testImages);
     process.env.TEST_FOLDERS = JSON.stringify(testFolders);

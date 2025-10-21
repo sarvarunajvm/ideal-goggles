@@ -29,9 +29,39 @@ export class PeoplePage extends BasePage {
     await this.addPersonButton.click();
     await this.personNameInput.fill(name);
 
-    // Upload photos - use the file input that appears after clicking upload button
-    const fileInput = this.page.locator('input#new-person-file');
-    await fileInput.setInputFiles(photoPaths);
+    // The new UI uses photo selection from indexed photos instead of file upload
+    // Wait for the form to be visible
+    await this.page.waitForTimeout(500);
+
+    // Wait for photos to finish loading by checking for loading indicator or photos
+    const loadingText = this.page.locator('text=Loading photos');
+    const photoGrid = this.page.locator('.grid.grid-cols-6 > div');
+
+    // Wait for loading to finish
+    await loadingText.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {
+      // Loading text might not exist, that's ok
+    });
+
+    // Wait for photo grid to have items
+    await this.page.waitForTimeout(1000);
+
+    // Get available photos
+    const photoCount = await photoGrid.count();
+
+    if (photoCount === 0) {
+      // No photos available - this will cause validation error which is expected for some tests
+      await this.savePersonButton.click();
+      await this.page.waitForTimeout(500);
+      return;
+    }
+
+    // Select the requested number of photos
+    const photosToSelect = Math.min(photoPaths.length, photoCount);
+
+    for (let i = 0; i < photosToSelect; i++) {
+      await photoGrid.nth(i).click();
+      await this.page.waitForTimeout(200);
+    }
 
     await this.savePersonButton.click();
     await this.waitForSaveComplete();
@@ -92,14 +122,24 @@ export class PeoplePage extends BasePage {
   }
 
   async addPhotosToExistingPerson(name: string, photoPaths: string[]) {
-    await this.selectPerson(name);
-    // The file input is specific to the selected person - find it first
-    const fileInputs = await this.page.locator('input[type="file"]').all();
-    // Use the last file input which should be for the selected person
-    const fileInput = fileInputs[fileInputs.length - 1];
-    await fileInput.setInputFiles(photoPaths);
-    // Click the Save Person button for that specific person
-    await this.page.locator('[data-testid="person-item"] button:has-text("Save Person")').click();
+    // Click Edit button for the person
+    const personCard = this.page.locator('[data-testid="person-item"]', { hasText: name });
+    await personCard.locator('button:has-text("Edit")').click();
+
+    // Wait for form to appear and photos to load
+    await this.page.waitForTimeout(1000);
+
+    // Select photos from the grid
+    const photoGrid = this.page.locator('.grid.grid-cols-6 > div');
+    const photoCount = Math.min(photoPaths.length, await photoGrid.count());
+
+    for (let i = 0; i < photoCount; i++) {
+      await photoGrid.nth(i).click();
+      await this.page.waitForTimeout(200);
+    }
+
+    // Click Save
+    await this.page.locator('button:has-text("Save Person")').first().click();
     await this.waitForSaveComplete();
   }
 
@@ -156,9 +196,15 @@ export class PeoplePage extends BasePage {
 
   async waitForSaveComplete() {
     await this.page.waitForTimeout(500);
-    const toast = await this.page.locator('[role="alert"]:has-text("Saved")');
-    await toast.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    // The toast shows just "Saved" text
+    const toast = this.page.locator('[role="alert"]', { hasText: 'Saved' });
+    await toast.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+      console.log('Save toast not found - continuing anyway');
+    });
+    // Wait for toast to disappear
     await toast.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    // Wait for form to close
+    await this.page.waitForTimeout(1000);
   }
 
   async waitForDeleteComplete() {

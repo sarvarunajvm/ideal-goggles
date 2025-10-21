@@ -51,10 +51,12 @@ test.describe('@P0 Critical User Flows', () => {
       searchPage = new SearchPage(page);
       await searchPage.goto();
 
-      // Quick Find is the default mode, so we don't need to click it
-      // Just verify it's the active mode
+      // Click text search mode to activate it
+      await searchPage.textSearchButton.click();
+      await page.waitForTimeout(300);
+
       const activeMode = await searchPage.getActiveSearchMode();
-      expect(activeMode).toContain('Quick Find');
+      expect(activeMode).toContain('Text');
 
       // Enter search query
       await searchPage.searchInput.fill('test query');

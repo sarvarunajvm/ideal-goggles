@@ -100,6 +100,7 @@ yarn.lock
 .claude/
 
 .playwright-mcp
+func_tests/fixtures/
 
 AGENTS.md
 CLAUDE.md
