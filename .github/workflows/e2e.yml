@@ -207,7 +207,7 @@ jobs:
         verbose: true
 
     - name: Upload test reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: e2e-test-reports-${{ matrix.browser }}
@@ -243,7 +243,7 @@ jobs:
         pnpm install --no-frozen-lockfile
 
     - name: Download all test reports
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         pattern: e2e-test-reports-*
         path: all-test-reports
@@ -309,7 +309,7 @@ jobs:
         fi
 
     - name: Upload merged report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: e2e-test-report
         path: func_tests/playwright-report/
