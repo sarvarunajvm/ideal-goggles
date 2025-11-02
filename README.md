@@ -1,305 +1,193 @@
-# 🥽 Ideal Goggles - Desktop App
+# 🥽 Ideal Goggles
+
+> Privacy-first photo search and organization powered by AI - everything runs on your computer
 
 [![Quick CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml)
 [![E2E Tests](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml)
 [![Coverage Report](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
-[![Dependabot Updates](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/dependabot/dependabot-updates)
 
-A privacy-focused desktop application for intelligent photo search and organization. Ideal Goggles lets you search your photos using natural language, faces, and text within images — all processed locally on your machine.
+Search your photo library using natural language, face recognition, and OCR — all running locally on your machine. No cloud uploads, no subscriptions, no privacy concerns.
 
-## ✨ Features
+## What Makes It Special
 
-- 🔍 **Smart Search**: Find photos using natural language descriptions
-- 👤 **Face Recognition**: Group and search photos by people
-- 📝 **OCR Text Search**: Find photos containing specific text
-- 🖼️ **Similar Image Search**: Find visually similar photos
-- 🔒 **100% Private**: All processing happens locally - no cloud uploads
-- ⚡ **Fast Performance**: Handles 1M+ photos with sub-2s search times
-- 🖥️ **Cross-Platform**: Works on macOS, Windows, and Linux
+**🔒 Privacy First**
+- All AI processing happens on your computer
+- Zero cloud uploads or third-party services
+- Open source - verify the code yourself
 
-## 🚀 Quick Start
+**🎯 Powerful Search**
+- Natural language: "dog playing in snow"
+- Face recognition: Find all photos of a person
+- OCR: Search text within images
+- Visual similarity: Find duplicates or similar shots
 
-### Prerequisites
+**⚡ Fast & Scalable**
+- Handles 100,000+ photos
+- Sub-2-second search times
+- Works on macOS, Windows, and Linux
 
-- **Node.js** 18+
-- **PNPM** 10+ (install with `npm install -g pnpm`)
-- **Python** 3.12+
-- **Git**
+## Quick Start
 
-### Installation
+### For Users
+
+Download the latest installer for your platform:
+- **macOS**: [ideal-goggles.dmg](https://github.com/sarvarunajvm/ideal-goggles/releases)
+- **Windows**: [ideal-goggles-Setup.exe](https://github.com/sarvarunajvm/ideal-goggles/releases)
+- **Linux**: [.AppImage / .deb / .rpm](https://github.com/sarvarunajvm/ideal-goggles/releases)
+
+[📖 Full Installation Guide](docs/USER_MANUAL.md#installation)
+
+### For Developers
 
 ```bash
-# Clone the repository
+# Prerequisites: Node.js 18+, Python 3.12+, pnpm 10+
 git clone https://github.com/sarvarunajvm/ideal-goggles.git
 cd ideal-goggles
 
-# Install all dependencies
+# Install dependencies
 pnpm install
-
-# Install backend dependencies
 make backend-install
 
-# Start development environment
+# Start development
 pnpm run dev
 ```
 
-### Optional: ML Dependencies
+[📖 Developer Setup Guide](docs/DEVELOPER_GUIDE.md)
 
-Ideal Goggles works out of the box with basic search functionality. To enable advanced features like OCR, semantic search, and face recognition, install the optional ML dependencies:
+### ML Features (Optional)
+
+Advanced AI features are optional. Install when ready:
 
 ```bash
-# Install all ML dependencies (semantic search, face recognition)
-# This installs PyTorch, CLIP, InsightFace and verifies they work
+# Install ML dependencies (PyTorch, CLIP, InsightFace)
 pnpm run backend:install-ml
 
-# Or use Make:
-make backend-install-ml
-
-# Verify models work correctly
+# Verify everything works
 pnpm run backend:verify-models
 ```
 
-**ML Features:**
-- **Tesseract OCR**: Extract and search text within images
-- **CLIP**: Natural language semantic search ("photos of sunset at beach")
-- **InsightFace**: Face detection and recognition for people search
+**What you get:**
+- Natural language search ("sunset at beach")
+- Face recognition and grouping
+- OCR text extraction from images
 
-These dependencies are optional and can be installed later if needed. The app will gracefully disable features that require missing dependencies.
+[📖 ML Setup Guide](docs/ML_SETUP.md)
 
-📖 **See [docs/ML_SETUP.md](docs/ML_SETUP.md) for complete ML setup guide, platform compatibility, and troubleshooting.**
-
-The app will launch with:
-- Backend API on http://localhost:5555
-- Frontend on http://localhost:3333
-- Electron desktop app
-
-## 📁 Project Structure
+## Architecture
 
 ```
-ideal-goggles/
-├── backend/              # Python FastAPI backend
-│   ├── src/             # Backend source code
-│   │   ├── api/         # API endpoints
-│   │   ├── core/        # Core functionality
-│   │   └── models/      # Data models
-│   └── pyproject.toml   # Python dependencies
-│
-├── frontend/            # React frontend (Vite)
-│   ├── src/            # Frontend source code
-│   │   ├── components/ # React components
-│   │   ├── pages/     # Application pages
-│   │   └── services/  # API services
-│   └── vite.config.ts # Vite configuration
-│
-├── frontend/electron/  # Electron desktop wrapper
-│   ├── main.ts        # Main process
-│   └── preload.ts     # Preload scripts
-│
-├── package.json       # Root scripts and Electron builder config
-├── Makefile          # Build automation commands
-└── .gitignore        # Ignores build artifacts and local data
+┌─────────────────────────────────┐
+│   Electron Desktop App          │
+├─────────────────────────────────┤
+│   React + TypeScript Frontend   │
+│   (Vite + TailwindCSS)          │
+├─────────────────────────────────┤
+│   FastAPI Python Backend        │
+│   (Async REST API)              │
+├─────────────────────────────────┤
+│   ML Layer (Optional)           │
+│   CLIP | InsightFace | OCR      │
+├─────────────────────────────────┤
+│   SQLite Database (Local)       │
+└─────────────────────────────────┘
 ```
 
-## 🛠️ Development
+**Tech Stack:** React 19 · Python 3.12 · FastAPI · Electron · SQLite · PyTorch (optional)
 
-### Available Commands
+## Development
+
+### Common Commands
 
 ```bash
+# Start everything
+pnpm run dev                    # Backend + Frontend + Electron
+
 # Development
-pnpm run dev              # Start full dev environment (backend 5555, frontend 3333, electron)
-make backend-dev          # Start backend only
-pnpm run dev:frontend     # Start frontend only
+make backend-dev                # Python API server (port 5555)
+pnpm run dev:frontend           # React dev server (port 3333)
 
 # Testing
-pnpm run test            # Run frontend tests
-make backend-test        # Run backend tests
+make backend-test               # Python tests with pytest
+pnpm test                       # Frontend tests with Jest
+pnpm run e2e                    # End-to-end tests
 
-# Linting & Formatting
-pnpm run lint:frontend  # Lint frontend
-make backend-lint       # Lint backend (ruff)
-make backend-format     # Format backend (black)
+# Code Quality
+make backend-lint               # Ruff linter
+pnpm run lint                   # ESLint + TypeScript check
 
 # Building
-pnpm run build          # Build frontend
-make backend-package    # Package backend with PyInstaller
-
-### Test Coverage
-
-```bash
-# Backend coverage (HTML + XML)
-make backend-coverage             # Outputs: backend/htmlcov/index.html, backend/coverage.xml
-
-# Frontend coverage (lcov + HTML)
-make frontend-coverage            # Outputs: frontend/coverage/lcov-report/index.html
-
-# Combined convenience target
-make coverage                     # Runs both backend and frontend coverage
-
-# Enforce minimum backend coverage (e.g., 70%)
-make backend-coverage COV_MIN=70
-```
+pnpm run dist:mac               # macOS .dmg
+pnpm run dist:win               # Windows installer
+pnpm run dist:all               # All platforms
 ```
 
-### Using Make Commands
+**All commands:** Run `make help` for full list
 
-The project includes a comprehensive Makefile:
+[📖 Development Guide](docs/DEVELOPER_GUIDE.md) | [📖 Contributing](docs/CONTRIBUTING.md) | [📖 ML Setup](docs/ML_SETUP.md)
 
-```bash
-make help              # Show all available commands
-make install          # Install all dependencies
-make dev              # Start development environment
-make test             # Run all tests
-make clean            # Clean build artifacts
+## Documentation
 
-# Distribution builds
-make dist-mac         # Build macOS DMG
-make dist-win         # Build Windows installer
-make dist-all         # Build for all platforms
-```
+| Document | Description |
+|----------|-------------|
+| [User Manual](docs/USER_MANUAL.md) | Complete user guide |
+| [Developer Guide](docs/DEVELOPER_GUIDE.md) | Architecture, patterns, testing, and workflows |
+| [Contributing](docs/CONTRIBUTING.md) | Setup and contribution guidelines |
+| [ML Setup](docs/ML_SETUP.md) | AI features and model installation |
+| [API Documentation](http://localhost:5555/docs) | Interactive API docs (when running) |
 
-## 📦 Building for Production
+## Contributing
 
-**Production builds automatically include all ML dependencies** so end users don't need to install anything manually. All AI features (face recognition, semantic search, OCR) work out of the box.
+Contributions are welcome! Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
-### Build for your platform:
-
-```bash
-# macOS (.dmg) - includes all ML features
-pnpm run dist:mac
-
-# Windows (.exe installer) - includes all ML features
-pnpm run dist:win
-
-# All platforms - includes all ML features
-pnpm run dist:all
-```
-
-Built installers will be in the `dist-electron/` directory.
-
-### Build Options:
-
-**Full Build (Recommended - ~3-4 GB):**
-```bash
-# Backend is packaged with all ML dependencies
-pnpm run backend:package      # Full backend with ML
-pnpm run dist:mac             # Full macOS app
-```
-
-**Lite Build (~150 MB, no ML features):**
-```bash
-# For testing or when ML features are not needed
-pnpm run backend:package-lite # Backend without ML
-pnpm run dist:mac             # Lite macOS app
-```
-
-### What's Included in Production Builds:
-
-✅ **Face Recognition** - InsightFace models pre-installed
-✅ **Semantic Search** - PyTorch + CLIP models included
-✅ **OCR Text Search** - Tesseract with language packs
-✅ **Vector Search** - FAISS for fast similarity search
-✅ **All dependencies bundled** - End users install nothing
-
-📖 **For platform-specific build details and packaging strategy, see [docs/ML_SETUP.md](docs/ML_SETUP.md).**
-
-Functional tests live under `func_tests/`. To run:
-
-```bash
-cd func_tests
-pnpm install
-pnpm test
-```
-
-## 🔧 Configuration
-
-### Package Management
-- **PNPM only**: No npm or yarn
-- **No lock files**: Dependencies stay fresh, `.gitignore` excludes all lock files
-- **Single package.json**: All Node.js dependencies in root
-
-### Technology Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Frontend | React + TypeScript + Vite + TailwindCSS |
-| Backend | Python + FastAPI + SQLAlchemy |
-| Desktop | Electron |
-| AI/ML | ONNX Runtime (CLIP, ArcFace models) |
-| OCR | Tesseract |
-| Database | SQLite (local) |
-| Package Manager | PNPM (no lock files) |
-
-## 🤝 Contributing
-
-We welcome contributions!
-
+Quick steps:
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests (`make test`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes and test (`make test`)
+4. Commit with pre-commit hooks (`git commit -m "feat: add feature"`)
+5. Push and open a Pull Request
 
-📖 **See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for detailed development guidelines.**
+## Troubleshooting
 
-## 📚 Documentation
-
-Complete documentation available in `/docs`:
-
-- **[docs/README.md](docs/README.md)** - Documentation index and navigation
-- **[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** - Complete user guide
-- **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)** - Developer setup and architecture
-- **[docs/ML_SETUP.md](docs/ML_SETUP.md)** - ML dependencies, packaging, and platforms
-- **[docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md)** - Testing approach and priorities
-- **[docs/COVERAGE.md](docs/COVERAGE.md)** - CI/CD and coverage documentation
-- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** - Contribution guidelines
-- **[API Documentation](http://localhost:5555/docs)** - Interactive API docs (when backend is running)
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Backend won't start:**
+**App won't start?**
 ```bash
-# Check Python version (needs 3.12+)
-python3 --version
-
-# Reinstall backend dependencies
+# Backend
 cd backend && rm -rf .venv && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-```
 
-**Frontend build fails:**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules dist
-pnpm install --no-lockfile
-```
+# Frontend
+rm -rf node_modules && pnpm install
 
-**Electron app won't launch:**
-```bash
-# Rebuild Electron
+# Electron
 pnpm run build:electron:main
 ```
 
-## 📄 License
+**Port conflicts?**
+```bash
+lsof -ti:5555 | xargs kill -9  # Kill backend
+lsof -ti:3333 | xargs kill -9  # Kill frontend
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[📖 Full Troubleshooting Guide](docs/DEVELOPER_GUIDE.md#troubleshooting)
 
-## 🙏 Acknowledgments
+## License
 
-- CLIP model by OpenAI for semantic image search
-- ArcFace for face recognition capabilities
-- Tesseract OCR for text extraction
-- The amazing open-source community
+MIT License - see [LICENSE](LICENSE) for details
 
-## 📧 Support
+## Support
 
-For issues or questions:
-- Open an issue on [GitHub](https://github.com/sarvarunajvm/ideal-goggles/issues)
-- Check existing issues for solutions
+- **Issues**: [GitHub Issues](https://github.com/sarvarunajvm/ideal-goggles/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sarvarunajvm/ideal-goggles/discussions)
+
+## Credits
+
+Built with:
+- [OpenAI CLIP](https://github.com/openai/CLIP) - Semantic image search
+- [InsightFace](https://github.com/deepinsight/insightface) - Face recognition
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) - Text extraction
+- [FastAPI](https://fastapi.tiangolo.com/) - Python web framework
+- [React](https://react.dev/) - UI framework
+- [Electron](https://www.electronjs.org/) - Desktop platform
 
 ---
 
-Made with ❤️ by the Ideal Goggles Team
+**Privacy-first photo management** • Made with care by the Ideal Goggles Team

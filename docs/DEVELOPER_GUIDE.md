@@ -1,594 +1,822 @@
-# 👨‍💻 Developer Guide - Ideal Goggles
+# Developer Guide
 
-Comprehensive guide for developers working on the Ideal Goggles application.
+Technical reference for Ideal Goggles architecture, patterns, and advanced development.
 
-## Table of Contents
-1. [Architecture Overview](#architecture-overview)
-2. [Development Setup](#development-setup)
-3. [Project Structure](#project-structure)
-4. [Development Workflow](#development-workflow)
-5. [Backend Development](#backend-development)
-6. [Frontend Development](#frontend-development)
-7. [Testing Strategy](#testing-strategy)
-8. [Build & Deployment](#build--deployment)
-9. [Troubleshooting](#troubleshooting)
+> **New to the project?** Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup and workflow.
 
-## Architecture Overview
+## Architecture
 
-### System Architecture
+### System Layers
 
 ```
 ┌─────────────────────────────────────────────┐
-│           Electron Desktop App              │
+│          Electron Desktop App               │
+│  - Main Process (Node.js)                   │
+│  - Preload Scripts (IPC bridge)             │
+│  - Auto-updater                             │
 ├─────────────────────────────────────────────┤
-│          React Frontend (Vite)              │
-│         TypeScript + TailwindCSS            │
+│         React Frontend (Port 3333)          │
+│  - UI Components (shadcn/ui)                │
+│  - State Management (Zustand)               │
+│  - API Client (Axios)                       │
+│  - Routing (React Router)                   │
 ├─────────────────────────────────────────────┤
-│         FastAPI Backend (Python)            │
-│     Async REST API + WebSocket Support      │
+│        FastAPI Backend (Port 5555)          │
+│  - REST API Endpoints                       │
+│  - Async Request Handlers                   │
+│  - WebSocket Support (future)               │
 ├─────────────────────────────────────────────┤
-│           ML Processing Layer               │
-│    CLIP (Semantic) | ArcFace (Faces) |     │
-│         Tesseract OCR | FAISS               │
+│           Service Layer                     │
+│  - Photo Indexing                           │
+│  - Search Implementations                   │
+│  - Thumbnail Generation                     │
 ├─────────────────────────────────────────────┤
-│         SQLite Database (Local)             │
+│            ML Layer (Optional)              │
+│  - CLIP Embeddings (semantic search)        │
+│  - InsightFace (face recognition)           │
+│  - Tesseract OCR (text extraction)          │
+│  - FAISS (vector similarity)                │
+├─────────────────────────────────────────────┤
+│           Data Layer                        │
+│  - SQLAlchemy ORM                           │
+│  - SQLite Database (local file)             │
+│  - Alembic Migrations                       │
 └─────────────────────────────────────────────┘
 ```
 
 ### Key Design Decisions
 
-1. **Single package.json with root scripts**: Simplified orchestration across frontend, backend, and Electron.
-2. **PNPM**: Fast, efficient package management and workspaces.
-3. **Local-first**: All processing on user's machine for privacy.
-4. **Modular architecture**: Clean separation of concerns.
+**1. Single Package.json**
+- All Node.js dependencies in root
+- Simplified script orchestration
+- Consistent dependency versions
 
-## Development Setup
+**2. PNPM Without Lock Files**
+- Faster than npm/yarn
+- Disk space efficient
+- No lock files = always fresh dependencies
+- Trade-off: reproducibility vs. freshness
 
-### Prerequisites
+**3. Local-First Architecture**
+- All processing on user's machine
+- No cloud dependencies
+- Privacy by design
+- Graceful degradation when ML unavailable
 
-```bash
-# Required software
-node --version  # 18+
-pnpm --version  # 10+
-python3 --version  # 3.12+
-make --version  # GNU Make
-```
+**4. Async-First Backend**
+- FastAPI with async/await
+- Non-blocking I/O for indexing
+- Background workers for heavy tasks
 
-### Quick Start
+**5. Electron Multi-Process**
+- Main process: Node.js, backend lifecycle
+- Renderer: React app in Chromium
+- Preload: Secure IPC bridge
 
-```bash
-# Clone and setup
-git clone https://github.com/sarvarunajvm/ideal-goggles.git
-cd ideal-goggles
+## Data Flow
 
-# Install everything
-make install        # Or: pnpm install && make backend-install
-
-# Start development
-pnpm run dev
-```
-
-### Manual Setup
-
-```bash
-# Frontend dependencies (PNPM)
-pnpm install
-
-# Backend dependencies
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-cd ..
-
-# Start services
-pnpm run dev
-```
-
-## Project Structure
-
-### Directory Layout
+### Photo Indexing
 
 ```
-ideal-goggles/
-├── backend/              # Python FastAPI backend
-│   ├── src/
-│   │   ├── api/         # REST endpoints
-│   │   ├── core/        # Business logic
-│   │   ├── models/      # Data models
-│   │   └── main.py      # Entry point
-│   └── pyproject.toml   # Python config
+User adds folder
+    ↓
+Indexing API call → Backend
+    ↓
+Discovery Phase: Find all image files
+    ↓
+Metadata Phase: Extract EXIF, dimensions, dates
+    ↓
+OCR Phase (optional): Extract text from images
+    ↓
+Embedding Phase (optional): Generate CLIP vectors
+    ↓
+Face Phase (optional): Detect and encode faces
+    ↓
+Thumbnail Phase: Generate preview images
+    ↓
+Database: Store all metadata
+    ↓
+Frontend: Update UI with progress
+```
+
+### Search Flow
+
+```
+User enters query
+    ↓
+Frontend: Determine search mode
+    ↓
+API Request → Backend
+    ↓
+Search Service:
+  - Text: SQL LIKE queries + OCR text
+  - Semantic: CLIP embedding similarity
+  - Face: InsightFace vector comparison
+  - Similar: Image embedding distance
+    ↓
+Results ranked by relevance/similarity
+    ↓
+Frontend: Display photo grid
+```
+
+## Backend Architecture
+
+### Directory Structure
+
+```
+backend/src/
+├── api/                    # FastAPI routers
+│   ├── search.py          # Search endpoints
+│   ├── photos.py          # Photo CRUD
+│   ├── index.py           # Indexing control
+│   └── people.py          # Face management
 │
-├── frontend/            # React frontend
-│   ├── src/
-│   │   ├── components/  # UI components
-│   │   ├── pages/      # Page components
-│   │   ├── services/   # API clients
-│   │   └── App.tsx     # Root component
-│   └── vite.config.ts  # Vite config
+├── core/                   # Core business logic
+│   ├── config.py          # App configuration
+│   ├── indexer.py         # Photo discovery
+│   └── logging_config.py  # Logging setup
 │
-├── frontend/electron/  # Electron wrapper
-│   ├── main.ts        # Main process
-│   └── preload.ts     # Preload scripts
+├── db/                     # Database layer
+│   ├── session.py         # SQLAlchemy setup
+│   └── migrations/        # Alembic migrations
 │
-├── package.json       # Single package.json
-├── Makefile          # Build automation
-└── .gitignore        # Excludes lock files
+├── models/                 # Data models
+│   ├── database.py        # SQLAlchemy models
+│   └── schemas.py         # Pydantic schemas
+│
+├── services/               # Feature implementations
+│   ├── embedding.py       # CLIP embeddings
+│   ├── face_search.py     # Face recognition
+│   ├── ocr.py             # Text extraction
+│   ├── thumbnail.py       # Image resizing
+│   └── faiss_manager.py   # Vector search
+│
+├── workers/                # Background tasks
+│   └── indexing.py        # Async indexing
+│
+└── main.py                 # Application entry
 ```
 
-### Configuration Files
+### Database Schema
 
-- `package.json` - All Node.js dependencies and scripts
-- `Makefile` - Build automation and commands
-- `.gitignore` - Includes `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`
-- No `pnpm-workspace.yaml` - Single package structure
-
-## Development Workflow
-
-### Branch Strategy
-
-```
-main              # Production releases
-├── develop       # Integration branch
-└── feature/*     # Feature branches
-    bugfix/*      # Bug fixes
-    hotfix/*      # Emergency fixes
-```
-
-### Development Commands
-
-```bash
-# Start everything
-make dev
-# OR
-pnpm run dev
-
-# Backend only
-pnpm run dev:backend
-# OR
-make backend-dev
-
-# Frontend only
-pnpm run dev:frontend
-
-# Electron only
-pnpm run dev:electron
-```
-
-### Quick Start Cheat-Sheet
-
-```bash
-# Backend
-make backend-dev        # Start backend only
-make backend-test       # Run backend tests
-make backend-coverage   # Coverage report
-make backend-lint       # Ruff
-make backend-format     # Black
-
-# Frontend
-pnpm --filter frontend run dev        # Start frontend only
-pnpm --filter frontend run lint       # ESLint
-pnpm --filter frontend run type-check # TypeScript
-pnpm --filter frontend run test       # Jest tests
-
-# Build & Package
-pnpm run build                        # Build frontend
-make dist-mac                         # macOS .dmg
-make dist-win                         # Windows installer
-
-# Ports (kill if stuck)
-lsof -ti:5555 | xargs kill -9         # Backend
-lsof -ti:3333 | xargs kill -9         # Frontend
-```
-
-### Code Quality
-
-```bash
-# Linting
-pnpm run lint          # Frontend
-make backend-lint      # Backend (ruff)
-
-# Formatting
-pnpm run lint:fix      # Frontend
-make backend-format    # Backend (black)
-
-# Type checking
-pnpm run type-check    # Frontend
-make backend-typecheck # Backend (mypy)
-```
-
-## Backend Development
-
-### API Structure
-
+**Photos Table:**
 ```python
-# Backend: src/api/search.py
-from fastapi import APIRouter, Query, HTTPException
-from typing import List, Optional
-
-router = APIRouter(prefix="/search", tags=["search"])
-
-@router.get("/photos")
-async def search_photos(
-    q: str = Query(..., description="Search query"),
-    mode: str = Query("semantic", regex="^(text|semantic|face|similar)$"),
-    limit: int = Query(50, ge=1, le=100)
-) -> List[PhotoResult]:
-    """Search photos with different modes."""
-    try:
-        results = await search_service.search(q, mode, limit)
-        return results
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-```
-
-### Database Models
-
-```python
-# src/models/database.py
-from sqlalchemy import Column, String, Float, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
-
 class Photo(Base):
-    __tablename__ = "photos"
-
-    id = Column(String, primary_key=True)
-    path = Column(String, unique=True, index=True)
-    filename = Column(String)
-    size = Column(Float)
-    created_at = Column(DateTime)
-    embedding = Column(String)  # JSON serialized
-    faces = Column(String)       # JSON serialized
-    ocr_text = Column(String)
+    id: str (UUID)
+    path: str (unique, indexed)
+    filename: str
+    size: int (bytes)
+    width: int
+    height: int
+    created_at: datetime
+    modified_at: datetime
+    camera_make: str (optional)
+    camera_model: str (optional)
+    ocr_text: str (optional)
+    embedding: str (JSON, CLIP vector)
+    thumbnail_path: str
 ```
 
-### Running Backend
-
-```bash
-# Development server
-cd backend
-.venv/bin/python -m src.main
-
-# With auto-reload
-.venv/bin/python -m uvicorn src.main:app --reload --port 5555
-
-# API docs available at:
-# http://localhost:5555/docs (Swagger)
-# http://localhost:5555/redoc (ReDoc)
+**People Table:**
+```python
+class Person(Base):
+    id: str (UUID)
+    name: str
+    created_at: datetime
+    face_encodings: str (JSON, list of vectors)
+    photo_count: int
 ```
 
-## Frontend Development
-
-### Component Structure
-
-```tsx
-// src/components/PhotoCard.tsx
-import React from 'react';
-import { Photo } from '@/types';
-import { Card } from '@/components/ui/card';
-
-interface PhotoCardProps {
-  photo: Photo;
-  selected?: boolean;
-  onSelect?: (photo: Photo) => void;
-}
-
-export const PhotoCard: React.FC<PhotoCardProps> = ({
-  photo,
-  selected = false,
-  onSelect
-}) => {
-  return (
-    <Card
-      className={`cursor-pointer ${selected ? 'ring-2' : ''}`}
-      onClick={() => onSelect?.(photo)}
-    >
-      <img
-        src={photo.thumbnail}
-        alt={photo.filename}
-        loading="lazy"
-      />
-      <p className="truncate">{photo.filename}</p>
-    </Card>
-  );
-};
+**Photo-Person Association:**
+```python
+class PhotoPerson(Base):
+    photo_id: str (FK)
+    person_id: str (FK)
+    confidence: float (0.0-1.0)
+    face_box: str (JSON, [x, y, w, h])
 ```
 
-### State Management (Zustand)
+### API Patterns
 
-```tsx
-// src/stores/searchStore.ts
+**Async Route Handlers:**
+```python
+@router.get("/photos/{photo_id}")
+async def get_photo(photo_id: str) -> PhotoResponse:
+    async with get_session() as session:
+        photo = await session.get(Photo, photo_id)
+        if not photo:
+            raise HTTPException(404, "Photo not found")
+        return PhotoResponse.from_orm(photo)
+```
+
+**Dependency Injection:**
+```python
+from fastapi import Depends
+from src.services.search import SearchService
+
+def get_search_service() -> SearchService:
+    return SearchService()
+
+@router.get("/search")
+async def search(
+    q: str,
+    service: SearchService = Depends(get_search_service)
+):
+    return await service.search(q)
+```
+
+**Error Handling:**
+```python
+from src.core.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+try:
+    result = await risky_operation()
+except SpecificError as e:
+    logger.error(f"Operation failed: {e}")
+    raise HTTPException(500, detail=str(e))
+```
+
+## Frontend Architecture
+
+### Directory Structure
+
+```
+frontend/src/
+├── components/            # React components
+│   ├── ui/               # shadcn/ui primitives
+│   ├── PhotoGrid/        # Photo display
+│   ├── SearchBar/        # Search interface
+│   └── Lightbox/         # Photo viewer
+│
+├── pages/                # Page components
+│   ├── MainPage.tsx      # Photo grid
+│   ├── SearchPage.tsx    # Search results
+│   ├── PeoplePage.tsx    # Face management
+│   └── SettingsPage.tsx  # Configuration
+│
+├── services/             # API clients
+│   ├── api.ts           # Axios instance
+│   ├── photos.ts        # Photo endpoints
+│   └── search.ts        # Search endpoints
+│
+├── stores/               # Zustand stores
+│   ├── searchStore.ts   # Search state
+│   ├── photoStore.ts    # Photo state
+│   └── settingsStore.ts # Settings state
+│
+├── types/                # TypeScript types
+│   └── index.ts         # Shared types
+│
+└── utils/                # Utilities
+    ├── logger.ts        # Logging utility
+    └── format.ts        # Formatting helpers
+```
+
+### State Management Pattern
+
+```typescript
+// stores/photoStore.ts
 import { create } from 'zustand';
 
-interface SearchStore {
-  query: string;
-  results: Photo[];
+interface PhotoStore {
+  photos: Photo[];
+  selectedIds: Set<string>;
   loading: boolean;
-  setQuery: (query: string) => void;
-  search: () => Promise<void>;
+
+  setPhotos: (photos: Photo[]) => void;
+  toggleSelection: (id: string) => void;
+  clearSelection: () => void;
 }
 
-export const useSearchStore = create<SearchStore>((set, get) => ({
-  query: '',
-  results: [],
+export const usePhotoStore = create<PhotoStore>((set) => ({
+  photos: [],
+  selectedIds: new Set(),
   loading: false,
 
-  setQuery: (query) => set({ query }),
+  setPhotos: (photos) => set({ photos }),
 
-  search: async () => {
-    set({ loading: true });
-    try {
-      const response = await apiClient.search(get().query);
-      set({ results: response.data, loading: false });
-    } catch (error) {
-      set({ loading: false });
-    }
-  }
+  toggleSelection: (id) => set((state) => {
+    const newSet = new Set(state.selectedIds);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+    return { selectedIds: newSet };
+  }),
+
+  clearSelection: () => set({ selectedIds: new Set() })
 }));
 ```
 
-### API Client
+### API Client Pattern
 
-```tsx
-// Frontend: src/services/apiClient.ts
+```typescript
+// services/api.ts
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555';
 
-export const apiClient = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
 });
 
-export const searchAPI = {
-  search: (query: string, mode = 'semantic') =>
-    apiClient.get('/search/photos', { params: { q: query, mode } }),
+// services/photos.ts
+export const photoAPI = {
+  search: (query: string, mode: 'text' | 'semantic' | 'face') =>
+    api.get('/search/photos', { params: { q: query, mode } }),
 
-  getSimilar: (photoId: string) =>
-    apiClient.get(`/search/similar/${photoId}`),
+  getById: (id: string) =>
+    api.get(`/photos/${id}`),
 
-  indexFolder: (path: string) =>
-    apiClient.post('/index/folder', { path }),
+  startIndexing: (paths: string[]) =>
+    api.post('/index/start', { paths }),
 };
 ```
 
-## Testing Strategy
+## Electron Integration
 
-### Test Organization
+### Main Process (Node.js)
 
-```
-tests/
-├── backend/tests/        # Backend tests
-│   ├── unit/            # Fast, isolated unit tests
-│   ├── contract/        # API contract tests
-│   ├── integration/     # Integration tests
-│   └── performance/     # Performance benchmarks
-├── frontend/tests/       # Frontend tests
-│   ├── components/      # Component tests
-│   └── setupTests.ts    # Test configuration
-└── func_tests/          # E2E/functional/integration Playwright tests
-    ├── e2e/            # End-to-end test suites
-    ├── page-objects/   # Page object models
-    └── helpers/        # Test utilities
-```
+```typescript
+// frontend/electron/main.ts
+import { app, BrowserWindow } from 'electron';
+import { spawn } from 'child_process';
 
-### Backend Testing
+let backendProcess: ChildProcess;
+let mainWindow: BrowserWindow;
 
-```bash
-# Run all tests
-make backend-test
+async function startBackend() {
+  const pythonPath = /* platform-specific path */;
+  backendProcess = spawn(pythonPath, ['-m', 'src.main']);
 
-# Run specific test types
-pytest -m unit           # Unit tests only
-pytest -m contract       # Contract tests only
-pytest -m integration    # Integration tests only
-pytest -m "not performance"  # Exclude performance tests
+  // Wait for backend to be ready
+  await waitForBackend('http://localhost:5555/health');
+}
 
-# Coverage report
-make backend-coverage    # Generate HTML report
-```
+app.on('ready', async () => {
+  await startBackend();
 
-### Frontend Testing
-
-```bash
-# Unit tests
-pnpm run test:unit
-
-# Component tests
-pnpm run test:components
-
-# All tests with coverage
-pnpm run test:coverage
-```
-
-### E2E Testing (Chromium-only)
-
-```bash
-cd tests
-pnpm test                # Run all E2E tests (Chromium)
-pnpm run test:smoke      # Quick smoke tests (Chromium)
-pnpm run test:ui         # Interactive mode
-```
-
-### Test Writing Guidelines
-
-Example unit test:
-
-```tsx
-// tests/components/PhotoCard.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import { PhotoCard } from '@/components/PhotoCard';
-
-describe('PhotoCard', () => {
-  it('calls onSelect when clicked', () => {
-    const mockSelect = jest.fn();
-    const photo = { id: '1', filename: 'test.jpg' };
-
-    render(<PhotoCard photo={photo} onSelect={mockSelect} />);
-    fireEvent.click(screen.getByText('test.jpg'));
-
-    expect(mockSelect).toHaveBeenCalledWith(photo);
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
   });
+
+  mainWindow.loadURL('http://localhost:3333');
+});
+
+app.on('quit', () => {
+  if (backendProcess) {
+    backendProcess.kill();
+  }
 });
 ```
 
-### Backend Testing
+### Preload Script (IPC Bridge)
 
-```bash
-# Run all tests
-make backend-test
+```typescript
+// frontend/electron/preload.ts
+import { contextBridge, ipcRenderer } from 'electron';
 
-# With coverage
-cd backend
-.venv/bin/pytest --cov=src --cov-report=html
+contextBridge.exposeInMainWorld('electron', {
+  selectFolder: () => ipcRenderer.invoke('dialog:openDirectory'),
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  // Expose only safe, specific APIs
+});
 ```
 
-Example test:
+## ML Integration
+
+### CLIP Embeddings
 
 ```python
-# backend/tests/test_search.py
-import pytest
-from fastapi.testclient import TestClient
-from src.main import app
+# services/embedding.py
+import torch
+import clip
+from typing import List
+import numpy as np
 
-client = TestClient(app)
+class EmbeddingService:
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
-def test_search_photos():
-    response = client.get("/search/photos?q=sunset")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    async def embed_text(self, text: str) -> List[float]:
+        """Generate embedding for text query."""
+        text_input = clip.tokenize([text]).to(self.device)
+        with torch.no_grad():
+            embedding = self.model.encode_text(text_input)
+            embedding /= embedding.norm(dim=-1, keepdim=True)
+        return embedding.cpu().numpy()[0].tolist()
+
+    async def embed_image(self, image_path: str) -> List[float]:
+        """Generate embedding for image."""
+        from PIL import Image
+        image = Image.open(image_path)
+        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            embedding = self.model.encode_image(image_input)
+            embedding /= embedding.norm(dim=-1, keepdim=True)
+        return embedding.cpu().numpy()[0].tolist()
+```
+
+### Face Recognition
+
+```python
+# services/face_search.py
+import insightface
+from insightface.app import FaceAnalysis
+
+class FaceService:
+    def __init__(self):
+        self.app = FaceAnalysis(name='buffalo_l')
+        self.app.prepare(ctx_id=0)
+
+    async def detect_faces(self, image_path: str) -> List[Face]:
+        """Detect faces in image."""
+        import cv2
+        img = cv2.imread(image_path)
+        faces = self.app.get(img)
+
+        return [
+            Face(
+                embedding=face.normed_embedding.tolist(),
+                bbox=[int(x) for x in face.bbox],
+                confidence=float(face.det_score)
+            )
+            for face in faces
+        ]
 ```
 
 ## Build & Deployment
 
-### Local Builds
+### Development Build
 
 ```bash
-# Quick builds
-pnpm run build          # Frontend only
-make backend-package    # Backend binary
+# Frontend only
+pnpm run build
 
-# Full distribution builds
-make dist-mac          # macOS DMG
-make dist-win          # Windows installer
-make dist-all          # All platforms
+# Backend only
+cd backend && make package
+
+# Full Electron app
+pnpm run build:electron
 ```
+
+### Production Build
+
+```bash
+# macOS
+pnpm run dist:mac
+
+# Windows
+pnpm run dist:win
+
+# Linux
+pnpm run dist:linux
+
+# All platforms
+pnpm run dist:all
+```
+
+### Build Configuration
+
+**electron-builder.json:**
+```json
+{
+  "productName": "Ideal Goggles",
+  "appId": "com.idealgoggles.app",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "frontend/dist/**/*",
+    "backend/dist/**/*"
+  ],
+  "mac": {
+    "category": "public.app-category.photography",
+    "target": ["dmg", "zip"]
+  },
+  "win": {
+    "target": ["nsis"]
+  },
+  "linux": {
+    "target": ["AppImage", "deb"]
+  }
+}
+```
+
+## Performance Optimization
+
+### Backend
+
+**1. Database Indexing:**
+```python
+# Ensure critical fields are indexed
+class Photo(Base):
+    path = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, index=True)
+    # Composite index for common queries
+    __table_args__ = (
+        Index('idx_date_path', 'created_at', 'path'),
+    )
+```
+
+**2. Query Optimization:**
+```python
+# Use select loading to avoid N+1
+from sqlalchemy.orm import selectinload
+
+photos = await session.execute(
+    select(Photo)
+    .options(selectinload(Photo.people))
+    .limit(100)
+)
+```
+
+**3. Caching:**
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=1000)
+def get_thumbnail_path(photo_id: str) -> str:
+    return f"cache/thumbnails/{photo_id}.webp"
+```
+
+### Frontend
+
+**1. Virtual Scrolling:**
+```typescript
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const virtualizer = useVirtualizer({
+  count: photos.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 200,
+  overscan: 5
+});
+```
+
+**2. Image Lazy Loading:**
+```typescript
+<img
+  src={photo.thumbnail}
+  loading="lazy"
+  decoding="async"
+/>
+```
+
+**3. Debounced Search:**
+```typescript
+import { useDebouncedCallback } from 'use-debounce';
+
+const debouncedSearch = useDebouncedCallback(
+  (query: string) => {
+    searchAPI.search(query);
+  },
+  300
+);
+```
+
+## Testing Strategy
+
+### Test Pyramid
+
+```
+         /\
+        /E2E\          P2: Weekly (~15 min)
+       /------\
+      /  API  \        P1: Nightly (~5 min)
+     /----------\
+    /   Unit     \     P0: Every PR (~15 sec)
+   /--------------\
+```
+
+### Priority Levels
+
+**P0 - Critical (CI on every PR):**
+- Runtime: ~15 seconds
+- App loads, API health, basic search, navigation
+- Blocks merging if fails
+- Command: `pnpm test:p0`
+
+**P1 - Important (Nightly):**
+- Runtime: ~5 minutes
+- All search modes, settings, filters, responsive design
+- Command: `pnpm test:p1`
+
+**P2 - Extended (Weekly):**
+- Runtime: ~15 minutes
+- People management, face search, performance tests
+- Command: `pnpm test:p2`
+
+### Test Organization
+
+**Backend (pytest):**
+```bash
+# All tests
+pytest
+
+# By type
+pytest -m unit           # Fast, isolated
+pytest -m contract       # API contracts
+pytest -m integration    # DB + services
+pytest -m "not performance"  # Skip slow tests
+
+# With coverage
+pytest --cov=src --cov-report=html
+```
+
+**Frontend (Jest):**
+```bash
+# All tests
+pnpm test
+
+# With coverage
+pnpm test:coverage
+
+# Watch mode
+pnpm test:watch
+```
+
+**E2E (Playwright):**
+```bash
+cd func_tests
+
+# All E2E tests
+pnpm test
+
+# Quick smoke tests
+pnpm test:smoke
+
+# Interactive UI
+pnpm test:ui
+
+# Specific priority
+pnpm exec playwright test --grep @P0
+```
+
+### Coverage Targets
+
+- **Backend**: 70%+ line coverage
+- **Frontend**: 60%+ line coverage
+- **E2E**: Critical user paths (P0/P1)
 
 ### CI/CD Pipeline
 
-GitHub Actions automatically:
-1. Runs tests on PR
-2. Builds releases on version tags
-3. Creates GitHub releases
+**On every PR:**
+1. Lint check (ESLint, Ruff)
+2. Type check (TypeScript, mypy)
+3. Unit tests (Backend + Frontend)
+4. P0 E2E tests (~15 sec)
 
-### Creating a Release
+**Nightly:**
+1. Full test suite
+2. Coverage reports
+3. Performance benchmarks
 
+**On release:**
+1. All tests pass
+2. Build all platforms
+3. Smoke test installers
+
+## Git Hooks
+
+Pre-commit and pre-push hooks enforce code quality automatically.
+
+### Pre-commit Hook
+
+Runs before every commit to catch issues early:
+
+**Frontend checks:**
+- ❌ Blocks `console.log()` statements (use logger instead)
+- ❌ Blocks `debugger` statements
+- ❌ Runs ESLint on staged files
+- ❌ Runs TypeScript type check
+
+**Backend checks:**
+- ⚠️ Warns on `print()` statements (use logger)
+- ❌ Blocks `breakpoint()` and `pdb` statements
+- ❌ Runs Ruff linter on staged files
+
+**Installation:**
 ```bash
-# 1. Update version
-npm version patch  # or minor/major
+# Automatic via postinstall
+pnpm install
 
-# 2. Commit and tag
-git commit -am "Release v1.0.9"
-git tag v1.0.9
-
-# 3. Push to trigger release
-git push origin main --tags
+# Manual installation
+bash scripts/setup-hooks.sh
 ```
 
-### Build Output
-
+**Bypass (use sparingly):**
+```bash
+git commit --no-verify
 ```
-dist-electron/
-├── ideal-googles-1.0.9.dmg        # macOS
-├── ideal-googles-1.0.9.exe        # Windows
-├── ideal-googles-1.0.9.AppImage   # Linux
-└── ideal-googles-1.0.9.deb        # Debian/Ubuntu
+
+### Pre-push Hook
+
+Prevents version mismatches on releases:
+- Checks `package.json` version matches git tag
+- Checks `backend/pyproject.toml` version matches tag
+
+**Fix version mismatch:**
+```bash
+pnpm run version:update 1.0.27
+```
+
+### Hook Files
+
+- **Source**: `scripts/git-hooks/pre-commit`, `scripts/git-hooks/pre-push`
+- **Installed**: `.git/hooks/` (copied by setup script)
+- **Uses**: pnpm for all linting/type-check operations
+
+## Security Best Practices
+
+**1. Input Validation:**
+```python
+from pydantic import BaseModel, validator
+
+class SearchRequest(BaseModel):
+    query: str
+    mode: str
+
+    @validator('query')
+    def validate_query(cls, v):
+        if len(v) > 1000:
+            raise ValueError('Query too long')
+        return v
+```
+
+**2. Path Traversal Prevention:**
+```python
+import os
+from pathlib import Path
+
+def safe_path_join(base: str, user_path: str) -> str:
+    base_path = Path(base).resolve()
+    full_path = (base_path / user_path).resolve()
+
+    if not full_path.is_relative_to(base_path):
+        raise ValueError("Path traversal detected")
+
+    return str(full_path)
+```
+
+**3. No Secrets in Code:**
+```bash
+# Use environment variables
+DATABASE_URL=sqlite:///./data/photos.db
+API_KEY=${API_KEY}  # Never hardcode
+
+# backend/.env.example shows required vars
+# backend/.env is gitignored
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Common Development Issues
 
-**Port already in use:**
+**Port conflicts:**
 ```bash
-# Kill process on port 5555
-lsof -ti:5555 | xargs kill -9
+# Kill stuck processes
+lsof -ti:5555 | xargs kill -9  # Backend
+lsof -ti:3333 | xargs kill -9  # Frontend
 ```
 
-**Electron won't start:**
+**Import errors:**
 ```bash
-# Rebuild Electron
-rm -rf node_modules frontend/electron/dist
-pnpm install --no-lockfile
-pnpm run build:electron:main
+# Backend: Reinstall in editable mode
+cd backend && pip install -e ".[dev]"
+
+# Frontend: Clear cache
+rm -rf node_modules .vite && pnpm install
 ```
 
-**Backend import errors:**
+**Database locked:**
 ```bash
-# Reinstall backend
-cd backend
-rm -rf .venv
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+# SQLite write lock - close all connections
+# Or delete and recreate (loses data)
+rm backend/data/photos.db
 ```
-
-**Frontend build fails:**
-```bash
-# Clean and rebuild
-rm -rf node_modules frontend/dist
-pnpm install --no-lockfile
-pnpm run build:frontend
-```
-
-### Debug Mode
-
-```bash
-# Enable debug logging
-DEBUG=true pnpm run dev
-
-# Electron DevTools
-# Press Ctrl+Shift+I in app
-
-# Backend debug
-cd backend
-DEBUG=true .venv/bin/python -m src.main
-```
-
-## Best Practices
-
-### Code Style
-
-- **TypeScript**: Strict mode, explicit types
-- **Python**: Type hints, docstrings
-- **Commits**: Conventional commits (feat:, fix:, docs:)
-- **PRs**: Small, focused, with tests
-
-### Performance
-
-- Lazy load components
-- Virtual scrolling for large lists
-- Batch API requests
-- Cache thumbnails locally
-- Use WebP for thumbnails
-
-### Security
-
-- Sanitize all inputs
-- No eval() or dynamic imports
-- Validate file paths
-- Rate limit API endpoints
-- No external dependencies for core features
 
 ## Resources
 
-- [FastAPI Docs](https://fastapi.tiangolo.com/)
-- [React Docs](https://react.dev/)
-- [Electron Docs](https://www.electronjs.org/)
-- [Vite Docs](https://vitejs.dev/)
-- [PNPM Docs](https://pnpm.io/)
+**Official Documentation:**
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [React](https://react.dev/)
+- [Electron](https://www.electronjs.org/)
+- [PNPM](https://pnpm.io/)
+- [Zustand](https://github.com/pmndrs/zustand)
+
+**Project Documentation:**
+- [User Manual](USER_MANUAL.md) - End-user guide
+- [Contributing](CONTRIBUTING.md) - Setup and workflow
+- [ML Setup](ML_SETUP.md) - AI features and model installation
 
 ---
 
-Need help? Check [GitHub Issues](https://github.com/sarvarunajvm/ideal-goggles/issues) or create a new one!
+**Questions?** Check [GitHub Discussions](https://github.com/sarvarunajvm/ideal-goggles/discussions) or open an issue.
