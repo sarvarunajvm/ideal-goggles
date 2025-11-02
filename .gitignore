@@ -1,0 +1,6 @@
+# This is the user_guide branch - ignore everything except docs/ and README
+*
+!.gitignore
+!README.md
+!docs/
+!docs/**
