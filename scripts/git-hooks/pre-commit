@@ -1,0 +1,150 @@
+#!/bin/bash
+
+# Pre-commit hook: Run linters and prevent debug code from being committed
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Separate frontend and backend files
+FRONTEND_FILES=$(echo "$STAGED_FILES" | grep -E '^frontend/src/.*\.(ts|tsx|js|jsx)$' || true)
+BACKEND_FILES=$(echo "$STAGED_FILES" | grep -E '^backend/.*\.py$' || true)
+
+ERRORS=0
+
+# ============================================================================
+# Frontend Checks
+# ============================================================================
+if [ -n "$FRONTEND_FILES" ]; then
+  echo ""
+  echo "📦 Checking frontend files..."
+
+  # Check for console.log statements
+  echo "  🔍 Checking for console.log statements..."
+  CONSOLE_LOGS=$(echo "$FRONTEND_FILES" | xargs grep -n "console\.log(" 2>/dev/null || true)
+
+  if [ -n "$CONSOLE_LOGS" ]; then
+    echo "  ❌ Found console.log statements:"
+    echo "$CONSOLE_LOGS" | while read -r line; do
+      echo "     $line"
+    done
+    echo ""
+    echo "  💡 Use the logger utility instead: import { logger } from '@/utils/logger'"
+    echo "  💡 Or use console.error/console.warn for legitimate logging"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ✅ No console.log statements found"
+  fi
+
+  # Check for debugger statements
+  echo "  🔍 Checking for debugger statements..."
+  DEBUGGERS=$(echo "$FRONTEND_FILES" | xargs grep -n "^\s*debugger" 2>/dev/null || true)
+
+  if [ -n "$DEBUGGERS" ]; then
+    echo "  ❌ Found debugger statements:"
+    echo "$DEBUGGERS" | while read -r line; do
+      echo "     $line"
+    done
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ✅ No debugger statements found"
+  fi
+
+  # Run ESLint on staged files
+  echo "  🔧 Running ESLint..."
+  if command -v pnpm &> /dev/null; then
+    if ! echo "$FRONTEND_FILES" | xargs pnpm exec eslint -c frontend/eslint.config.mjs 2>&1 | grep -v "File ignored"; then
+      echo "  ❌ ESLint found issues"
+      ERRORS=$((ERRORS + 1))
+    else
+      echo "  ✅ ESLint passed"
+    fi
+  else
+    echo "  ⚠️  pnpm not found, skipping ESLint"
+  fi
+
+  # TypeScript type checking (only if tsconfig exists)
+  if [ -f "frontend/tsconfig.json" ]; then
+    echo "  🔧 Running TypeScript type check..."
+    if pnpm run typecheck:frontend > /dev/null 2>&1; then
+      echo "  ✅ TypeScript type check passed"
+    else
+      echo "  ❌ TypeScript type check failed"
+      echo "  💡 Run: pnpm run typecheck:frontend"
+      ERRORS=$((ERRORS + 1))
+    fi
+  fi
+fi
+
+# ============================================================================
+# Backend Checks
+# ============================================================================
+if [ -n "$BACKEND_FILES" ]; then
+  echo ""
+  echo "🐍 Checking backend files..."
+
+  # Check for print statements (should use logger)
+  echo "  🔍 Checking for print() statements..."
+  PRINTS=$(echo "$BACKEND_FILES" | xargs grep -n "^\s*print(" 2>/dev/null || true)
+
+  if [ -n "$PRINTS" ]; then
+    echo "  ⚠️  Found print() statements (use logger instead):"
+    echo "$PRINTS" | while read -r line; do
+      echo "     $line"
+    done
+    echo "  💡 Use: from src.core.logging_config import get_logger"
+    # This is a warning, not an error - don't increment ERRORS
+  fi
+
+  # Check for breakpoint() or pdb
+  echo "  🔍 Checking for debugger statements..."
+  DEBUGGERS=$(echo "$BACKEND_FILES" | xargs grep -nE "(breakpoint\(\)|import pdb|pdb\.set_trace)" 2>/dev/null || true)
+
+  if [ -n "$DEBUGGERS" ]; then
+    echo "  ❌ Found debugger statements:"
+    echo "$DEBUGGERS" | while read -r line; do
+      echo "     $line"
+    done
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ✅ No debugger statements found"
+  fi
+
+  # Run backend linting via pnpm
+  echo "  🔧 Running backend linter (Ruff)..."
+  if command -v pnpm &> /dev/null; then
+    if pnpm run backend:lint > /dev/null 2>&1; then
+      echo "  ✅ Backend linting passed"
+    else
+      echo "  ❌ Backend linting failed"
+      echo "  💡 Run: pnpm run backend:lint"
+      ERRORS=$((ERRORS + 1))
+    fi
+  else
+    echo "  ⚠️  pnpm not found, skipping backend linting"
+  fi
+fi
+
+# ============================================================================
+# Summary
+# ============================================================================
+echo ""
+if [ $ERRORS -gt 0 ]; then
+  echo "❌ Pre-commit checks failed with $ERRORS error(s)"
+  echo ""
+  echo "💡 Tips:"
+  echo "   - Remove console.log and use logger instead"
+  echo "   - Remove debugger statements"
+  echo "   - Fix linting errors before committing"
+  echo "   - Run 'pnpm run typecheck:frontend' to check TypeScript"
+  echo "   - Run 'pnpm run backend:lint' to check Python"
+  echo ""
+  echo "🔧 To skip this hook (not recommended): git commit --no-verify"
+  exit 1
+else
+  echo "✅ All pre-commit checks passed!"
+  exit 0
+fi

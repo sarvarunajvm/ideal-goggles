@@ -16,6 +16,15 @@ fi
 # Create hooks directory if it doesn't exist
 mkdir -p "$HOOKS_DIR"
 
+# Install pre-commit hook
+if [ -f "$SCRIPTS_DIR/pre-commit" ]; then
+  cp "$SCRIPTS_DIR/pre-commit" "$HOOKS_DIR/pre-commit"
+  chmod +x "$HOOKS_DIR/pre-commit"
+  echo "✅ Installed pre-commit hook"
+else
+  echo "⚠️  pre-commit hook not found"
+fi
+
 # Install pre-push hook
 if [ -f "$SCRIPTS_DIR/pre-push" ]; then
   cp "$SCRIPTS_DIR/pre-push" "$HOOKS_DIR/pre-push"
