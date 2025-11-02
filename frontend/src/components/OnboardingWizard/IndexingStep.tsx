@@ -119,7 +119,6 @@ export function IndexingStep() {
     try {
       const response = await axios.get(`${API_BASE}/index/status`);
       const data: IndexingStatus = response.data;
-      console.log('Indexing status:', data); // Debug log
       setStatus(data);
 
       // Check if indexing is complete

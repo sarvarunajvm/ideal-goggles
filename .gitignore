@@ -98,17 +98,23 @@ yarn.lock
 # Project specific ignore
 .specify/
 .claude/
-
 .playwright-mcp
 func_tests/fixtures/
+/func_tests/blob-report
+/test_photos
 
+# Documentation artifacts (not committed)
 AGENTS.md
 CLAUDE.md
-*.xml
-/test_photos
 IMPLEMENTATION_STATUS.md
 frontend/DESIGN_TOKENS.md
-/func_tests/blob-report
 BUGS.md
+
+# Temporary/misc
+*.xml
 clientsystem
 *.resolve()'*
+*.orig
+*.bak
+*.backup
+.serena/*

@@ -18,7 +18,6 @@ export function LightboxImage({ photo }: LightboxImageProps) {
     // For now, always use the API endpoint in development
     // TODO: Re-enable Electron detection when running in Electron
     const photoId = photo.id; // This is already a string
-    console.log('Loading image via API:', `/api/photos/${photoId}/original`);
     return `/api/photos/${photoId}/original`;
   })();
 
