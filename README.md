@@ -1,55 +1,32 @@
-# Ideal Goggles User Guide Branch
+# Ideal Goggles - User Guide
 
-This branch contains only the user manual for GitHub Pages deployment.
+Welcome! This is the complete guide to using Ideal Goggles.
 
-## GitHub Pages Setup
+## What is Ideal Goggles?
 
-This branch is configured to work with GitHub Pages using Jekyll:
+Ideal Goggles helps you organize and find your photos quickly using powerful search features.
 
-1. **Jekyll Configuration**: `_config.yml` sets up the Cayman theme
-2. **Index Page**: `index.md` contains the full user manual (Jekyll converts to HTML)
-3. **Original Manual**: `USER_MANUAL.md` kept for reference
+## Quick Links
 
-## Deployment
+📖 **[Read the User Manual](docs/index.md)** - Everything you need to know about using Ideal Goggles
 
-To deploy on GitHub Pages:
+## What You'll Learn
 
-1. Go to repository Settings → Pages
-2. Source: Deploy from branch
-3. Branch: `user_guide`
-4. Folder: `/docs`
-5. Save
+- How to install Ideal Goggles on your computer
+- How to search for photos by keywords, dates, or even what's in the picture
+- How to organize your photos into collections
+- How to find photos of specific people
+- Tips for getting the best performance
+- Solutions to common problems
 
-GitHub will automatically:
-- Convert `index.md` to HTML using Jekyll
-- Apply the Cayman theme
-- Make it available at: `https://[username].github.io/ideal-goggles/`
+## Need Help?
 
-## Local Preview
+If you have questions or run into problems:
 
-To preview locally with Jekyll:
+- Check the **Troubleshooting** section in the manual
+- Ask for help on [GitHub Discussions](https://github.com/sarvarunajvm/ideal-goggles/discussions)
+- Report bugs on [GitHub Issues](https://github.com/sarvarunajvm/ideal-goggles/issues)
 
-```bash
-cd docs
-gem install bundler jekyll
-bundle exec jekyll serve
-```
+---
 
-Visit: http://localhost:4000
-
-## File Structure
-
-```
-docs/
-├── _config.yml       # Jekyll configuration (theme, title)
-├── index.md          # Main user manual (auto-converted to HTML)
-└── USER_MANUAL.md    # Original markdown (for reference)
-```
-
-## How It Works
-
-GitHub Pages with Jekyll:
-- Automatically processes `.md` files to HTML
-- Applies the theme specified in `_config.yml`
-- No need for manual `index.html` creation
-- Supports all markdown features + syntax highlighting
+**Ready to get started?** [Click here to read the manual](docs/index.md)

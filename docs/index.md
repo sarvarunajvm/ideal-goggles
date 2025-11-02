@@ -401,19 +401,16 @@ A: Each user account has a separate index. Shared library support is planned.
 **Q: How do I move my library to a new computer?**
 A: Use Settings → Maintenance → Backup to export. Restore on new computer.
 
-## Support
+## Need Help?
 
-**Documentation:**
-- [Developer Guide](https://github.com/sarvarunajvm/ideal-goggles/blob/main/DEVELOPER_GUIDE.md) - Technical details
-- [Contributing](https://github.com/sarvarunajvm/ideal-goggles/blob/main/CONTRIBUTING.md) - How to contribute
+**Report a Problem:**
+- [Report bugs or issues](https://github.com/sarvarunajvm/ideal-goggles/issues)
 
-**Get Help:**
-- [GitHub Issues](https://github.com/sarvarunajvm/ideal-goggles/issues) - Report bugs
-- [Discussions](https://github.com/sarvarunajvm/ideal-goggles/discussions) - Ask questions
+**Ask Questions:**
+- [Ask the community for help](https://github.com/sarvarunajvm/ideal-goggles/discussions)
 
-**Contact:**
+**Contact Support:**
 - Email: support@ideal-goggles.app
-- GitHub: [@sarvarunajvm](https://github.com/sarvarunajvm)
 
 ---
 
