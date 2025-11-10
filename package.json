@@ -120,7 +120,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vite": "^7.1.12",
-    "wait-on": "^9.0.1",
+    "wait-on": "^9.0.3",
     "@codecov/vite-plugin": "^1.9.1"
   },
   "dependencies": {
