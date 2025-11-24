@@ -52,7 +52,7 @@ jobs:
       run_full_suite: ${{ steps.check.outputs.run_full_suite }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Determine E2E scope
       id: check
@@ -97,7 +97,7 @@ jobs:
         browser: ${{ fromJson(needs.determine-e2e-scope.outputs.browser_matrix) }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
@@ -226,7 +226,7 @@ jobs:
     if: always() && needs.e2e-tests.result != 'skipped'
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4
