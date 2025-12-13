@@ -61,15 +61,23 @@ class FaceDetectionWorker:
 
         except ImportError as e:
             logger.warning(f"InsightFace not available: {e}")
+            logger.info("Face detection and recognition features will be disabled")
             self.face_app = None
         except Exception as e:
-            logger.exception(f"Failed to initialize InsightFace: {e}")
+            logger.warning(f"Failed to initialize InsightFace: {e}")
+            logger.info("Face detection and recognition features will be disabled")
             self.face_app = None
+
+    def is_available(self) -> bool:
+        """Check if face detection is available."""
+        return self.face_app is not None
 
     async def detect_faces(self, photo: Photo) -> list[Face]:
         """Detect faces in a photo."""
-        if not self.face_app:
-            logger.warning("Face detection not available (InsightFace not initialized)")
+        if not self.is_available():
+            logger.debug(
+                f"InsightFace not available, skipping face detection for {photo.path}"
+            )
             return []
 
         start_time = time.time()
@@ -340,10 +348,6 @@ class FaceDetectionWorker:
             "processing_time": 0.0,
             "failed_detections": 0,
         }
-
-    def is_available(self) -> bool:
-        """Check if face detection is available."""
-        return self.face_app is not None
 
     def shutdown(self):
         """Shutdown the executor and clean up resources."""

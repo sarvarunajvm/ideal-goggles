@@ -232,7 +232,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         if not face_worker.is_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Face recognition not available",
+                detail="Face recognition is not available. InsightFace dependencies are not installed or failed to initialize.",
             )
 
         person = await face_worker.enroll_person(request.name, sample_photos)

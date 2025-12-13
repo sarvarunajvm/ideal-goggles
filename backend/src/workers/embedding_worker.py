@@ -27,8 +27,9 @@ class CLIPEmbeddingWorker:
         self.model = None
         self.preprocess = None
         self.device = None
+        self._available = False
 
-        # Initialize CLIP model
+        # Initialize CLIP model (gracefully handle failures)
         self._initialize_clip_model()
 
     def _initialize_clip_model(self):
@@ -45,17 +46,28 @@ class CLIPEmbeddingWorker:
             self.model, self.preprocess = clip.load(self.model_name, device=self.device)
             self.model.eval()
 
+            self._available = True
             logger.info(f"CLIP model loaded: {self.model_name}")
 
         except ImportError as e:
-            msg = f"CLIP dependencies not installed: {e}"
-            raise RuntimeError(msg)
+            logger.warning(f"CLIP dependencies not available: {e}")
+            logger.info("Semantic search features will be disabled")
+            self._available = False
         except Exception as e:
-            msg = f"Failed to initialize CLIP model: {e}"
-            raise RuntimeError(msg)
+            logger.warning(f"Failed to initialize CLIP model: {e}")
+            logger.info("Semantic search features will be disabled")
+            self._available = False
+
+    def is_available(self) -> bool:
+        """Check if CLIP model is available for use."""
+        return self._available
 
     async def generate_embedding(self, photo: Photo) -> Embedding | None:
         """Generate CLIP embedding for a photo."""
+        if not self._available:
+            logger.debug(f"CLIP not available, skipping embedding for {photo.path}")
+            return None
+
         start_time = time.time()
 
         try:
@@ -118,6 +130,10 @@ class CLIPEmbeddingWorker:
 
     async def generate_text_embedding(self, text: str) -> np.ndarray | None:
         """Generate CLIP embedding for text query."""
+        if not self._available:
+            logger.debug("CLIP not available, cannot generate text embedding")
+            return None
+
         try:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
