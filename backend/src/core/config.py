@@ -46,6 +46,20 @@ class Settings(BaseSettings):
     TELEMETRY_ENABLED: bool = Field(default=False, env="TELEMETRY_ENABLED")
     NETWORK_MONITORING: bool = Field(default=True, env="NETWORK_MONITORING")
 
+    # Timeout and retry configuration (seconds unless specified)
+    DB_CONNECTION_TIMEOUT: float = Field(default=30.0, env="DB_CONNECTION_TIMEOUT")
+    HTTP_REQUEST_TIMEOUT: float = Field(default=5.0, env="HTTP_REQUEST_TIMEOUT")
+    ML_INSTALL_TIMEOUT: float = Field(default=600.0, env="ML_INSTALL_TIMEOUT")
+    ML_VERIFY_TIMEOUT: float = Field(default=120.0, env="ML_VERIFY_TIMEOUT")
+    WORKER_SHUTDOWN_TIMEOUT: float = Field(default=30.0, env="WORKER_SHUTDOWN_TIMEOUT")
+    THREAD_JOIN_TIMEOUT: float = Field(default=5.0, env="THREAD_JOIN_TIMEOUT")
+    QUEUE_GET_TIMEOUT: float = Field(default=0.1, env="QUEUE_GET_TIMEOUT")
+
+    # Performance monitoring
+    SLOW_REQUEST_THRESHOLD_MS: int = Field(
+        default=1000, env="SLOW_REQUEST_THRESHOLD_MS"
+    )
+
     class Config:
         """Pydantic configuration."""
 

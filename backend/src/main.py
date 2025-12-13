@@ -69,7 +69,7 @@ _DOCS_ENABLED = settings.DEBUG or not _UI_AVAILABLE
 
 app = FastAPI(
     title="Ideal Goggles API",
-    version="1.0.8",
+    version="1.0.26",
     description="Local API for Ideal Goggles",
     # If no UI is bundled, expose /docs by default; otherwise follow DEBUG.
     docs_url="/docs" if _DOCS_ENABLED else None,
@@ -79,26 +79,28 @@ app = FastAPI(
 # Add custom middleware for logging and monitoring
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(ErrorLoggingMiddleware)
-app.add_middleware(PerformanceMonitoringMiddleware, threshold_ms=1000)
+app.add_middleware(
+    PerformanceMonitoringMiddleware, threshold_ms=settings.SLOW_REQUEST_THRESHOLD_MS
+)
 
 # CORS middleware for Electron frontend
 app.add_middleware(
     CORSMiddleware,
     # Electron renderer in production loads from file:// which presents
-    # as Origin "null" for CORS. Allow common local dev origins and
-    # permit any origin via regex to avoid startup issues.
+    # as Origin "null" for CORS. Allow local dev origins and null origin
+    # for Electron. Note: "null" origin is necessary for file:// protocol.
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3333",
         "http://127.0.0.1:3333",
-        "file://",
-        "null",
+        "http://localhost:5173",  # Vite default port
+        "http://127.0.0.1:5173",
+        "null",  # Electron file:// protocol
     ],
-    allow_origin_regex=".*",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
 
 # Include routers
@@ -135,7 +137,7 @@ async def root() -> dict[str, Any]:
     logger.info("Root endpoint accessed")
     return {
         "message": "Ideal Goggles API",
-        "version": "1.0.8",
+        "version": "1.0.26",
         "ui": "/ui" if _UI_MOUNTED else None,
         "docs": "/docs" if _DOCS_ENABLED else None,
     }
