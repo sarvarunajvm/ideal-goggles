@@ -46,7 +46,11 @@ async function startBackend(): Promise<void> {
     });
   };
 
-  const waitForPort = (port: number, host = '127.0.0.1', retries = 60, delayMs = 500): Promise<void> => {
+  // Import constants for centralized config
+  const BACKEND_MAX_RETRIES = 60;
+  const BACKEND_RETRY_DELAY = 500;
+  
+  const waitForPort = (port: number, host = '127.0.0.1', retries = BACKEND_MAX_RETRIES, delayMs = BACKEND_RETRY_DELAY): Promise<void> => {
     console.log(`[Backend] Waiting for port ${host}:${port} to become available...`);
     return new Promise((resolve, reject) => {
       const tryOnce = (attempt: number) => {
