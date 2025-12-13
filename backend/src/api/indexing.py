@@ -229,6 +229,90 @@ async def stop_indexing() -> dict[str, Any]:
         )
 
 
+@router.get("/index/thumbnails/validate")
+async def validate_thumbnail_cache(
+    sample_size: int = 100,
+) -> dict[str, Any]:
+    """
+    Validate thumbnail cache integrity.
+
+    Args:
+        sample_size: Number of thumbnails to sample for validation
+
+    Returns:
+        Validation results with cache health metrics
+    """
+    try:
+        from ..core.config import settings
+        from ..workers.thumbnail_worker import ThumbnailCacheManager
+
+        cache_manager = ThumbnailCacheManager(str(settings.THUMBNAIL_DIR))
+
+        # Get cache statistics
+        stats = await cache_manager.get_cache_statistics()
+
+        # Validate sample
+        validation = await cache_manager.validate_cache_integrity(sample_size)
+
+        # Calculate health score
+        total_checked = validation["total_checked"]
+        if total_checked > 0:
+            health_score = (validation["valid_files"] / total_checked) * 100
+        else:
+            health_score = 0.0
+
+        return {
+            "cache_statistics": stats,
+            "validation": validation,
+            "health": {
+                "score": round(health_score, 2),
+                "status": (
+                    "healthy"
+                    if health_score >= 95
+                    else "degraded" if health_score >= 80 else "poor"
+                ),
+            },
+            "recommendations": _get_cache_recommendations(validation, stats),
+        }
+
+    except Exception as e:
+        logger.exception(f"Thumbnail cache validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cache validation failed: {e!s}",
+        )
+
+
+def _get_cache_recommendations(
+    validation: dict[str, Any], stats: dict[str, Any]
+) -> list[str]:
+    """Generate recommendations based on validation results."""
+    recommendations = []
+
+    if validation["invalid_files"] > 0:
+        recommendations.append(
+            f"Found {validation['invalid_files']} corrupted thumbnails. Consider regenerating thumbnails."
+        )
+
+    if stats.get("total_size_mb", 0) > 1000:
+        recommendations.append(
+            "Cache size exceeds 1GB. Consider cleanup of orphaned thumbnails."
+        )
+
+    total_checked = validation["total_checked"]
+    if total_checked > 0:
+        invalid_rate = (validation["invalid_files"] / total_checked) * 100
+        if invalid_rate > 5:
+            recommendations.append(
+                f"High invalid file rate ({invalid_rate:.1f}%). Check for disk corruption or interrupted writes."
+            )
+
+    if not recommendations:
+        recommendations.append("Thumbnail cache is healthy. No action needed.")
+
+    return recommendations
+
+
 @router.get("/index/diagnostics")
 async def get_model_diagnostics() -> dict[str, Any]:
     """

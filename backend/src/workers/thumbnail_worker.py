@@ -504,8 +504,116 @@ class ThumbnailCacheManager:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.cache.get_cache_stats)
 
+    async def validate_thumbnails_for_photos(
+        self, photo_ids: list[int], db_manager
+    ) -> dict[str, Any]:
+        """Validate that thumbnails exist for given photo IDs.
+
+        Args:
+            photo_ids: List of photo IDs to check
+            db_manager: Database manager instance
+
+        Returns:
+            Dictionary with validation results:
+            - photos_checked: Number of photos checked
+            - thumbnails_exist: Number with existing thumbnails
+            - thumbnails_missing: Number missing thumbnails
+            - thumbnails_invalid: Number with invalid thumbnails
+            - missing_photo_ids: List of photo IDs missing thumbnails
+        """
+        if not photo_ids:
+            return {
+                "photos_checked": 0,
+                "thumbnails_exist": 0,
+                "thumbnails_missing": 0,
+                "thumbnails_invalid": 0,
+                "missing_photo_ids": [],
+            }
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._validate_thumbnails_sync, photo_ids, db_manager
+        )
+
+    def _validate_thumbnails_sync(
+        self, photo_ids: list[int], db_manager
+    ) -> dict[str, Any]:
+        """Synchronously validate thumbnails for photos."""
+        from PIL import Image
+
+        # Query thumbnails from database
+        placeholders = ",".join("?" * len(photo_ids))
+        query = f"""
+            SELECT file_id, thumb_path
+            FROM thumbnails
+            WHERE file_id IN ({placeholders})
+        """
+
+        rows = db_manager.execute_query(query, photo_ids)
+        db_thumbnails = {row[0]: row[1] for row in rows}
+
+        exist_count = 0
+        missing_count = 0
+        invalid_count = 0
+        missing_ids = []
+
+        for photo_id in photo_ids:
+            if photo_id not in db_thumbnails:
+                # No database record
+                missing_count += 1
+                missing_ids.append(photo_id)
+                continue
+
+            thumb_rel_path = db_thumbnails[photo_id]
+            thumb_abs_path = self.cache.cache_root / thumb_rel_path
+
+            if not thumb_abs_path.exists():
+                # Database record exists but file missing
+                missing_count += 1
+                missing_ids.append(photo_id)
+                continue
+
+            # Validate the thumbnail file
+            try:
+                with Image.open(thumb_abs_path) as img:
+                    img.verify()
+
+                # Reopen to check actual content
+                with Image.open(thumb_abs_path) as img:
+                    width, height = img.size
+                    if width > 0 and height > 0:
+                        exist_count += 1
+                    else:
+                        invalid_count += 1
+                        missing_ids.append(photo_id)
+
+            except Exception as e:
+                logger.warning(f"Invalid thumbnail for photo {photo_id}: {e}")
+                invalid_count += 1
+                missing_ids.append(photo_id)
+
+        return {
+            "photos_checked": len(photo_ids),
+            "thumbnails_exist": exist_count,
+            "thumbnails_missing": missing_count,
+            "thumbnails_invalid": invalid_count,
+            "missing_photo_ids": missing_ids,
+        }
+
     async def validate_cache_integrity(self, sample_size: int = 100) -> dict[str, Any]:
-        """Validate cache integrity by checking a sample of files."""
+        """Validate cache integrity by checking a sample of files.
+
+        Args:
+            sample_size: Number of files to sample for validation
+
+        Returns:
+            Dictionary with validation results:
+            - valid_files: Number of valid thumbnail images
+            - invalid_files: Number of corrupted/invalid files
+            - missing_files: Number of expected files that don't exist
+            - total_checked: Total files checked
+            - sample_rate: Percentage of cache sampled
+        """
         stats = await self.get_cache_statistics()
 
         if not stats["exists"] or stats["total_files"] == 0:
@@ -514,14 +622,80 @@ class ThumbnailCacheManager:
                 "invalid_files": 0,
                 "missing_files": 0,
                 "total_checked": 0,
+                "sample_rate": 0.0,
             }
 
-        # TODO: Implement sampling and validation logic
-        # This would check if thumbnail files are valid images
+        # Get list of all thumbnail files
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._validate_cache_sample, sample_size, stats["total_files"]
+        )
+
+    def _validate_cache_sample(
+        self, sample_size: int, total_files: int
+    ) -> dict[str, Any]:
+        """Synchronously validate a sample of cache files."""
+        import random
+
+        from PIL import Image
+
+        # Collect all thumbnail files
+        all_thumbnails = [
+            path
+            for path in self.cache.cache_root.rglob("*")
+            if path.is_file()
+            and path.suffix.lower() in (".webp", ".jpeg", ".jpg", ".png")
+        ]
+
+        # Calculate actual sample size
+        actual_sample_size = min(sample_size, len(all_thumbnails))
+
+        if actual_sample_size == 0:
+            return {
+                "valid_files": 0,
+                "invalid_files": 0,
+                "missing_files": 0,
+                "total_checked": 0,
+                "sample_rate": 0.0,
+            }
+
+        # Random sampling
+        sample = random.sample(all_thumbnails, actual_sample_size)
+
+        valid_count = 0
+        invalid_count = 0
+
+        for thumb_path in sample:
+            try:
+                # Try to open and verify the image
+                with Image.open(thumb_path) as img:
+                    # Verify it can be loaded
+                    img.verify()
+
+                # Reopen to check actual content (verify() closes the file)
+                with Image.open(thumb_path) as img:
+                    # Check if image has valid dimensions
+                    width, height = img.size
+                    if width > 0 and height > 0:
+                        valid_count += 1
+                    else:
+                        logger.warning(
+                            f"Invalid dimensions for {thumb_path}: {width}x{height}"
+                        )
+                        invalid_count += 1
+
+            except Exception as e:
+                logger.warning(f"Invalid thumbnail {thumb_path}: {e}")
+                invalid_count += 1
+
+        sample_rate = (
+            (actual_sample_size / total_files * 100) if total_files > 0 else 0.0
+        )
 
         return {
-            "valid_files": 0,
-            "invalid_files": 0,
-            "missing_files": 0,
-            "total_checked": 0,
+            "valid_files": valid_count,
+            "invalid_files": invalid_count,
+            "missing_files": 0,  # Sampling doesn't check for missing files
+            "total_checked": actual_sample_size,
+            "sample_rate": round(sample_rate, 2),
         }
