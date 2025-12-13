@@ -17,9 +17,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("photos", schema=None):
-        pass
-
     op.execute(
         """
         CREATE TABLE IF NOT EXISTS photos (

@@ -239,8 +239,13 @@ class DatabaseManager:
                 self._run_legacy_migrations(from_version)
                 return
 
-            logger.info("Running Alembic migrations")
+            logger.info(f"Running Alembic migrations for database: {self.db_path}")
             alembic_cfg = Config(str(alembic_ini))
+
+            # Override the database URL to use the actual database path
+            # This is critical for tests and custom database paths
+            db_url = f"sqlite:///{self.db_path}"
+            alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
             # Run migrations to latest version
             command.upgrade(alembic_cfg, "head")
