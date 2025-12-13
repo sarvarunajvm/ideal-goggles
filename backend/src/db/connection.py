@@ -225,18 +225,46 @@ class DatabaseManager:
         return max(versions) if versions else 1
 
     def _run_migrations(self, from_version: int = 0):
-        """Run database migrations from specified version."""
+        """Run database migrations using Alembic."""
+        try:
+            from alembic.config import Config
+
+            from alembic import command
+
+            backend_dir = Path(__file__).parent.parent.parent
+            alembic_ini = backend_dir / "alembic.ini"
+
+            if not alembic_ini.exists():
+                logger.warning(f"Alembic config not found: {alembic_ini}")
+                self._run_legacy_migrations(from_version)
+                return
+
+            logger.info("Running Alembic migrations")
+            alembic_cfg = Config(str(alembic_ini))
+
+            # Run migrations to latest version
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Alembic migrations completed successfully")
+
+        except ImportError:
+            logger.warning("Alembic not available, falling back to legacy migrations")
+            self._run_legacy_migrations(from_version)
+        except Exception as e:
+            logger.exception(f"Alembic migration failed: {e}")
+            logger.warning("Falling back to legacy migrations")
+            self._run_legacy_migrations(from_version)
+
+    def _run_legacy_migrations(self, from_version: int = 0):
+        """Run legacy SQL file-based migrations as fallback."""
         migrations_dir = Path(__file__).parent / "migrations"
 
         if not migrations_dir.exists():
             logger.warning(f"Migrations directory not found: {migrations_dir}")
-            # Use embedded schema as fallback for bundled environments
             if from_version == 0:
                 logger.info("Using embedded initial schema for database setup")
                 self._run_embedded_migration()
             return
 
-        # Find and sort migration files
         migration_files = []
         for file in migrations_dir.glob("*.sql"):
             try:
@@ -256,10 +284,8 @@ class DatabaseManager:
                     with open(file_path) as f:
                         migration_sql = f.read()
 
-                    # Execute migration
                     conn.executescript(migration_sql)
 
-                    # Update schema version
                     conn.execute(
                         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
                         ("schema_version", str(version)),
@@ -312,8 +338,14 @@ class DatabaseManager:
 
     def get_connection(self) -> sqlite3.Connection:
         """Get a database connection with optimal settings."""
+        from src.core.config import settings
+
         # sqlite3.connect expects a string path; ensure correct type
-        conn = sqlite3.connect(str(self.db_path), timeout=30.0, check_same_thread=False)
+        conn = sqlite3.connect(
+            str(self.db_path),
+            timeout=settings.DB_CONNECTION_TIMEOUT,
+            check_same_thread=False,
+        )
 
         # Enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON")
