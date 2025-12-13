@@ -803,6 +803,252 @@ rm -rf node_modules .vite && pnpm install
 rm backend/data/photos.db
 ```
 
+## Database Migrations
+
+Ideal Goggles uses [Alembic](https://alembic.sqlalchemy.org/) for database migrations with automatic fallback to legacy SQL migrations.
+
+### Migration System
+
+**Hybrid Approach:**
+1. **Alembic** (Primary): Modern migration framework with full version control
+2. **Legacy SQL** (Fallback): SQL files in `backend/src/db/migrations/` for bundled environments
+3. **Embedded Schema** (Last Resort): Hardcoded initial schema for sandboxed environments
+
+The DatabaseManager automatically selects the best available method on startup.
+
+### Creating New Migrations
+
+```bash
+cd backend
+
+# Generate migration file
+alembic revision -m "add_photo_ratings_table"
+
+# Edit generated file in alembic/versions/
+```
+
+**Example migration:**
+```python
+"""add_photo_ratings_table
+
+Revision ID: b2c3d4e5f6g7
+Revises: a1b2c3d4e5f6
+Create Date: 2025-12-14 10:30:00
+"""
+from alembic import op
+
+def upgrade() -> None:
+    """Apply migration: create photo_ratings table."""
+    op.execute("""
+        CREATE TABLE photo_ratings (
+          file_id INTEGER PRIMARY KEY,
+          rating INTEGER CHECK(rating >= 1 AND rating <= 5),
+          updated_at REAL NOT NULL,
+          FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+        )
+    """)
+    op.execute("CREATE INDEX idx_photo_ratings_rating ON photo_ratings(rating)")
+
+def downgrade() -> None:
+    """Rollback migration: drop photo_ratings table."""
+    op.execute("DROP TABLE IF EXISTS photo_ratings")
+```
+
+### Running Migrations
+
+**Automatic (Production):**
+- Migrations run automatically when application starts
+- New database: Runs all migrations to create schema
+- Existing database: Checks version and upgrades if needed
+
+**Manual (Development):**
+```bash
+cd backend
+
+# Upgrade to latest version
+alembic upgrade head
+
+# Downgrade one version
+alembic downgrade -1
+
+# Show current version
+alembic current
+
+# Show migration history
+alembic history
+```
+
+### SQLite Considerations
+
+Use batch mode for ALTER TABLE operations:
+
+```python
+def upgrade() -> None:
+    with op.batch_alter_table('photos', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('archived', sa.Boolean(), default=False))
+```
+
+### Best Practices
+
+1. **Always provide downgrade()**: Enable rollback if migration fails
+2. **Test both directions**: Verify upgrade and downgrade work correctly
+3. **Add indexes**: Create indexes for frequently queried columns
+4. **Commit migrations**: Add migration files to version control
+5. **Test locally**: Run migrations on development database before deploying
+
+### Testing Migrations
+
+```bash
+# Fresh database test
+rm backend/data/photos.db
+python -m src.main  # Creates DB with all migrations
+
+# Upgrade test
+alembic upgrade head
+
+# Downgrade test
+alembic downgrade base
+```
+
+### Troubleshooting
+
+**Migration fails midway:**
+```bash
+# Check where it stopped
+alembic current
+
+# Manually fix database, then stamp revision
+alembic stamp a1b2c3d4e5f6
+```
+
+**Database corruption:**
+1. Backup `backend/data/photos.db`
+2. Delete corrupted database
+3. Restart app (fresh database created with all migrations)
+
+## Database Migrations
+
+Ideal Goggles uses [Alembic](https://alembic.sqlalchemy.org/) for database migrations with automatic fallback to legacy SQL migrations.
+
+### Migration System
+
+**Hybrid Approach:**
+1. **Alembic** (Primary): Modern migration framework with full version control
+2. **Legacy SQL** (Fallback): SQL files in `backend/src/db/migrations/` for bundled environments
+3. **Embedded Schema** (Last Resort): Hardcoded initial schema for sandboxed environments
+
+The DatabaseManager automatically selects the best available method on startup.
+
+### Creating New Migrations
+
+```bash
+cd backend
+
+# Generate migration file
+alembic revision -m "add_photo_ratings_table"
+
+# Edit generated file in alembic/versions/
+```
+
+**Example migration:**
+```python
+"""add_photo_ratings_table
+
+Revision ID: b2c3d4e5f6g7
+Revises: a1b2c3d4e5f6
+Create Date: 2025-12-14 10:30:00
+"""
+from alembic import op
+
+def upgrade() -> None:
+    """Apply migration: create photo_ratings table."""
+    op.execute("""
+        CREATE TABLE photo_ratings (
+          file_id INTEGER PRIMARY KEY,
+          rating INTEGER CHECK(rating >= 1 AND rating <= 5),
+          updated_at REAL NOT NULL,
+          FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
+        )
+    """)
+    op.execute("CREATE INDEX idx_photo_ratings_rating ON photo_ratings(rating)")
+
+def downgrade() -> None:
+    """Rollback migration: drop photo_ratings table."""
+    op.execute("DROP TABLE IF EXISTS photo_ratings")
+```
+
+### Running Migrations
+
+**Automatic (Production):**
+- Migrations run automatically when application starts
+- New database: Runs all migrations to create schema
+- Existing database: Checks version and upgrades if needed
+
+**Manual (Development):**
+```bash
+cd backend
+
+# Upgrade to latest version
+alembic upgrade head
+
+# Downgrade one version
+alembic downgrade -1
+
+# Show current version
+alembic current
+
+# Show migration history
+alembic history
+```
+
+### SQLite Considerations
+
+Use batch mode for ALTER TABLE operations:
+
+```python
+def upgrade() -> None:
+    with op.batch_alter_table('photos', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('archived', sa.Boolean(), default=False))
+```
+
+### Best Practices
+
+1. **Always provide downgrade()**: Enable rollback if migration fails
+2. **Test both directions**: Verify upgrade and downgrade work correctly
+3. **Add indexes**: Create indexes for frequently queried columns
+4. **Commit migrations**: Add migration files to version control
+5. **Test locally**: Run migrations on development database before deploying
+
+### Testing Migrations
+
+```bash
+# Fresh database test
+rm backend/data/photos.db
+python -m src.main  # Creates DB with all migrations
+
+# Upgrade test
+alembic upgrade head
+
+# Downgrade test
+alembic downgrade base
+```
+
+### Troubleshooting
+
+**Migration fails midway:**
+```bash
+# Check where it stopped
+alembic current
+
+# Manually fix database, then stamp revision
+alembic stamp a1b2c3d4e5f6
+```
+
+**Database corruption:**
+1. Backup `backend/data/photos.db`
+2. Delete corrupted database
+3. Restart app (fresh database created with all migrations)
+
 ## Resources
 
 **Official Documentation:**
@@ -811,6 +1057,7 @@ rm backend/data/photos.db
 - [Electron](https://www.electronjs.org/)
 - [PNPM](https://pnpm.io/)
 - [Zustand](https://github.com/pmndrs/zustand)
+- [Alembic](https://alembic.sqlalchemy.org/)
 
 **Project Documentation:**
 - [User Manual](USER_MANUAL.md) - End-user guide
