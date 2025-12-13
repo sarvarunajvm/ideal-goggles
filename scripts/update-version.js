@@ -37,6 +37,12 @@ function updateVersion(version) {
       type: 'toml',
       pattern: /^version = ".*"$/m,
       replacement: `version = "${version}"`
+    },
+    {
+      file: 'backend/src/main.py',
+      type: 'python',
+      pattern: /(version["']?\s*[:=]\s*["'])([^"']+)(["'])/g,
+      replacement: `$1${version}$3`
     }
   ];
 
@@ -83,6 +89,18 @@ function updateVersion(version) {
         if (updated) {
           const oldVersion = oldContent.match(/version = "(.*?)"/)?.[1];
           console.log(`✅ Updated ${update.file}: ${oldVersion} → ${version}`);
+        } else {
+          console.log(`✓  ${update.file} already at version ${version}`);
+        }
+      } else if (update.type === 'python') {
+        const oldContent = content;
+        content = content.replace(update.pattern, update.replacement);
+        updated = oldContent !== content;
+
+        if (updated) {
+          const matches = [...oldContent.matchAll(/version="([^"]+)"/g)];
+          const oldVersion = matches[0]?.[1];
+          console.log(`✅ Updated ${update.file}: ${oldVersion} → ${version} (${matches.length} occurrences)`);
         } else {
           console.log(`✓  ${update.file} already at version ${version}`);
         }

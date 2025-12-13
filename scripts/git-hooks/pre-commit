@@ -129,6 +129,27 @@ if [ -n "$BACKEND_FILES" ]; then
 fi
 
 # ============================================================================
+# Version Consistency Check
+# ============================================================================
+echo ""
+echo "🔢 Checking version consistency..."
+PKG_VERSION=$(node -p "require('./package.json').version")
+MAIN_PY_VERSION=$(grep -E 'version\s*=\s*"' backend/src/main.py | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+PYPROJECT_VERSION=$(grep -E '^version\s*=\s*"' backend/pyproject.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+
+if [ "$PKG_VERSION" != "$MAIN_PY_VERSION" ] || [ "$PKG_VERSION" != "$PYPROJECT_VERSION" ]; then
+  echo "  ❌ Version mismatch detected:"
+  echo "     package.json:           $PKG_VERSION"
+  echo "     backend/pyproject.toml: $PYPROJECT_VERSION"
+  echo "     backend/src/main.py:    $MAIN_PY_VERSION"
+  echo ""
+  echo "  💡 Run: node scripts/update-version.js $PKG_VERSION"
+  ERRORS=$((ERRORS + 1))
+else
+  echo "  ✅ All versions synchronized: $PKG_VERSION"
+fi
+
+# ============================================================================
 # Summary
 # ============================================================================
 echo ""
