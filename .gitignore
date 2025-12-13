@@ -118,3 +118,4 @@ clientsystem
 *.bak
 *.backup
 .serena/*
+claudedocs/*

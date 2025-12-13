@@ -104,7 +104,9 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
             import importlib
 
             # Use timeout to prevent hanging on problematic imports
-            with timeout(3):
+            from ..core.config import settings
+
+            with timeout(int(settings.THREAD_JOIN_TIMEOUT)):
                 module = importlib.import_module(package_name)
                 version = getattr(module, "__version__", None)
                 if version is None and package_name == "sqlite3":
@@ -138,7 +140,9 @@ def check_python_package(package_name: str) -> tuple[bool, str | None]:
             import importlib
 
             # Use timeout to prevent hanging on problematic imports
-            with timeout(3):
+            from ..core.config import settings
+
+            with timeout(int(settings.THREAD_JOIN_TIMEOUT)):
                 module = importlib.import_module(package_name)
                 # Many packages expose __version__, some use {pkg}.__version__ or version attributes
                 version = getattr(module, "__version__", None)
@@ -241,12 +245,14 @@ def check_system_command(command: str) -> tuple[bool, str | None]:
     Returns (installed, version) and never raises.
     """
     try:
+        from ..core.config import settings
+
         result = subprocess.run(
             [command, "--version"],
             check=False,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=settings.HTTP_REQUEST_TIMEOUT,
         )
         if result.returncode == 0:
             # Extract version from output (usually first line)
@@ -526,12 +532,14 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
 
             logger.info(f"Running ML setup script: {' '.join(cmd)}")
 
+            from ..core.config import settings
+
             result = subprocess.run(
                 cmd,
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=600,  # 10 minute timeout for ML installation
+                timeout=settings.ML_INSTALL_TIMEOUT,
             )
 
             if result.returncode == 0:
@@ -588,12 +596,14 @@ async def install_dependencies(request: InstallRequest) -> dict[str, Any]:
             # Use system Python3 instead of frozen executable
             python_cmd = "python3" if platform.system() != "Windows" else "python"
             for package in packages:
+                from ..core.config import settings as cfg
+
                 result = subprocess.run(
                     [python_cmd, "-m", "pip", "install", "--user", package],
                     check=False,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=cfg.ML_VERIFY_TIMEOUT,
                 )
                 if result.returncode == 0:
                     outputs.append(f"Installed {package}")

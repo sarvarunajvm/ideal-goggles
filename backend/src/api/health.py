@@ -155,12 +155,14 @@ def _check_dependencies() -> dict[str, Any]:
     try:
         import subprocess
 
+        from ..core.config import settings
+
         result = subprocess.run(
             ["tesseract", "--version"],
             check=False,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=settings.HTTP_REQUEST_TIMEOUT,
         )
         if result.returncode == 0:
             version = result.stdout.split("\n")[0]

@@ -307,11 +307,13 @@ class FileCrawler:
         if not self.is_watching:
             return
 
+        from ..core.config import settings
+
         logger.info("Stopping file system watching")
 
         for observer in self.observers:
             observer.stop()
-            observer.join(timeout=5.0)
+            observer.join(timeout=settings.THREAD_JOIN_TIMEOUT)
 
         self.observers.clear()
         self.is_watching = False

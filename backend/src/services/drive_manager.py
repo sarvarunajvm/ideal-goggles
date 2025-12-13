@@ -501,9 +501,11 @@ class DriveManager:
 
     def stop_monitoring(self):
         """Stop background monitoring."""
+        from ..core.config import settings
+
         self._monitoring = False
         if self._monitor_thread:
-            self._monitor_thread.join(timeout=5)
+            self._monitor_thread.join(timeout=settings.THREAD_JOIN_TIMEOUT)
         logger.info("Drive monitoring stopped")
 
     def bulk_resolve_paths(self, paths: list[str]) -> dict[str, str | None]:

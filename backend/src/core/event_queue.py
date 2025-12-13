@@ -344,13 +344,17 @@ class EventQueue:
 
     async def stop(self, timeout: float = 30.0):
         """Stop the event queue processing."""
+        from ..core.config import settings
+
         self._running = False
 
         # Cancel scheduler
         if self._scheduler_task:
             self._scheduler_task.cancel()
             with contextlib.suppress(TimeoutError, asyncio.CancelledError):
-                await asyncio.wait_for(self._scheduler_task, timeout=5.0)
+                await asyncio.wait_for(
+                    self._scheduler_task, timeout=settings.THREAD_JOIN_TIMEOUT
+                )
 
         # Cancel worker tasks
         for task in self._worker_tasks:
@@ -407,10 +411,15 @@ class EventQueue:
             try:
                 # Get next event (with timeout to allow for shutdown)
                 try:
+                    from ..core.config import settings
+
                     # Run the blocking get() in executor to allow cancellation
                     loop = asyncio.get_event_loop()
                     event = await loop.run_in_executor(
-                        None, lambda: self._event_queue.get(timeout=0.1)
+                        None,
+                        lambda: self._event_queue.get(
+                            timeout=settings.QUEUE_GET_TIMEOUT
+                        ),
                     )
                     with self._lock:
                         self._stats["queue_size"] = self._event_queue.qsize()
