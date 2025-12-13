@@ -11,6 +11,7 @@ import SettingsPage from './pages/SettingsPage'
 import PeoplePage from './pages/PeoplePage'
 import StatsPage from './pages/StatsPage'
 import DependenciesPage from './pages/DependenciesPage'
+import { LogsPage } from './pages/LogsPage'
 import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import './index.css'
 
@@ -53,6 +54,10 @@ const router = createRouter(
         {
           path: 'dependencies',
           element: <DependenciesPage />,
+        },
+        {
+          path: 'logs',
+          element: <LogsPage />,
         },
       ],
     },

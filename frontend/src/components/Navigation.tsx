@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
-import { Search, Settings, Users, Camera, Menu, X, Activity, BookOpen, Package, ExternalLink } from 'lucide-react'
+import { Search, Settings, Users, Camera, Menu, X, Activity, BookOpen, Package, ExternalLink, FileText } from 'lucide-react'
 import { useDeveloperModeStore } from '../stores/developerModeStore'
 import { getApiBaseUrl } from '../services/apiClient'
 
@@ -34,6 +34,7 @@ export default function Navigation() {
   // Add developer items when in developer mode
   const developerItems = isDeveloperMode ? [
     { path: '/dependencies', label: 'Dependencies', icon: Package },
+    { path: '/logs', label: 'Logs', icon: FileText },
   ] : []
 
   const allNavItems = [...navItems, ...developerItems]
