@@ -163,7 +163,7 @@ class TestCLIPEmbeddingWorkerInitialization:
         assert worker.device == "cpu"
 
     def test_initialization_clip_import_error(self, mock_torch):
-        """Test initialization handles CLIP import error."""
+        """Test initialization handles CLIP import error gracefully."""
         # Simulate CLIP not being available - remove it from sys.modules
         original_clip = sys.modules.get("clip")
         if "clip" in sys.modules:
@@ -180,19 +180,23 @@ class TestCLIPEmbeddingWorkerInitialization:
             return original_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=mock_import):
-            with pytest.raises(RuntimeError, match="CLIP dependencies not installed"):
-                CLIPEmbeddingWorker()
+            # Should not raise - graceful degradation
+            worker = CLIPEmbeddingWorker()
+            # Worker should be created but not available
+            assert not worker.is_available()
 
         # Restore original state
         if original_clip is not None:
             sys.modules["clip"] = original_clip
 
     def test_initialization_model_load_error(self, mock_clip, mock_torch):
-        """Test initialization handles model load error."""
+        """Test initialization handles model load error gracefully."""
         mock_clip.load.side_effect = Exception("Model load failed")
 
-        with pytest.raises(RuntimeError, match="Failed to initialize CLIP model"):
-            CLIPEmbeddingWorker()
+        # Should not raise - graceful degradation
+        worker = CLIPEmbeddingWorker()
+        # Worker should be created but not available
+        assert not worker.is_available()
 
 
 @pytest.mark.asyncio

@@ -552,8 +552,9 @@ class TestIndexOptimization:
 class TestIndexOptimizationMethods:
     """Test specific index optimization methods."""
 
+    @patch("src.services.faiss_manager.faiss")
     @patch("src.services.faiss_manager.get_settings")
-    def test_optimize_flat_index(self, mock_get_settings):
+    def test_optimize_flat_index(self, mock_get_settings, mock_faiss):
         """Test flat index optimization."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -569,30 +570,21 @@ class TestIndexOptimizationMethods:
 
         # Mock new index
         mock_new_index = Mock()
+        mock_faiss.IndexFlatIP.return_value = mock_new_index
+        mock_faiss.IndexFlatL2 = Mock()  # Ensure attribute exists for getattr check
 
         with patch.object(FAISSIndexManager, "_load_stats"):
             with patch.object(FAISSIndexManager, "_start_background_scheduler"):
                 manager = FAISSIndexManager()
 
-                # Patch faiss within the method
-                with patch("builtins.__import__") as mock_import:
-                    mock_faiss = Mock()
-                    mock_faiss.IndexFlatIP.return_value = mock_new_index
+                result = manager._optimize_flat_index(mock_index)
 
-                    def import_side_effect(name, *args, **kwargs):
-                        if name == "faiss":
-                            return mock_faiss
-                        return __import__(name, *args, **kwargs)
+                assert result == mock_new_index
+                mock_faiss.IndexFlatIP.assert_called_once_with(512)
 
-                    mock_import.side_effect = import_side_effect
-
-                    result = manager._optimize_flat_index(mock_index)
-
-                    assert result == mock_new_index
-                    mock_faiss.IndexFlatIP.assert_called_once_with(512)
-
+    @patch("src.services.faiss_manager.faiss")
     @patch("src.services.faiss_manager.get_settings")
-    def test_optimize_flat_index_non_clip(self, mock_get_settings):
+    def test_optimize_flat_index_non_clip(self, mock_get_settings, mock_faiss):
         """Test flat index optimization for non-CLIP embeddings."""
         mock_settings = Mock()
         mock_settings.app_data_dir = tempfile.mkdtemp()
@@ -606,27 +598,17 @@ class TestIndexOptimizationMethods:
         )
 
         mock_new_index = Mock()
+        mock_faiss.IndexFlatL2.return_value = mock_new_index
+        mock_faiss.IndexFlatIP = Mock()  # Ensure attribute exists for getattr check
 
         with patch.object(FAISSIndexManager, "_load_stats"):
             with patch.object(FAISSIndexManager, "_start_background_scheduler"):
                 manager = FAISSIndexManager()
 
-                # Patch faiss at the import level
-                with patch("builtins.__import__") as mock_import:
-                    mock_faiss = Mock()
-                    mock_faiss.IndexFlatL2.return_value = mock_new_index
+                result = manager._optimize_flat_index(mock_index)
 
-                    def import_side_effect(name, *args, **kwargs):
-                        if name == "faiss":
-                            return mock_faiss
-                        return __import__(name, *args, **kwargs)
-
-                    mock_import.side_effect = import_side_effect
-
-                    result = manager._optimize_flat_index(mock_index)
-
-                    assert result == mock_new_index
-                    mock_faiss.IndexFlatL2.assert_called_once_with(256)
+                assert result == mock_new_index
+                mock_faiss.IndexFlatL2.assert_called_once_with(256)
 
     @patch("src.services.faiss_manager.faiss")
     @patch("src.services.faiss_manager.get_settings")

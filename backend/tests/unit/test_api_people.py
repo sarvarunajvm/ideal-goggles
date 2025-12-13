@@ -431,7 +431,7 @@ class TestCreatePerson:
                 await create_person(request)
 
             assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-            assert "Face recognition not available" in exc_info.value.detail
+            assert "Face recognition is not available" in exc_info.value.detail
 
     async def test_create_person_no_faces_found(self, mock_db_manager, db_manager):
         """Test creating a person when no faces are found in sample photos."""
