@@ -1,11 +1,14 @@
 """Logging endpoints for Ideal Goggles API."""
 
+import re
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
+from ..core.config import settings
 from ..core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -133,3 +136,158 @@ async def submit_error_report(error_report: ErrorReport) -> None:
     except Exception as e:
         # Don't fail client requests due to logging issues
         logger.exception(f"Failed to process error report: {e}")
+
+
+class LogLine(BaseModel):
+    """Parsed log line."""
+
+    timestamp: str
+    level: str
+    logger_name: str
+    message: str
+    source: Literal["backend", "frontend", "electron"]
+    function: str | None = None
+    line_number: int | None = None
+    request_id: str | None = None
+
+
+class LogsResponse(BaseModel):
+    """Response model for logs endpoint."""
+
+    logs: list[LogLine]
+    total: int
+    has_more: bool
+    sources: list[str]
+
+
+@router.get("/logs/fetch", response_model=LogsResponse)
+async def fetch_logs(
+    source: str = Query(
+        "all", description="Log source: backend, frontend, electron, or all"
+    ),
+    level: str = Query(
+        "all", description="Filter by log level: DEBUG, INFO, WARN, ERROR, or all"
+    ),
+    limit: int = Query(100, ge=1, le=1000, description="Number of log lines to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    search: str | None = Query(None, description="Search term to filter logs"),
+) -> LogsResponse:
+    """
+    Fetch logs from backend log files.
+
+    Args:
+        source: Filter by log source
+        level: Filter by log level
+        limit: Number of lines to return
+        offset: Pagination offset
+        search: Search term
+
+    Returns:
+        Log entries with metadata
+    """
+    try:
+        logs_dir = Path.cwd() / "logs"
+
+        # Determine which log files to read based on source
+        log_files = []
+
+        if source in ("backend", "all"):
+            backend_log = logs_dir / "ideal-goggles-api.log"
+            if backend_log.exists():
+                log_files.append(("backend", backend_log))
+
+        if not log_files:
+            return LogsResponse(logs=[], total=0, has_more=False, sources=[])
+
+        # Parse log files
+        all_logs: list[LogLine] = []
+
+        for src, log_file in log_files:
+            try:
+                with open(log_file, encoding="utf-8") as f:
+                    lines = f.readlines()
+
+                for line in lines:
+                    parsed = _parse_log_line(line.strip(), src)
+                    if parsed:
+                        # Apply filters
+                        if level not in ("all", parsed.level):
+                            continue
+                        if search and search.lower() not in parsed.message.lower():
+                            continue
+
+                        all_logs.append(parsed)
+            except Exception as e:
+                logger.warning(f"Failed to read log file {log_file}: {e}")
+
+        # Sort by timestamp (newest first)
+        all_logs.sort(key=lambda x: x.timestamp, reverse=True)
+
+        # Apply pagination
+        total = len(all_logs)
+        paginated = all_logs[offset : offset + limit]
+        has_more = (offset + limit) < total
+
+        sources = list({log.source for log in all_logs})
+
+        return LogsResponse(
+            logs=paginated, total=total, has_more=has_more, sources=sources
+        )
+
+    except Exception as e:
+        logger.exception(f"Failed to fetch logs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch logs: {e!s}",
+        )
+
+
+def _parse_log_line(line: str, source: str) -> LogLine | None:
+    """
+    Parse a log line into structured format.
+
+    Expected format:
+    2025-12-13 10:30:45 - src.api.health - INFO - health_check:25 - Health check requested
+
+    Or for client logs:
+    2025-12-13 10:30:45 - src.api.logs - INFO - submit_client_logs:78 - [CLIENT-INFO] Message
+    """
+    try:
+        # Pattern for backend logs
+        pattern = r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - ([^ ]+) - (DEBUG|INFO|WARNING|ERROR|CRITICAL) - ([^:]+):(\d+) - (.+)$"
+
+        match = re.match(pattern, line)
+        if match:
+            timestamp, logger_name, level, function, line_num, message = match.groups()
+
+            # Normalize level names
+            if level == "WARNING":
+                level = "WARN"
+
+            # Extract request_id if present
+            request_id = None
+            req_match = re.search(r"\[req_id=([^\]]+)\]", message)
+            if req_match:
+                request_id = req_match.group(1)
+
+            # Detect client logs and update source
+            detected_source = source
+            if "[CLIENT-" in message:
+                detected_source = "frontend"
+
+            return LogLine(
+                timestamp=timestamp,
+                level=level,
+                logger_name=logger_name,
+                message=message,
+                source=detected_source,
+                function=function,
+                line_number=int(line_num),
+                request_id=request_id,
+            )
+
+        return None
+
+    except Exception as e:
+        logger.debug(f"Failed to parse log line: {e}")
+        return None
