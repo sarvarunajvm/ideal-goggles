@@ -22,7 +22,7 @@
     "build:all": "concurrently \"pnpm run backend:package\" \"pnpm run build:frontend\" \"pnpm run build:electron:main\"",
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "build:frontend:analyze": "vite build --config frontend/vite.config.ts && open frontend/dist/stats.html",
-    "prepare:icons": "node scripts/generate-ico.js",
+    "prepare:icons": "node scripts/generate-icons.js",
     "build:electron": "concurrently \"pnpm run build:frontend\" \"pnpm run build:electron:main\" && pnpm run prepare:icons && electron-builder",
     "build:electron:main": "tsc -p frontend/electron/tsconfig.json",
     "dist:all": "concurrently \"pnpm run backend:package\" \"pnpm run build:frontend\" \"pnpm run build:electron:main\" && pnpm run prepare:icons && electron-builder -mwl",
