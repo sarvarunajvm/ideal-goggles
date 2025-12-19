@@ -27,6 +27,7 @@ module.exports = {
     '!src/lib/*-variants.ts',            // CSS variant definitions
     '!src/lib/utils.ts',                 // Trivial cn() utility
     '!src/utils/logger.ts',              // Logger uses import.meta incompatible with Jest, mocked globally
+    '!src/config/constants.ts',          // Pure constants
     // Pure presentational components (no business logic)
     '!src/components/VirtualGrid/LoadingSkeleton.tsx',
     '!src/components/VirtualGrid/VirtualGridItem.tsx',

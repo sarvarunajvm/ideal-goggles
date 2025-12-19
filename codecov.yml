@@ -96,7 +96,10 @@ ignore:
   - frontend/src/main.tsx
   - frontend/src/App.tsx
   - frontend/src/vite-env.d.ts
-  - frontend/src/setupTests.ts
+  - frontend/src/types/
+
+  # Frontend - configuration and constants
+  - frontend/src/config/constants.ts
 
   # Frontend - third-party UI components and utilities
   - frontend/src/components/ui/**
