@@ -1,5 +1,6 @@
 """Unit tests for database connection and DatabaseManager."""
 
+import builtins
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -548,25 +549,38 @@ class TestDatabaseManagerGlobals:
             migration_sql = """
             BEGIN TRANSACTION;
             CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT);
-            INSERT INTO settings (key, value, updated_at) VALUES ('schema_version', '2', datetime('now'));
+            CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at REAL NOT NULL);
+            INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('schema_version', '2', datetime('now'));
             COMMIT;
             """
             (migrations_dir / "002_test_migration.sql").write_text(migration_sql)
 
-            # Create database manager and mock the migrations path
-            db_manager = DatabaseManager(str(db_path))
+            import src.db.connection as connection_module
 
-            # Manually run migrations from the temp directory
-            original_path = Path(db_manager.db_path).parent / "migrations"
-            with patch.object(
-                Path,
-                "__truediv__",
-                side_effect=lambda self, other: (
-                    migrations_dir if other == "migrations" else Path(str(self)) / other
-                ),
-            ):
-                # This is tricky to mock, so let's just verify the method can be called
-                pass
+            original_file = connection_module.__file__
+            connection_module.__file__ = str(Path(temp_dir) / "connection.py")
+            try:
+                db_manager = DatabaseManager.__new__(DatabaseManager)
+                db_manager.db_path = db_path
+                db_manager._connection = None
+
+                db_manager._run_legacy_migrations(from_version=0)
+
+                with db_manager.get_connection() as conn:
+                    tables = [
+                        row[0]
+                        for row in conn.execute(
+                            "SELECT name FROM sqlite_master WHERE type='table'"
+                        ).fetchall()
+                    ]
+                    assert "test_table" in tables
+
+                    version = conn.execute(
+                        "SELECT value FROM settings WHERE key = 'schema_version'"
+                    ).fetchone()[0]
+                    assert version == "2"
+            finally:
+                connection_module.__file__ = original_file
 
     def test_run_migrations_with_migration_failure(self):
         """Test handling migration failures."""
@@ -604,6 +618,26 @@ class TestDatabaseManagerGlobals:
             assert "photos" in tables
             assert "exif" in tables
             assert "embeddings" in tables
+
+    def test_ensure_settings_table_backfills_defaults(self):
+        """Ensure missing settings table is created with default values."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "settings.db"
+
+            db_manager = DatabaseManager.__new__(DatabaseManager)
+            db_manager.db_path = db_path
+            db_manager._connection = None
+
+            db_manager._ensure_settings_table()
+
+            with db_manager.get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT key, value FROM settings ORDER BY key"
+                ).fetchall()
+                values = {row[0]: row[1] for row in rows}
+
+            assert values["index_version"] == "1"
+            assert values["schema_version"] == "1"
 
     def test_get_database_context_manager(self):
         """Test the get_database context manager."""
@@ -704,6 +738,27 @@ class TestDatabaseManagerGlobals:
 
                 # The migration should handle the error
                 # This is hard to test without creating actual bad migration files
+
+    def test_run_migrations_import_error_triggers_legacy(self):
+        """Fallback to legacy migrations when alembic imports fail."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "test.db"
+            db_manager = DatabaseManager.__new__(DatabaseManager)
+            db_manager.db_path = db_path
+            db_manager._connection = None
+
+            real_import = builtins.__import__
+
+            def import_with_failure(name, *args, **kwargs):
+                if name.startswith("alembic"):
+                    raise ImportError("alembic missing")
+                return real_import(name, *args, **kwargs)
+
+            with patch.object(db_manager, "_run_legacy_migrations") as mock_legacy:
+                with patch("builtins.__import__", side_effect=import_with_failure):
+                    db_manager._run_migrations(from_version=5)
+
+                mock_legacy.assert_called_once_with(5)
 
     def test_get_database_info_table_not_found(self):
         """Test get_database_info handles missing tables gracefully."""

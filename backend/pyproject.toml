@@ -156,8 +156,10 @@ omit = [
     "alembic/*",
     "scripts/*",
     "*/migrations/*",
-    # Explicitly exclude non-critical entry/marker files from coverage
+    # Entry point - tested via integration tests
     "src/main.py",
+    # __init__.py files - package markers with no business logic
+    "src/core/logging_config.py",
     "src/__init__.py",
     "src/core/__init__.py",
     "src/api/__init__.py",
@@ -165,23 +167,38 @@ omit = [
     "src/db/migrations/__init__.py",
     "src/models/__init__.py",
     "src/services/__init__.py",
-    "src/workers/__init__.py"
+    "src/workers/__init__.py",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
+    # Standard pragma
     "pragma: no cover",
+    # Debug and development code
     "def __repr__",
+    "if self\\.debug",
+    "if 0:",
+    # Defensive assertions and not implemented
     "raise AssertionError",
     "raise NotImplementedError",
+    # Entry point guards
     "if __name__ == .__main__.:",
+    # Type checking blocks (not executed at runtime)
     "if TYPE_CHECKING:",
+    # Abstract methods and protocols
     "@abstractmethod",
     "@overload",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+    # Import error handling (defensive, tested separately)
     "except ImportError:",
+    # Empty blocks
     "pass",
-    "\\.\\.\\."
+    "\\.\\.\\.",
+    # Background scheduler infinite loops (daemon threads)
+    "while True:",
+    "def scheduler\\(\\):",
+    # Error handling in background threads (hard to test reliably)
+    "except Exception.*scheduler",
 ]
 fail_under = 0

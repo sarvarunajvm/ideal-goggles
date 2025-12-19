@@ -5,41 +5,58 @@ omit =
     */test_*
     */__pycache__/*
     */site-packages/*
+    alembic/*
+    scripts/*
+    */migrations/*
+    # Entry point - tested via integration tests
+    src/main.py
+    # __init__.py files - package markers
+    src/__init__.py
+    src/core/__init__.py
+    src/api/__init__.py
+    src/db/__init__.py
+    src/db/migrations/__init__.py
+    src/models/__init__.py
+    src/services/__init__.py
+    src/workers/__init__.py
 
 [report]
 exclude_lines =
-    # Have to re-enable the standard pragma
+    # Standard pragma
     pragma: no cover
 
-    # Don't complain about missing debug-only code:
+    # Debug and development code
     def __repr__
     if self\.debug
+    if 0:
 
-    # Don't complain if tests don't hit defensive assertion code:
+    # Defensive assertions and not implemented
     raise AssertionError
     raise NotImplementedError
 
-    # Don't complain if non-runnable code isn't run:
-    if 0:
+    # Entry point guards
     if __name__ == .__main__.:
 
-    # Don't complain about abstract methods:
-    @(abc\.)?abstractmethod
+    # Type checking blocks (not executed at runtime)
+    if TYPE_CHECKING:
 
-    # Don't complain about FAISS-specific code (optional dependency):
+    # Abstract methods and protocols
+    @(abc\.)?abstractmethod
+    @overload
+    class .*\\bProtocol\\):
+    @runtime_checkable
+
+    # Import error handling (defensive, tested separately)
+    except ImportError:
     import faiss
     except ImportError.*faiss
 
-    # Don't complain about background scheduler loops:
+    # Empty blocks
+    pass
+    \.\.\.
+
+    # Background scheduler infinite loops (daemon threads)
     while True:
-
-    # Don't complain about type checking blocks:
-    if TYPE_CHECKING:
-
-    # Don't complain about protocol methods:
-    @runtime_checkable
-
-    # Exclude daemon thread infinite loops
     def scheduler\(\):
 
 ignore_errors = False

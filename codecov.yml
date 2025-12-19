@@ -78,7 +78,6 @@ ignore:
   
   # UI Components (Presentational / Generated)
   - "frontend/src/components/ui/**"    # Shadcn/UI or library components
-  - "frontend/src/lib/utils.ts"
   - "frontend/src/lib/*-variants.ts"
   
   # Pure presentational components (no business logic)
