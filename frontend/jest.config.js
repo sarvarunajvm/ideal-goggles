@@ -23,11 +23,12 @@ module.exports = {
     '!src/main.tsx',                      // Entry point (integration test territory)
     '!src/App.tsx',                       // Router config (E2E territory)
     '!src/vite-env.d.ts',                // Vite types
+    '!src/types/**',                     // Type definitions directory
     '!src/components/ui/**',              // Third-party UI library (shadcn/ui)
     '!src/lib/*-variants.ts',            // CSS variant definitions
     '!src/lib/utils.ts',                 // Trivial cn() utility
     '!src/utils/logger.ts',              // Logger uses import.meta incompatible with Jest, mocked globally
-    '!src/config/constants.ts',          // Pure constants
+    '!src/config/**',                    // Configuration constants
     // Pure presentational components (no business logic)
     '!src/components/VirtualGrid/LoadingSkeleton.tsx',
     '!src/components/VirtualGrid/VirtualGridItem.tsx',

@@ -74,17 +74,21 @@ ignore:
   - "frontend/src/vite-env.d.ts"
   - "frontend/src/types/"
   - "frontend/src/config/"
+  - "frontend/src/utils/logger.ts"       # Uses import.meta (incompatible with Jest)
   
   # UI Components (Presentational / Generated)
   - "frontend/src/components/ui/**"    # Shadcn/UI or library components
   - "frontend/src/lib/utils.ts"
   - "frontend/src/lib/*-variants.ts"
   
-  # Specific pure components (keep if these truly have no logic)
+  # Pure presentational components (no business logic)
   - "frontend/src/components/VirtualGrid/LoadingSkeleton.tsx"
   - "frontend/src/components/VirtualGrid/VirtualGridItem.tsx"
-  - "frontend/src/components/Lightbox/Lightbox*.tsx"
-  - "frontend/src/components/OnboardingWizard/*.tsx"
+  - "frontend/src/components/Lightbox/LightboxNavigation.tsx"
+  - "frontend/src/components/Lightbox/LightboxImage.tsx"
+  - "frontend/src/components/Lightbox/LightboxMetadata.tsx"
+  - "frontend/src/components/OnboardingWizard/WelcomeStep.tsx"
+  - "frontend/src/components/OnboardingWizard/CompleteStep.tsx"
 
   # --- Tests & Build ---
   - "frontend/electron/"
