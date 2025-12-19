@@ -118,7 +118,7 @@
     "terser": "^5.44.0",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2",
+    "typescript-eslint": "^8.49.0",
     "vite": "^7.2.7",
     "wait-on": "^9.0.3",
     "@codecov/vite-plugin": "^1.9.1"
