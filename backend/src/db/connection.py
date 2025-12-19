@@ -7,6 +7,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
+from src.core.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 # Embedded initial schema as fallback for bundled environments
@@ -477,17 +479,13 @@ class DatabaseManager:
 _db_manager: DatabaseManager | None = None
 
 
+
 def get_database_manager(db_path: str | None = None) -> DatabaseManager:
     """Get or create the global database manager instance."""
     global _db_manager
     if _db_manager is None:
         # Prefer app data directory if available
         if db_path is None:
-            try:
-                # Import lazily to avoid circular dependencies at module import time
-                from ..core.config import get_settings  # type: ignore[import-untyped]
-            except Exception:
-                from src.core.config import get_settings  # type: ignore[import-untyped]
             settings = get_settings()
             db_path = Path(settings.DATA_DIR) / "photos.db"
         _db_manager = DatabaseManager(str(db_path))

@@ -1,8 +1,8 @@
 """FAISS vector search service for semantic and image similarity search."""
 
+import json
 import logging
 import os
-import pickle
 import threading
 import time
 from pathlib import Path
@@ -23,7 +23,8 @@ class FAISSVectorSearchService:
         default_index = Path(settings.CACHE_DIR) / "faiss_index.bin"
         default_index.parent.mkdir(parents=True, exist_ok=True)
         self.index_path = index_path or str(default_index)
-        self.metadata_path = self.index_path.replace(".bin", "_metadata.pkl")
+        # Use JSON for metadata for security (avoid pickle)
+        self.metadata_path = self.index_path.replace(".bin", "_metadata.json")
 
         # FAISS components
         self.index = None
@@ -49,33 +50,41 @@ class FAISSVectorSearchService:
             # Load existing index if available
             if os.path.exists(self.index_path) and os.path.exists(self.metadata_path):
                 self._load_index()
-                logger.info(
-                    f"Loaded existing FAISS index with {self.index.ntotal} vectors"
-                )
+                if self.index:
+                    logger.info(
+                        f"Loaded existing FAISS index with {self.index.ntotal} vectors"
+                    )
             else:
                 # Create new index
                 self._create_new_index()
-                logger.info(f"Created new FAISS index (dimension: {self.dimension})")
+                if self.index:
+                    logger.info(f"Created new FAISS index (dimension: {self.dimension})")
 
         except ImportError:
-            msg = "FAISS not available. Install with: pip install faiss-cpu"
-            raise RuntimeError(msg)
+            logger.warning(
+                "FAISS not available. Vector search features will be disabled. "
+                "Install with: pip install faiss-cpu"
+            )
+            self.index = None
 
     def _create_new_index(self):
         """Create a new FAISS index."""
-        import faiss
+        try:
+            import faiss
 
-        # For small collections, use flat index for exact search
-        # For large collections, use IVF with PQ for approximate search
-        if self.dimension == 512:  # CLIP embeddings
-            # Use IndexFlatIP for cosine similarity (with normalized vectors)
-            self.index = faiss.IndexFlatIP(self.dimension)
-        else:
-            # Generic case
-            self.index = faiss.IndexFlatL2(self.dimension)
+            # For small collections, use flat index for exact search
+            # For large collections, use IVF with PQ for approximate search
+            if self.dimension == 512:  # CLIP embeddings
+                # Use IndexFlatIP for cosine similarity (with normalized vectors)
+                self.index = faiss.IndexFlatIP(self.dimension)
+            else:
+                # Generic case
+                self.index = faiss.IndexFlatL2(self.dimension)
 
-        self.id_to_file_id = {}
-        self.file_id_to_index = {}
+            self.id_to_file_id = {}
+            self.file_id_to_index = {}
+        except ImportError:
+            self.index = None
 
     def _should_use_ivf(self, num_vectors: int) -> bool:
         """Determine if we should switch to IVF index for better performance."""
@@ -84,6 +93,9 @@ class FAISSVectorSearchService:
 
     def _upgrade_to_ivf_index(self):
         """Upgrade flat index to IVF index for better performance."""
+        if self.index is None:
+            return
+
         try:
             import faiss
 
@@ -128,6 +140,9 @@ class FAISSVectorSearchService:
         Returns:
             True if successful
         """
+        if self.index is None:
+            return False
+
         with self._lock:
             try:
                 # Validate vector
@@ -187,6 +202,9 @@ class FAISSVectorSearchService:
         Returns:
             True if successful
         """
+        if self.index is None:
+            return False
+
         with self._lock:
             try:
                 if file_id not in self.file_id_to_index:
@@ -220,6 +238,9 @@ class FAISSVectorSearchService:
         Returns:
             List of (file_id, similarity_score) tuples
         """
+        if self.index is None:
+            return []
+
         with self._lock:
             try:
                 if self.index.ntotal == 0:
@@ -284,6 +305,9 @@ class FAISSVectorSearchService:
         Returns:
             List of search results for each query
         """
+        if self.index is None:
+            return [[] for _ in range(len(query_vectors))]
+
         with self._lock:
             try:
                 if self.index.ntotal == 0:
@@ -361,6 +385,9 @@ class FAISSVectorSearchService:
         Returns:
             Vector if found, None otherwise
         """
+        if self.index is None:
+            return None
+
         with self._lock:
             try:
                 if file_id not in self.file_id_to_index:
@@ -380,6 +407,9 @@ class FAISSVectorSearchService:
         Returns:
             True if successful
         """
+        if self.index is None:
+            return False
+
         with self._lock:
             try:
                 if self.index.ntotal == 0:
@@ -462,7 +492,7 @@ class FAISSVectorSearchService:
     def _save_index(self) -> bool:
         """Internal method to save index."""
         try:
-            if not self._index_dirty:
+            if not self._index_dirty or self.index is None:
                 return True
 
             # Ensure directory exists
@@ -473,7 +503,7 @@ class FAISSVectorSearchService:
 
             faiss.write_index(self.index, self.index_path)
 
-            # Save metadata
+            # Save metadata as JSON (safer than pickle)
             metadata = {
                 "id_to_file_id": self.id_to_file_id,
                 "file_id_to_index": self.file_id_to_index,
@@ -481,8 +511,8 @@ class FAISSVectorSearchService:
                 "saved_at": time.time(),
             }
 
-            with open(self.metadata_path, "wb") as f:
-                pickle.dump(metadata, f)
+            with open(self.metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
 
             self._index_dirty = False
             self.unsaved_additions = 0
@@ -503,18 +533,40 @@ class FAISSVectorSearchService:
             # Load FAISS index
             self.index = faiss.read_index(self.index_path)
 
-            # Load metadata (safe: internal application data)
-            with open(self.metadata_path, "rb") as f:
-                metadata = pickle.load(f)  # noqa: S301
+            # Load metadata from JSON
+            if os.path.exists(self.metadata_path):
+                with open(self.metadata_path) as f:
+                    metadata = json.load(f)
 
-            self.id_to_file_id = metadata["id_to_file_id"]
-            self.file_id_to_index = metadata["file_id_to_index"]
+                # Convert integer keys from strings (JSON requirement)
+                self.id_to_file_id = {
+                    int(k): v for k, v in metadata["id_to_file_id"].items()
+                }
+                self.file_id_to_index = {
+                    int(k): v for k, v in metadata["file_id_to_index"].items()
+                }
 
-            # Verify dimension consistency
-            if metadata.get("dimension", self.dimension) != self.dimension:
-                logger.warning(
-                    f"Dimension mismatch: expected {self.dimension}, got {metadata.get('dimension')}"
-                )
+                # Verify dimension consistency
+                if metadata.get("dimension", self.dimension) != self.dimension:
+                    logger.warning(
+                        f"Dimension mismatch: expected {self.dimension}, got {metadata.get('dimension')}"
+                    )
+            else:
+                # Fallback for old pickle metadata
+                old_pickle_path = self.index_path.replace(".bin", "_metadata.pkl")
+                if os.path.exists(old_pickle_path):
+                    import pickle
+
+                    logger.info("Migrating metadata from pickle to JSON")
+                    with open(old_pickle_path, "rb") as f:
+                        metadata = pickle.load(f)  # noqa: S301
+
+                    self.id_to_file_id = metadata["id_to_file_id"]
+                    self.file_id_to_index = metadata["file_id_to_index"]
+
+                    # Save as JSON immediately
+                    self._index_dirty = True
+                    self._save_index()
 
             self._index_dirty = False
             self.unsaved_additions = 0
@@ -537,13 +589,14 @@ class FAISSVectorSearchService:
                 "valid_vectors": valid_vectors,
                 "deleted_vectors": deleted_vectors,
                 "dimension": self.dimension,
-                "index_type": type(self.index).__name__ if self.index else None,
+                "index_type": type(self.index).__name__ if self.index else "None",
                 "index_dirty": self._index_dirty,
                 "unsaved_additions": self.unsaved_additions,
+                "available": self.index is not None,
             }
 
             # Add IVF-specific stats if applicable
-            if hasattr(self.index, "nlist"):
+            if self.index and hasattr(self.index, "nlist"):
                 stats["nlist"] = self.index.nlist
                 stats["nprobe"] = getattr(self.index, "nprobe", None)
 

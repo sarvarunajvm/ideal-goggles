@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LightboxPhoto } from '../../stores/lightboxStore';
 import { Loader2 } from 'lucide-react';
+import { API_CONFIG } from '../../config/constants';
 
 interface LightboxImageProps {
   photo: LightboxPhoto;
@@ -12,13 +13,17 @@ export function LightboxImage({ photo }: LightboxImageProps) {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // In Electron, use file:// protocol for direct access
-  // In web dev, use the backend API to serve the original image
   const imageUrl = (() => {
-    // For now, always use the API endpoint in development
-    // TODO: Re-enable Electron detection when running in Electron
-    const photoId = photo.id; // This is already a string
-    return `/api/photos/${photoId}/original`;
+    // If running in Electron (via file protocol) and photo path is available, use direct file access
+    // This provides much better performance for high-res images
+    if (window.location.protocol === 'file:' && photo.path) {
+      // Use standard file:// protocol which Electron supports when reading from renderer
+      // (assuming webSecurity is configured to allow it or via standard secure loading)
+      return `file://${photo.path}`;
+    }
+
+    // Fallback to API for dev mode or when path is missing
+    return `/api/photos/${photo.id}/original`;
   })();
 
   const handleImageLoad = () => {
@@ -34,6 +39,18 @@ export function LightboxImage({ photo }: LightboxImageProps) {
       filename: photo.filename,
       error: e
     });
+    
+    // If file:// access fails (e.g. security restrictions), try falling back to API
+    if (imageUrl.startsWith('file://')) {
+        // Use full API URL since relative paths in file:// protocol resolve to filesystem
+        const fallbackUrl = `${API_CONFIG.BASE_URL}/photos/${photo.id}/original`;
+        if (e.currentTarget.src !== fallbackUrl) {
+            console.warn('Falling back to API endpoint...');
+            e.currentTarget.src = fallbackUrl;
+            return;
+        }
+    }
+
     setIsLoading(false);
     setHasError(true);
     setErrorMessage(`Failed to load: ${photo.filename}`);

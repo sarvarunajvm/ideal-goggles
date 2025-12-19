@@ -404,35 +404,29 @@ class BatchFileCrawler:
         """Crawl files in batches for memory efficiency."""
         result = CrawlResult()
         start_time = time.time()
+        current_batch = []
 
         try:
-            # Collect all files first
-            # Collect all files from all root paths
-            all_files = []
+            # Iterate over all files lazily across all root paths
             for root_path in root_paths:
-                root_files = [
-                    file_data async for file_data in self._collect_files(root_path)
-                ]
-                all_files.extend(root_files)
+                async for file_data in self._collect_files(root_path):
+                    current_batch.append(file_data)
+                    result.total_files += 1
 
-            result.total_files = len(all_files)
+                    # Process batch if full
+                    if len(current_batch) >= self.batch_size:
+                        await self._process_and_update(
+                            current_batch, callback, result, result.total_files
+                        )
+                        current_batch = []
+                        # Yield control
+                        await asyncio.sleep(0.1)
 
-            # Process in batches
-            for i in range(0, len(all_files), self.batch_size):
-                batch = all_files[i : i + self.batch_size]
-                batch_result = await self._process_batch(batch, callback)
-
-                result.new_files += batch_result.new_files
-                result.modified_files += batch_result.modified_files
-                result.errors += batch_result.errors
-                result.error_details.extend(batch_result.error_details)
-
-                # Progress update
-                progress = (i + len(batch)) / len(all_files) * 100
-                logger.info(f"Batch processing progress: {progress:.1f}%")
-
-                # Yield control between batches
-                await asyncio.sleep(0.1)
+            # Process remaining files
+            if current_batch:
+                await self._process_and_update(
+                    current_batch, callback, result, result.total_files
+                )
 
         except Exception as e:
             logger.exception(f"Batch crawl failed: {e}")
@@ -443,6 +437,21 @@ class BatchFileCrawler:
             result.duration_seconds = time.time() - start_time
 
         return result
+
+    async def _process_and_update(
+        self, batch: list[dict], callback: Callable, result: CrawlResult, total: int
+    ):
+        """Process a batch and update results."""
+        batch_result = await self._process_batch(batch, callback)
+
+        result.new_files += batch_result.new_files
+        result.modified_files += batch_result.modified_files
+        result.errors += batch_result.errors
+        result.error_details.extend(batch_result.error_details)
+
+        logger.info(
+            f"Batch processing progress: {total} files found ({result.new_files} new)"
+        )
 
     async def _collect_files(self, root_path: str) -> AsyncGenerator[dict, None]:
         """Collect file information without processing."""
