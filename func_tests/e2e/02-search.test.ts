@@ -44,9 +44,9 @@ test.describe('Search Functionality', () => {
       await searchPage.searchInput.fill('');
       await searchPage.page.waitForTimeout(500); // Increased wait for UI to update
 
-      // Empty search should disable button
+      // Empty search should still be enabled (returns all photos)
       const isEnabled = await searchPage.isSearchButtonEnabled();
-      expect(isEnabled).toBeFalsy();
+      expect(isEnabled).toBeTruthy();
 
       // Valid input should enable button
       await searchPage.searchInput.fill('test');

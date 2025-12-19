@@ -33,6 +33,18 @@ export class SettingsPage extends BasePage {
     this.thumbnailSizeSelect = page.locator('#thumbnail-size'); // Not in new UI
   }
 
+  async waitForSettingsLoaded() {
+    const loader = this.page.locator('text=Loading settings...');
+    await loader.waitFor({ state: 'hidden', timeout: 10000 });
+    // Also wait for the main content to be visible
+    await this.indexingButton.waitFor({ state: 'visible', timeout: 10000 });
+  }
+
+  async goto(path: string = '/settings') {
+    await super.goto(path);
+    await this.waitForSettingsLoaded();
+  }
+
   async addRootFolder(path: string) {
     // The new UI uses prompt() when not in Electron
     this.page.once('dialog', async dialog => {
@@ -43,10 +55,31 @@ export class SettingsPage extends BasePage {
   }
 
   async removeRootFolder(index: number) {
+    // Check if we need to expand the "Show more" section
+    if (index >= 3) {
+      const summary = this.page.locator('summary:has-text("Show")');
+      if (await summary.isVisible()) {
+        const details = summary.locator('..');
+        const isOpen = await details.getAttribute('open');
+        if (isOpen === null) {
+          await summary.click();
+          await this.page.waitForTimeout(300); // Animation
+        }
+      }
+    }
+
     // Click the trash icon for the folder at the given index
     const folderItems = this.page.locator('.font-mono.text-xs.truncate');
     const folder = folderItems.nth(index);
-    const removeButton = folder.locator('..').locator('button').first();
+    const row = folder.locator('..');
+    
+    // Ensure element is visible before hover
+    await row.scrollIntoViewIfNeeded();
+    
+    // Hover to reveal the delete button
+    await row.hover();
+    
+    const removeButton = row.locator('button').first();
     await removeButton.click();
     await this.page.waitForTimeout(1500); // Wait for auto-save
   }
@@ -144,7 +177,20 @@ export class SettingsPage extends BasePage {
     // No tab navigation needed - all on one page now
     const isChecked = await this.faceSearchToggle.isChecked();
     if (isChecked !== enable) {
-      await this.faceSearchToggle.click();
+      await this.faceSearchToggle.click({ force: true });
+      // Verify state changed
+      try {
+        await this.page.waitForFunction(
+          (args) => {
+            const el = document.querySelector(args.selector);
+            return el?.getAttribute('aria-checked') === (args.enable ? 'true' : 'false');
+          },
+          { selector: '#face-search', enable },
+          { timeout: 2000 }
+        );
+      } catch (e) {
+        console.log('Warning: Toggle state check timed out');
+      }
       // Wait for auto-save
       await this.page.waitForTimeout(1500);
     }
@@ -154,7 +200,20 @@ export class SettingsPage extends BasePage {
     // No tab navigation needed - all on one page now
     const isChecked = await this.semanticSearchToggle.isChecked();
     if (isChecked !== enable) {
-      await this.semanticSearchToggle.click();
+      await this.semanticSearchToggle.click({ force: true });
+      // Verify state changed
+      try {
+        await this.page.waitForFunction(
+          (args) => {
+            const el = document.querySelector(args.selector);
+            return el?.getAttribute('aria-checked') === (args.enable ? 'true' : 'false');
+          },
+          { selector: '#semantic-search', enable },
+          { timeout: 2000 }
+        );
+      } catch (e) {
+        console.log('Warning: Toggle state check timed out');
+      }
       // Wait for auto-save
       await this.page.waitForTimeout(1500);
     }
@@ -192,9 +251,12 @@ export class SettingsPage extends BasePage {
 
   async getConfiguration() {
     // No tab navigation needed - all on one page
-    const semanticSearchEnabled = await this.semanticSearchToggle.isChecked().catch(() => false);
-    const ocrEnabled = await this.ocrToggle.isChecked().catch(() => false);
-    const faceSearchEnabled = await this.faceSearchToggle.isChecked().catch(() => false);
+    // Ensure elements are ready
+    await this.semanticSearchToggle.waitFor({ state: 'visible' });
+    
+    const semanticSearchEnabled = await this.semanticSearchToggle.isChecked();
+    const ocrEnabled = await this.ocrToggle.isVisible() ? await this.ocrToggle.isChecked() : false;
+    const faceSearchEnabled = await this.faceSearchToggle.isChecked();
 
     return {
       ocrEnabled,

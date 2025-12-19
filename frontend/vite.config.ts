@@ -7,13 +7,21 @@ export default defineConfig({
   root: __dirname,
   plugins: [
     react(),
-    // Generate bundle analysis report
+    // Generate bundle analysis report (HTML)
     visualizer({
       filename: './dist/stats.html',
       open: false,
       gzipSize: true,
       brotliSize: true,
-      template: 'treemap' // sunburst, treemap, network
+      template: 'treemap'
+    }) as any,
+    // Generate bundle analysis report (JSON for Codecov)
+    visualizer({
+      filename: './dist/stats.json',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      template: 'json'
     }) as any
   ],
   base: './',

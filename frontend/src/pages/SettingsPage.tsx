@@ -37,8 +37,10 @@ export default function SettingsPage() {
   // const [batchSize, setBatchSize] = useState(50)
   // const [thumbnailSize, setThumbnailSize] = useState('medium')
 
-  // Debounce timer ref
-  const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Debounce timer refs
+  const configSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const rootsSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingConfigUpdatesRef = useRef<any>({})
   const initialLoadRef = useRef(true)
   const isLoadingDataRef = useRef(false)
 
@@ -86,21 +88,20 @@ export default function SettingsPage() {
     loadData()
   }, [loadData])
 
-  // Auto-save with debouncing - single useCallback to avoid circular dependencies
-  const debouncedSave = useCallback(
-    (configUpdate: any, updateType: 'roots' | 'config' = 'config') => {
-      const saveConfig = async () => {
-        // Don't save during initial load or while loading data
-        if (initialLoadRef.current || isLoadingDataRef.current) return
+  // Auto-save with debouncing - separated for roots and config
+  const debouncedSaveRoots = useCallback(
+    (roots: string[]) => {
+      // Don't save during initial load or while loading data
+      if (initialLoadRef.current || isLoadingDataRef.current) return
 
+      if (rootsSaveTimerRef.current) {
+        clearTimeout(rootsSaveTimerRef.current)
+      }
+
+      rootsSaveTimerRef.current = setTimeout(async () => {
         try {
           setSaving(true)
-
-          if (updateType === 'roots') {
-            await apiService.updateRoots(configUpdate)
-          } else {
-            await apiService.updateConfig(configUpdate)
-          }
+          await apiService.updateRoots(roots)
         } catch (err) {
           toast({
             title: 'Error',
@@ -111,55 +112,76 @@ export default function SettingsPage() {
         } finally {
           setSaving(false)
         }
-      }
-
-      // In test environment, avoid debounce to make tests deterministic
-      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
-        saveConfig()
-        return
-      }
-
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current)
-      }
-      saveTimerRef.current = setTimeout(() => {
-        saveConfig()
-      }, 1000) // 1 second debounce
+      }, 1000)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // toast is stable from useToast hook, safe to omit
+    [] // toast is stable
+  )
+
+  const debouncedSaveConfig = useCallback(
+    (configUpdate: any) => {
+      // Don't save during initial load or while loading data
+      if (initialLoadRef.current || isLoadingDataRef.current) return
+
+      // Merge pending config updates
+      pendingConfigUpdatesRef.current = { ...pendingConfigUpdatesRef.current, ...configUpdate }
+
+      if (configSaveTimerRef.current) {
+        clearTimeout(configSaveTimerRef.current)
+      }
+
+      configSaveTimerRef.current = setTimeout(async () => {
+        // Send all pending updates and clear the ref immediately
+        const updatesToSend = { ...pendingConfigUpdatesRef.current }
+        pendingConfigUpdatesRef.current = {}
+
+        try {
+          setSaving(true)
+          await apiService.updateConfig(updatesToSend)
+        } catch (err) {
+          toast({
+            title: 'Error',
+            description:
+              err instanceof Error ? err.message : 'Failed to save configuration',
+            variant: 'destructive',
+          })
+        } finally {
+          setSaving(false)
+        }
+      }, 1000)
+    },
+    [] // toast is stable
   )
 
   // Auto-save hooks
   useEffect(() => {
     if (!initialLoadRef.current) {
-      debouncedSave(rootFolders, 'roots')
+      debouncedSaveRoots(rootFolders)
     }
-  }, [rootFolders, debouncedSave])
+  }, [rootFolders, debouncedSaveRoots])
 
   useEffect(() => {
     if (!initialLoadRef.current) {
-      debouncedSave({ ocr_enabled: ocrEnabled }, 'config')
+      debouncedSaveConfig({ ocr_enabled: ocrEnabled })
     }
-  }, [ocrEnabled, debouncedSave])
+  }, [ocrEnabled, debouncedSaveConfig])
 
   useEffect(() => {
     if (!initialLoadRef.current && ocrEnabled) {
-      debouncedSave({ ocr_languages: ocrLanguages }, 'config')
+      debouncedSaveConfig({ ocr_languages: ocrLanguages })
     }
-  }, [ocrLanguages, ocrEnabled, debouncedSave])
+  }, [ocrLanguages, ocrEnabled, debouncedSaveConfig])
 
   useEffect(() => {
     if (!initialLoadRef.current) {
-      debouncedSave({ face_search_enabled: faceSearchEnabled }, 'config')
+      debouncedSaveConfig({ face_search_enabled: faceSearchEnabled })
     }
-  }, [faceSearchEnabled, debouncedSave])
+  }, [faceSearchEnabled, debouncedSaveConfig])
 
   useEffect(() => {
     if (!initialLoadRef.current) {
-      debouncedSave({ semantic_search_enabled: semanticSearchEnabled }, 'config')
+      debouncedSaveConfig({ semantic_search_enabled: semanticSearchEnabled })
     }
-  }, [semanticSearchEnabled, debouncedSave])
+  }, [semanticSearchEnabled, debouncedSaveConfig])
 
   const addRootFolder = async () => {
     try {

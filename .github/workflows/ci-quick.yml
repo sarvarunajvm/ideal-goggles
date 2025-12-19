@@ -251,7 +251,7 @@ jobs:
       with:
         use_oidc: true
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./frontend/dist/stats.html
+        files: ./frontend/dist/stats.json
         flags: bundle
         name: bundle-stats
         fail_ci_if_error: false

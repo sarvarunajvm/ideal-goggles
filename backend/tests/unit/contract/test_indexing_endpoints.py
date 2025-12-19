@@ -75,8 +75,7 @@ class TestIndexingEndpoints:
 
     def test_start_indexing_already_running(self, client):
         """Test starting indexing when already running."""
-        with patch("src.api.indexing._state_manager.is_indexing", new_callable=AsyncMock) as mock_is_indexing:
-            mock_is_indexing.return_value = True
+        with patch("src.api.indexing._state_manager._state", {"status": "indexing"}):
             response = client.post("/index/start", json={"full": False})
             assert response.status_code == 409
             data = response.json()
@@ -134,8 +133,7 @@ class TestIndexingEndpoints:
 
     def test_concurrent_indexing_prevention(self, client):
         """Test that concurrent indexing requests are prevented."""
-        with patch("src.api.indexing._state_manager.is_indexing", new_callable=AsyncMock) as mock_is_indexing:
-            mock_is_indexing.return_value = True
+        with patch("src.api.indexing._state_manager._state", {"status": "indexing"}):
             # Try to start another indexing while one is running
             response1 = client.post("/index/start", json={"full": True})
             assert response1.status_code == 409

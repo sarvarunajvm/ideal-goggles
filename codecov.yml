@@ -1,5 +1,5 @@
 codecov:
-  require_ci_to_pass: false
+  require_ci_to_pass: true
   notify:
     wait_for_ci: true
 
@@ -7,31 +7,26 @@ coverage:
   precision: 2
   round: down
   range: "70...100"
-
+  
   status:
     project:
       default:
         target: auto
-        threshold: 1%
-        informational: true
-        only_pulls: false
+        threshold: 0.2%  # Only allow 0.2% drop before failing
       backend:
         target: auto
-        threshold: 1%
-        informational: true
+        threshold: 0.2%
         flags:
           - backend
       frontend:
         target: auto
-        threshold: 1%
-        informational: true
+        threshold: 0.2%
         flags:
           - frontend
     patch:
       default:
-        target: auto
-        threshold: 1%
-        informational: true
+        target: 80%      # Require 80% coverage on NEW code
+        threshold: 0%
 
 flag_management:
   default_rules:
@@ -39,9 +34,9 @@ flag_management:
     statuses:
       - type: project
         target: auto
-        threshold: 1%
+        threshold: 0.2%
       - type: patch
-        target: auto
+        target: 80%
 
 flags:
   backend:
@@ -55,86 +50,56 @@ flags:
   e2e:
     paths:
       - func_tests/
-    carryforward: false
-  p0-e2e:
-    paths:
-      - func_tests/
-    carryforward: false
+    carryforward: true  # Changed to true to persist E2E results if they don't run on every commit
 
 comment:
   layout: "reach, diff, flags, files, footer"
   behavior: default
-  require_changes: false
+  require_changes: false  # Update comment even if coverage didn't change (good for visibility)
   require_base: false
   require_head: true
 
 ignore:
-  # Backend - entry points and __init__ files
-  - backend/src/main.py
-  - backend/src/__init__.py
-  - backend/src/core/__init__.py
-  - backend/src/api/__init__.py
-  - backend/src/db/__init__.py
-  - backend/src/db/migrations/__init__.py
-  - backend/src/models/__init__.py
-  - backend/src/services/__init__.py
-  - backend/src/workers/__init__.py
-
-  # Backend - migrations and scripts
-  - backend/alembic/
-  - backend/scripts/
-  - backend/src/db/migrations/
-
-  # Backend - test files (from .coveragerc)
-  - "**/tests/*"
-  - "**/test_*"
-  - "**/__pycache__/*"
-  - "**/site-packages/*"
-
-  # Frontend - type definitions and entry points (from jest.config.js)
+  # --- Backend ---
+  - "backend/**/__init__.py"           # Simplified: Ignore all __init__.py files in backend
+  - "backend/src/main.py"
+  - "backend/alembic/"
+  - "backend/scripts/"
+  - "backend/src/db/migrations/"
+  
+  # --- Frontend ---
   - "**/*.d.ts"
-  - frontend/src/main.tsx
-  - frontend/src/App.tsx
-  - frontend/src/vite-env.d.ts
-  - frontend/src/types/
+  - "frontend/src/main.tsx"
+  - "frontend/src/App.tsx"
+  - "frontend/src/vite-env.d.ts"
+  - "frontend/src/types/"
+  - "frontend/src/config/"
+  
+  # UI Components (Presentational / Generated)
+  - "frontend/src/components/ui/**"    # Shadcn/UI or library components
+  - "frontend/src/lib/utils.ts"
+  - "frontend/src/lib/*-variants.ts"
+  
+  # Specific pure components (keep if these truly have no logic)
+  - "frontend/src/components/VirtualGrid/LoadingSkeleton.tsx"
+  - "frontend/src/components/VirtualGrid/VirtualGridItem.tsx"
+  - "frontend/src/components/Lightbox/Lightbox*.tsx"
+  - "frontend/src/components/OnboardingWizard/*.tsx"
 
-  # Frontend - configuration and constants
-  - frontend/src/config/constants.ts
-
-  # Frontend - third-party UI components and utilities
-  - frontend/src/components/ui/**
-  - frontend/src/lib/*-variants.ts
-  - frontend/src/lib/utils.ts
-  - frontend/src/utils/logger.ts
-
-  # Frontend - pure presentational components (no business logic)
-  - frontend/src/components/VirtualGrid/LoadingSkeleton.tsx
-  - frontend/src/components/VirtualGrid/VirtualGridItem.tsx
-  - frontend/src/components/Lightbox/LightboxNavigation.tsx
-  - frontend/src/components/Lightbox/LightboxImage.tsx
-  - frontend/src/components/Lightbox/LightboxMetadata.tsx
-  - frontend/src/components/OnboardingWizard/WelcomeStep.tsx
-  - frontend/src/components/OnboardingWizard/CompleteStep.tsx
-
-  # Frontend - electron and e2e
-  - frontend/electron/
-  - frontend/tests/e2e/
-  - frontend/tests/main.test.tsx.skip
-  - frontend/tests/components/ui/*.skip
-
-  # Test files (general)
+  # --- Tests & Build ---
+  - "frontend/electron/"
+  - "**/tests/"
+  - "**/test_*"
   - "**/*test*"
   - "**/*spec*"
-  - "**/tests/"
   - "**/__tests__/"
-
-  # Build and config files
+  - "**/__pycache__/"
+  - "**/node_modules/"
   - "**/dist/"
   - "**/dist-electron/"
   - "**/build/"
-  - "**/node_modules/"
+  
+  # --- Config Files ---
   - "**/*.config.*"
-  - "**/vite.config.ts"
-  - "**/jest.config.js"
-  - "**/pytest.ini"
   - "**/.coveragerc"
+  - "**/pytest.ini"

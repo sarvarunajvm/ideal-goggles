@@ -30,15 +30,22 @@ export class BasePage {
   }
 
   async waitForApp() {
+    // Wait for either the onboarding wizard or the main app navigation
+    try {
+      await Promise.race([
+        this.navBar.waitFor({ state: 'visible', timeout: 5000 }),
+        this.page.locator('text=Welcome to Ideal Goggles').waitFor({ state: 'visible', timeout: 5000 })
+      ]);
+    } catch {
+      // Ignore timeout, we'll check individual elements
+    }
+
     // Check if onboarding wizard is present and skip it
     const skipButton = this.page.locator('button:has-text("Skip setup")');
-    try {
-      await skipButton.waitFor({ state: 'visible', timeout: 2000 });
+    if (await skipButton.isVisible()) {
       await skipButton.click();
       // Wait for onboarding to disappear
       await skipButton.waitFor({ state: 'hidden', timeout: 5000 });
-    } catch {
-      // Onboarding not present or already skipped
     }
 
     await this.navBar.waitFor({ state: 'visible', timeout: 30000 });
