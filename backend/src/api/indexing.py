@@ -31,50 +31,175 @@ class IndexStatus(BaseModel):
     )
 
 
-def _calculate_estimated_completion():
-    """Calculate estimated completion time based on current progress."""
-    if (
-        not _indexing_state["started_at"]
-        or _indexing_state["progress"]["total_files"] == 0
-    ):
-        return None
-
-    progress = _indexing_state["progress"]
-    current_time = datetime.now()
-    elapsed = (current_time - _indexing_state["started_at"]).total_seconds()
-
-    if progress["processed_files"] == 0:
-        return None
-
-    # Calculate progress percentage
-    progress_ratio = progress["processed_files"] / progress["total_files"]
-    if progress_ratio <= 0:
-        return None
-
-    # Estimate total time needed
-    estimated_total_time = elapsed / progress_ratio
-    remaining_time = estimated_total_time - elapsed
-
-    return current_time + timedelta(seconds=remaining_time)
-
-
 class StartIndexRequest(BaseModel):
     """Request model for starting indexing."""
 
     full: bool = Field(default=False, description="Whether to perform full re-index")
 
 
-# Global indexing state
-_indexing_state = {
-    "status": "idle",
-    "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
-    "errors": [],
-    "started_at": None,
-    "estimated_completion": None,
-    "task": None,
-    "last_completed_at": None,  # Track when indexing last completed
-    "request_count": 0,  # Track number of requests in current test
-}
+class IndexingStateManager:
+    """Thread-safe manager for indexing state using asyncio.Lock."""
+
+    def __init__(self):
+        self._lock = asyncio.Lock()
+        self._state = {
+            "status": "idle",
+            "progress": {
+                "total_files": 0,
+                "processed_files": 0,
+                "current_phase": "discovery",
+            },
+            "errors": [],
+            "started_at": None,
+            "estimated_completion": None,
+            "task": None,
+            "last_completed_at": None,
+            "request_count": 0,
+        }
+
+    async def get_state(self) -> dict[str, Any]:
+        """Get a copy of the current state."""
+        async with self._lock:
+            return self._state.copy()
+
+    async def get_value(self, key: str) -> Any:
+        """Get a specific value from state."""
+        async with self._lock:
+            return self._state.get(key)
+
+    async def set_value(self, key: str, value: Any) -> None:
+        """Set a specific value in state."""
+        async with self._lock:
+            self._state[key] = value
+
+    async def update_state(self, updates: dict[str, Any]) -> None:
+        """Update multiple state values atomically."""
+        async with self._lock:
+            self._state.update(updates)
+
+    async def update_progress(self, **kwargs) -> None:
+        """Update progress values atomically."""
+        async with self._lock:
+            self._state["progress"].update(kwargs)
+
+    async def append_error(self, error: str) -> None:
+        """Append an error to the errors list."""
+        async with self._lock:
+            self._state["errors"].append(error)
+
+    async def extend_errors(self, errors: list[str]) -> None:
+        """Extend errors list with multiple errors."""
+        async with self._lock:
+            self._state["errors"].extend(errors)
+
+    async def reset_for_new_indexing(self) -> None:
+        """Reset state for a new indexing run.
+
+        Note: We use clear() + update() instead of reassigning self._state
+        to preserve the reference that _indexing_state points to.
+        """
+        async with self._lock:
+            request_count = self._state.get("request_count", 0) + 1
+            self._state.clear()
+            self._state.update(
+                {
+                    "status": "indexing",
+                    "progress": {
+                        "total_files": 0,
+                        "processed_files": 0,
+                        "current_phase": "discovery",
+                    },
+                    "errors": [],
+                    "started_at": datetime.now(),
+                    "estimated_completion": None,
+                    "task": None,
+                    "last_completed_at": None,
+                    "request_count": request_count,
+                }
+            )
+
+    async def is_indexing(self) -> bool:
+        """Check if indexing is currently running."""
+        async with self._lock:
+            return self._state["status"] == "indexing"
+
+    async def calculate_estimated_completion(self) -> datetime | None:
+        """Calculate estimated completion time based on current progress."""
+        async with self._lock:
+            if (
+                not self._state["started_at"]
+                or self._state["progress"]["total_files"] == 0
+            ):
+                return None
+
+            progress = self._state["progress"]
+            current_time = datetime.now()
+            elapsed = (current_time - self._state["started_at"]).total_seconds()
+
+            if progress["processed_files"] == 0:
+                return None
+
+            progress_ratio = progress["processed_files"] / progress["total_files"]
+            if progress_ratio <= 0:
+                return None
+
+            estimated_total_time = elapsed / progress_ratio
+            remaining_time = estimated_total_time - elapsed
+
+            return current_time + timedelta(seconds=remaining_time)
+
+    # Synchronous access for backward compatibility (use sparingly)
+    def get_state_sync(self) -> dict[str, Any]:
+        """Get state synchronously (not thread-safe, use only when necessary).
+
+        Returns a deep copy to prevent callers from modifying nested structures
+        like 'progress' which would corrupt the internal state.
+        """
+        import copy
+
+        return copy.deepcopy(self._state)
+
+    def set_value_sync(self, key: str, value: Any) -> None:
+        """Set value synchronously (not thread-safe, use only when necessary)."""
+        self._state[key] = value
+
+    def reset_state_sync(self) -> None:
+        """Reset state synchronously for testing purposes.
+
+        Note: We use clear() + update() instead of reassigning self._state
+        to preserve the reference that _indexing_state points to.
+        """
+        self._state.clear()
+        self._state.update(
+            {
+                "status": "idle",
+                "progress": {
+                    "total_files": 0,
+                    "processed_files": 0,
+                    "current_phase": "discovery",
+                },
+                "errors": [],
+                "started_at": None,
+                "estimated_completion": None,
+                "task": None,
+                "last_completed_at": None,
+                "request_count": 0,
+            }
+        )
+
+
+# Global state manager instance
+_state_manager = IndexingStateManager()
+
+# Legacy global state for backward compatibility (deprecated)
+# Note: This is a reference to the internal state dict. Changes will be reflected
+# in _state_manager._state. For thread-safe access, use _state_manager methods.
+_indexing_state = _state_manager._state
+
+
+def reset_indexing_state_for_tests() -> None:
+    """Reset indexing state for testing purposes. Do not use in production."""
+    _state_manager.reset_state_sync()
 
 
 @router.post("/index/start")
@@ -91,73 +216,53 @@ async def start_indexing(
     Returns:
         Indexing start confirmation
     """
-    global _indexing_state
-
-    # Increment request count for contract testing
-    _indexing_state["request_count"] = _indexing_state.get("request_count", 0) + 1
-
-    # Reset request count if enough time has passed (new test context)
-    if (
-        _indexing_state.get("last_completed_at")
-        and (datetime.now() - _indexing_state["last_completed_at"]).total_seconds() > 30
-    ):
-        _indexing_state["request_count"] = 1  # Reset to 1 since we just incremented
-
-    # Check if indexing is already running
-    if _indexing_state["status"] == "indexing":
+    # Check if indexing is already running (thread-safe)
+    if await _state_manager.is_indexing():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Indexing already in progress"
         )
-
-    # Note: Concurrent request handling would work properly in a real async environment
-    # The TestClient behavior is different from a production server
 
     try:
         # Use default values if no request provided
         if request is None:
             request = StartIndexRequest()
 
-        # Reset indexing state
-        _indexing_state = {
-            "status": "indexing",
-            "progress": {
-                "total_files": 0,
-                "processed_files": 0,
-                "current_phase": "discovery",
-            },
-            "errors": [],
-            "started_at": datetime.now(),
-            "estimated_completion": None,
-            "task": None,
-        }
+        # Reset indexing state atomically
+        await _state_manager.reset_for_new_indexing()
 
         # Start indexing in background and store task for cancellation
         task = asyncio.create_task(_run_indexing_process(request.full))
-        _indexing_state["task"] = task
+        await _state_manager.set_value("task", task)
         background_tasks.add_task(_monitor_indexing_task, task)
+
+        state = await _state_manager.get_state()
+        started_at = state["started_at"]
 
         logger.info(
             "Indexing started successfully",
             extra={
                 "request_id": get_request_id(),
                 "full_reindex": request.full,
-                "started_at": _indexing_state["started_at"].isoformat(),
+                "started_at": started_at.isoformat() if started_at else None,
             },
         )
 
         return {
             "message": "Indexing started successfully",
             "full_reindex": request.full,
-            "started_at": _indexing_state["started_at"].isoformat(),
+            "started_at": started_at.isoformat() if started_at else None,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        _indexing_state["status"] = "error"
-        _indexing_state["errors"].append(str(e))
+        await _state_manager.update_state({"status": "error"})
+        await _state_manager.append_error(str(e))
 
+        # Sanitize error message for client
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start indexing: {e!s}",
+            detail="Failed to start indexing. Please check logs for details.",
         )
 
 
@@ -169,13 +274,15 @@ async def get_indexing_status() -> IndexStatus:
     Returns:
         Current indexing status and progress
     """
+    state = await _state_manager.get_state()
+
     # Calculate estimated completion in real-time
     estimated_completion = None
-    if _indexing_state["status"] == "indexing":
-        estimated_completion = _calculate_estimated_completion()
+    if state["status"] == "indexing":
+        estimated_completion = await _state_manager.calculate_estimated_completion()
 
     # Add percentage to progress
-    progress = dict(_indexing_state["progress"])
+    progress = dict(state["progress"])
     if progress.get("total_files", 0) > 0:
         progress["percentage"] = (
             progress.get("processed_files", 0) / progress["total_files"]
@@ -184,10 +291,10 @@ async def get_indexing_status() -> IndexStatus:
         progress["percentage"] = 0.0
 
     return IndexStatus(
-        status=_indexing_state["status"],
+        status=state["status"],
         progress=progress,
-        errors=_indexing_state["errors"],
-        started_at=_indexing_state["started_at"],
+        errors=state["errors"],
+        started_at=state["started_at"],
         estimated_completion=estimated_completion,
     )
 
@@ -200,9 +307,7 @@ async def stop_indexing() -> dict[str, Any]:
     Returns:
         Stop confirmation
     """
-    global _indexing_state
-
-    if _indexing_state["status"] != "indexing":
+    if not await _state_manager.is_indexing():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No indexing process is currently running",
@@ -210,10 +315,11 @@ async def stop_indexing() -> dict[str, Any]:
 
     try:
         # Cancel the indexing task if it exists
-        if _indexing_state["task"]:
-            _indexing_state["task"].cancel()
+        task = await _state_manager.get_value("task")
+        if task:
+            task.cancel()
 
-        _indexing_state["status"] = "stopped"
+        await _state_manager.set_value("status", "stopped")
 
         logger.info("Indexing process stopped")
 
@@ -223,9 +329,10 @@ async def stop_indexing() -> dict[str, Any]:
         }
 
     except Exception as e:
+        logger.exception(f"Failed to stop indexing: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to stop indexing: {e!s}",
+            detail="Failed to stop indexing. Please check logs for details.",
         )
 
 
@@ -418,6 +525,9 @@ async def get_indexing_statistics() -> dict[str, Any]:
         db_info = db_manager.get_database_info()
 
         # Get processing statistics
+        # Get state snapshot once for consistency (avoid race conditions from multiple reads)
+        state_snapshot = _state_manager.get_state_sync()
+
         return {
             "database": {
                 "total_photos": db_info.get("table_counts", {}).get("photos", 0),
@@ -431,14 +541,14 @@ async def get_indexing_statistics() -> dict[str, Any]:
                 "thumbnails": db_info.get("table_counts", {}).get("thumbnails", 0),
             },
             "current_indexing": {
-                "status": _indexing_state["status"],
-                "progress": _indexing_state["progress"],
+                "status": state_snapshot["status"],
+                "progress": state_snapshot["progress"],
                 "started_at": (
-                    _indexing_state["started_at"].isoformat()
-                    if _indexing_state["started_at"]
+                    state_snapshot["started_at"].isoformat()
+                    if state_snapshot["started_at"]
                     else None
                 ),
-                "errors_count": len(_indexing_state["errors"]),
+                "errors_count": len(state_snapshot["errors"]),
             },
             "database_info": {
                 "size_mb": db_info.get("database_size_mb", 0),
@@ -457,22 +567,20 @@ async def get_indexing_statistics() -> dict[str, Any]:
 
 async def _monitor_indexing_task(task):
     """Monitor the indexing task and handle completion/cancellation."""
-    global _indexing_state
     try:
         await task
     except asyncio.CancelledError:
-        _indexing_state["status"] = "stopped"
-        _indexing_state["task"] = None
+        await _state_manager.update_state({"status": "stopped", "task": None})
         logger.info("Indexing task was successfully cancelled")
     except Exception as e:
-        _indexing_state["status"] = "error"
-        _indexing_state["errors"].append(str(e))
-        _indexing_state["task"] = None
+        await _state_manager.update_state({"status": "error", "task": None})
+        await _state_manager.append_error(str(e))
         logger.exception(f"Indexing task failed: {e}")
     finally:
         # Clear task reference when done
-        if _indexing_state.get("task") == task:
-            _indexing_state["task"] = None
+        current_task = await _state_manager.get_value("task")
+        if current_task == task:
+            await _state_manager.set_value("task", None)
 
 
 async def _setup_indexing_workers():
@@ -492,23 +600,23 @@ async def _setup_indexing_workers():
     }
 
 
-def _check_cancellation():
+async def _check_cancellation():
     """Check if indexing has been cancelled and raise CancelledError if so."""
-    if _indexing_state["status"] == "stopped":
+    status = await _state_manager.get_value("status")
+    if status == "stopped":
         cancellation_msg = "Indexing was stopped by user request"
         raise asyncio.CancelledError(cancellation_msg)
 
 
 async def _run_discovery_phase(workers, config, full_reindex):
     """Run file discovery phase."""
-    global _indexing_state
     from ..db.connection import get_database_manager
 
-    _indexing_state["progress"]["current_phase"] = "discovery"
+    await _state_manager.update_progress(current_phase="discovery")
     logger.info("Phase 1: File discovery")
 
     # Check for cancellation
-    _check_cancellation()
+    await _check_cancellation()
 
     crawler = workers["FileCrawler"]()
     for root_path in config.get("roots", []):
@@ -516,11 +624,12 @@ async def _run_discovery_phase(workers, config, full_reindex):
 
     await asyncio.sleep(0.5)  # Add small delay to show progress
     crawl_result = await crawler.crawl_all_paths(full_reindex)
-    _indexing_state["progress"]["total_files"] = crawl_result.total_files
-    _indexing_state["progress"]["processed_files"] = 0  # Reset at start
+    await _state_manager.update_progress(
+        total_files=crawl_result.total_files, processed_files=0
+    )
 
     if crawl_result.errors > 0:
-        _indexing_state["errors"].extend(crawl_result.error_details)
+        await _state_manager.extend_errors(crawl_result.error_details)
 
     # Save discovered photos to database
     db_manager = get_database_manager()
@@ -560,18 +669,16 @@ async def _run_discovery_phase(workers, config, full_reindex):
 
 async def _run_processing_phases(workers, config, photos_to_process):
     """Run all processing phases for photos."""
-    global _indexing_state
-
     total_photos = len(photos_to_process)
-    _indexing_state["progress"]["total_files"] = total_photos
+    await _state_manager.update_progress(total_files=total_photos)
     processed_count = 0
 
     # Phase 2: Metadata extraction
-    _indexing_state["progress"]["current_phase"] = "metadata"
+    await _state_manager.update_progress(current_phase="metadata")
     logger.info("Phase 2: EXIF metadata extraction")
 
     # Check for cancellation
-    _check_cancellation()
+    await _check_cancellation()
 
     try:
         exif_pipeline = workers["EXIFExtractionPipeline"]()
@@ -640,17 +747,17 @@ async def _run_processing_phases(workers, config, photos_to_process):
         )
     except Exception as e:
         logger.exception(f"EXIF extraction failed: {e}")
-        _indexing_state["errors"].append(f"EXIF extraction failed: {e!s}")
+        await _state_manager.append_error(f"EXIF extraction failed: {e!s}")
 
     processed_count = int(total_photos * 0.3)  # 30% complete after metadata
-    _indexing_state["progress"]["processed_files"] = processed_count
+    await _state_manager.update_progress(processed_files=processed_count)
 
     # Phase 3: Embedding generation (optional - skip if dependencies missing)
-    _indexing_state["progress"]["current_phase"] = "embeddings"
+    await _state_manager.update_progress(current_phase="embeddings")
     logger.info("Phase 3: Embedding generation")
 
     # Check for cancellation
-    _check_cancellation()
+    await _check_cancellation()
 
     await asyncio.sleep(0.5)  # Add small delay to show progress
     try:
@@ -703,17 +810,17 @@ async def _run_processing_phases(workers, config, photos_to_process):
         )
     except Exception as e:
         logger.warning(f"Embedding generation failed: {e}")
-        _indexing_state["errors"].append(f"Embedding generation failed: {e!s}")
+        await _state_manager.append_error(f"Embedding generation failed: {e!s}")
         logger.info("Continuing without embeddings")
     processed_count = int(total_photos * 0.5)  # 50% complete after embeddings
-    _indexing_state["progress"]["processed_files"] = processed_count
+    await _state_manager.update_progress(processed_files=processed_count)
 
     # Phase 4: Thumbnail generation
-    _indexing_state["progress"]["current_phase"] = "thumbnails"
+    await _state_manager.update_progress(current_phase="thumbnails")
     logger.info("Phase 4: Thumbnail generation")
 
     # Check for cancellation
-    _check_cancellation()
+    await _check_cancellation()
 
     await asyncio.sleep(0.5)  # Add small delay to show progress
     thumbnail_generator = workers["SmartThumbnailGenerator"](
@@ -751,15 +858,15 @@ async def _run_processing_phases(workers, config, photos_to_process):
 
     logger.info(f"Saved {saved_count}/{len(thumbnails)} thumbnails to database")
     processed_count = int(total_photos * 0.75)  # 75% complete after thumbnails
-    _indexing_state["progress"]["processed_files"] = processed_count
+    await _state_manager.update_progress(processed_files=processed_count)
 
     # Phase 5: Face detection (if enabled)
     if config.get("face_search_enabled", True):
-        _indexing_state["progress"]["current_phase"] = "faces"
+        await _state_manager.update_progress(current_phase="faces")
         logger.info("Phase 5: Face detection")
 
         # Check for cancellation
-        _check_cancellation()
+        await _check_cancellation()
 
         try:
             face_worker = workers["FaceDetectionWorker"]()
@@ -800,19 +907,17 @@ async def _run_processing_phases(workers, config, photos_to_process):
                 logger.info(f"Saved {saved_face_count} face records to database")
             else:
                 logger.warning("Face detection not available, skipping")
-                _indexing_state["errors"].append("Face detection model not available")
+                await _state_manager.append_error("Face detection model not available")
         except Exception as e:
             logger.exception(f"Face detection failed: {e}")
-            _indexing_state["errors"].append(f"Face detection failed: {e!s}")
+            await _state_manager.append_error(f"Face detection failed: {e!s}")
 
     # Final update - 100% complete
-    _indexing_state["progress"]["processed_files"] = total_photos
+    await _state_manager.update_progress(processed_files=total_photos)
 
 
 async def _run_indexing_process(full_reindex: bool):
     """Run the complete indexing process."""
-    global _indexing_state
-
     try:
         logger.info(
             f"Starting indexing process in background task (full: {full_reindex})"
@@ -824,8 +929,8 @@ async def _run_indexing_process(full_reindex: bool):
         config = _get_config_from_db(db_manager)
 
         if not config.get("roots", []):
-            _indexing_state["errors"].append("No root paths configured")
-            _indexing_state["status"] = "error"
+            await _state_manager.append_error("No root paths configured")
+            await _state_manager.set_value("status", "error")
             return
 
         # Validate root paths exist
@@ -834,23 +939,24 @@ async def _run_indexing_process(full_reindex: bool):
             if Path(root_path).exists():
                 valid_roots.append(root_path)
             else:
-                _indexing_state["errors"].append(
+                await _state_manager.append_error(
                     f"Root path does not exist: {root_path}"
                 )
 
         if not valid_roots:
             # Complete immediately when no valid paths (for faster testing)
-            # In production, proper async behavior would handle concurrency correctly
-
-            _indexing_state["errors"].append(
+            await _state_manager.append_error(
                 "No valid root paths found - indexing completed with no work"
             )
-            _indexing_state["status"] = "idle"
-            _indexing_state["progress"]["current_phase"] = "completed"
-            _indexing_state["progress"]["processed_files"] = 0
-            _indexing_state["last_completed_at"] = (
-                datetime.now()
-            )  # Track completion time
+            await _state_manager.update_state(
+                {
+                    "status": "idle",
+                    "last_completed_at": datetime.now(),
+                }
+            )
+            await _state_manager.update_progress(
+                current_phase="completed", processed_files=0
+            )
             logger.info("Indexing completed with no valid root paths")
             return
 
@@ -867,27 +973,35 @@ async def _run_indexing_process(full_reindex: bool):
             photo_ids = [photo.id for photo in photos_to_process]
             indexed_time = datetime.now().isoformat()
 
-            # Update indexed_at for all processed photos
-            placeholders = ",".join("?" * len(photo_ids))
-            update_query = (
-                f"UPDATE photos SET indexed_at = ? WHERE id IN ({placeholders})"
-            )
-            db_manager.execute_update(update_query, (indexed_time, *photo_ids))
+            # Update indexed_at for all processed photos (batched for safety)
+            batch_size = 500
+            for i in range(0, len(photo_ids), batch_size):
+                batch_ids = photo_ids[i : i + batch_size]
+                placeholders = ",".join("?" * len(batch_ids))
+                update_query = (
+                    f"UPDATE photos SET indexed_at = ? WHERE id IN ({placeholders})"
+                )
+                db_manager.execute_update(update_query, (indexed_time, *batch_ids))
             logger.info(f"Marked {len(photo_ids)} photos as indexed")
 
         # Complete indexing
-        _indexing_state["status"] = "idle"
-        _indexing_state["progress"]["current_phase"] = "completed"
-        _indexing_state["progress"]["processed_files"] = len(photos_to_process)
-        _indexing_state["last_completed_at"] = datetime.now()  # Track completion time
+        await _state_manager.update_state(
+            {
+                "status": "idle",
+                "last_completed_at": datetime.now(),
+            }
+        )
+        await _state_manager.update_progress(
+            current_phase="completed", processed_files=len(photos_to_process)
+        )
         logger.info("Indexing process completed successfully")
 
     except asyncio.CancelledError:
-        _indexing_state["status"] = "stopped"
+        await _state_manager.set_value("status", "stopped")
         logger.info("Indexing process was cancelled")
     except Exception as e:
-        _indexing_state["status"] = "error"
-        _indexing_state["errors"].append(str(e))
+        await _state_manager.set_value("status", "error")
+        await _state_manager.append_error(str(e))
         logger.exception(f"Indexing process failed: {e}")
 
 

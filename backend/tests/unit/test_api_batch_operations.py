@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import BackgroundTasks, HTTPException
 
+import src.api.batch_operations as batch_ops
 from src.api.batch_operations import (
     BatchDeleteRequest,
     BatchExportRequest,
@@ -25,8 +26,12 @@ from src.api.batch_operations import (
 def clear_jobs():
     """Clear jobs dictionary before and after each test."""
     _jobs.clear()
+    # Disable path validation for tests
+    original_skip = batch_ops._SKIP_PATH_VALIDATION
+    batch_ops._SKIP_PATH_VALIDATION = True
     yield
     _jobs.clear()
+    batch_ops._SKIP_PATH_VALIDATION = original_skip
 
 
 class TestBatchExportRequest:

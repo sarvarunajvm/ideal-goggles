@@ -11,6 +11,44 @@ from ..db.connection import get_database_manager
 router = APIRouter()
 
 
+def _parse_datetime(value: Any) -> datetime:
+    """Parse datetime from database value.
+
+    Handles both Unix timestamps (float) and ISO format strings.
+    """
+    if value is None:
+        return datetime.now()
+
+    if isinstance(value, datetime):
+        return value
+
+    if isinstance(value, (int, float)):
+        # Unix timestamp
+        return datetime.fromtimestamp(value)
+
+    if isinstance(value, str):
+        # Try ISO format first (handles both with and without Z suffix)
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            pass
+
+        # Try common SQLite datetime format
+        try:
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            pass
+
+        # Try date only format
+        try:
+            return datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Fallback to current time if parsing fails
+    return datetime.now()
+
+
 class PersonResponse(BaseModel):
     """Person response model."""
 
@@ -104,7 +142,7 @@ async def list_people() -> list[PersonResponse]:
                 id=row[0],
                 name=row[1],
                 sample_count=row[2],
-                created_at=datetime.fromtimestamp(row[3]),
+                created_at=_parse_datetime(row[3]),
                 active=bool(row[5]),
             )
             people.append(person)
@@ -151,7 +189,7 @@ async def get_person(person_id: int) -> PersonResponse:
             id=row[0],
             name=row[1],
             sample_count=row[2],
-            created_at=datetime.fromtimestamp(row[3]),
+            created_at=_parse_datetime(row[3]),
             active=bool(row[5]),
         )
 
@@ -286,7 +324,7 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
             id=row[0],
             name=row[1],
             sample_count=row[2],
-            created_at=datetime.fromtimestamp(row[3]),
+            created_at=_parse_datetime(row[3]),
             active=bool(row[5]),
         )
 
@@ -453,7 +491,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
             id=row[0],
             name=row[1],
             sample_count=row[3],
-            created_at=datetime.fromtimestamp(row[4]),
+            created_at=_parse_datetime(row[4]),
             active=bool(row[6]),
         )
 

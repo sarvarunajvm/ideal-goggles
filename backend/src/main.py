@@ -24,6 +24,7 @@ from src.core.logging_config import get_logger, setup_logging
 from src.core.middleware import (
     ErrorLoggingMiddleware,
     PerformanceMonitoringMiddleware,
+    RateLimitingMiddleware,
     RequestLoggingMiddleware,
 )
 
@@ -76,12 +77,13 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# Add custom middleware for logging and monitoring
+# Add custom middleware for logging, monitoring, and rate limiting
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(ErrorLoggingMiddleware)
 app.add_middleware(
     PerformanceMonitoringMiddleware, threshold_ms=settings.SLOW_REQUEST_THRESHOLD_MS
 )
+app.add_middleware(RateLimitingMiddleware, window_seconds=60)
 
 # CORS middleware for Electron/frontend
 _allowed_origins = [

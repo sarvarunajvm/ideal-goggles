@@ -363,13 +363,13 @@ class TestPhotoModel:
 
     def test_is_valid(self):
         """Test is_valid method."""
-        # Valid photo - validation expects SHA-1 format (40 chars) even though implementation uses SHA-256
+        # Valid photo - validation expects SHA-256 format (64 chars)
         valid_photo = Photo(
             path="/test/photo.jpg",
             filename="photo.jpg",
             ext=".jpg",
             size=1024,
-            sha1="a" * 40,  # Validation expects SHA-1 length
+            sha1="a" * 64,  # SHA-256 hash is 64 hex characters
         )
         assert valid_photo.is_valid() is True
 

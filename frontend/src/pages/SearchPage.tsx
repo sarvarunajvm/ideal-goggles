@@ -335,6 +335,58 @@ function CompactSearchBar({
   )
 }
 
+// Helper to sanitize filename for display (prevent XSS)
+function sanitizeFilename(filename: string): string {
+  if (!filename) return 'Unknown'
+  // Remove any HTML-like content and limit length
+  return filename
+    .replace(/[<>]/g, '')
+    .substring(0, 255)
+}
+
+// Image component with error handling
+function ThumbnailImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string
+  alt: string
+  className?: string
+}) {
+  const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  if (error) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+        <ImageIcon className="h-8 w-8 text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
+          <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={sanitizeFilename(alt)}
+        className={`${className} ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+        loading="lazy"
+        onError={() => {
+          setError(true)
+          setLoading(false)
+        }}
+        onLoad={() => setLoading(false)}
+      />
+    </>
+  )
+}
+
 // Results Grid Component
 function ResultsGrid({
   results,
@@ -370,78 +422,81 @@ function ResultsGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
-      {results.map(item => (
-        <Card
-          key={item.file_id}
-          className="group cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
-          onClick={() => onItemClick(item)}
-        >
-          <div className="relative aspect-square bg-muted">
-            {item.thumb_path ? (
-              <img
-                src={`${thumbnailBaseUrl}/${item.thumb_path}`}
-                alt={item.filename}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
+      {results.map(item => {
+        const safeFilename = sanitizeFilename(item.filename)
 
-            {/* Overlay with actions */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200">
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="h-6 w-6 backdrop-blur-sm"
-                  onClick={e => {
-                    e.stopPropagation()
-                    onRevealInFolder(item)
-                  }}
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
+        return (
+          <Card
+            key={item.file_id}
+            className="group cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+            onClick={() => onItemClick(item)}
+          >
+            <div className="relative aspect-square bg-muted">
+              {item.thumb_path ? (
+                <ThumbnailImage
+                  src={`${thumbnailBaseUrl}/${item.thumb_path}`}
+                  alt={safeFilename}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Overlay with actions */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200">
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-6 w-6 backdrop-blur-sm"
+                    onClick={e => {
+                      e.stopPropagation()
+                      onRevealInFolder(item)
+                    }}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+
+              {/* Score badge */}
+              {item.score && item.score > 0 && (
+                <div className="absolute top-2 left-2">
+                  <Badge
+                    variant="secondary"
+                    className="backdrop-blur-sm text-xs px-1 py-0"
+                    title="Similarity score"
+                  >
+                    {(item.score * 100).toFixed(0)}% match
+                  </Badge>
+                </div>
+              )}
+
+              {/* Text indicator */}
+              {item.snippet && (
+                <div className="absolute bottom-2 left-2">
+                  <Badge variant="secondary" className="backdrop-blur-sm px-1 py-0">
+                    <FileText className="h-3 w-3" />
+                  </Badge>
+                </div>
+              )}
             </div>
 
-            {/* Score badge */}
-            {item.score && (
-              <div className="absolute top-2 left-2">
-                <Badge
-                  variant="secondary"
-                  className="backdrop-blur-sm text-xs px-1 py-0"
-                  title="Similarity score"
-                >
-                  {(item.score * 100).toFixed(0)}% match
-                </Badge>
-              </div>
-            )}
-
-            {/* Text indicator */}
-            {item.snippet && (
-              <div className="absolute bottom-2 left-2">
-                <Badge variant="secondary" className="backdrop-blur-sm px-1 py-0">
-                  <FileText className="h-3 w-3" />
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          <CardContent className="p-2">
-            <p className="text-xs font-medium truncate" title={item.filename}>
-              {item.filename}
-            </p>
-            {item.shot_dt && (
-              <p className="text-xs text-muted-foreground">
-                {new Date(item.shot_dt).toLocaleDateString()}
+            <CardContent className="p-2">
+              <p className="text-xs font-medium truncate" title={safeFilename}>
+                {safeFilename}
               </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {item.shot_dt && (
+                <p className="text-xs text-muted-foreground">
+                  {new Date(item.shot_dt).toLocaleDateString()}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }

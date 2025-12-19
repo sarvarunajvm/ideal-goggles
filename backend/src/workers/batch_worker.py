@@ -24,7 +24,7 @@ async def process_batch_export(
     destination: str,
     export_format: str = "original",
     max_dimension: int | None = None,
-    job_store: dict | None = None,
+    job_store=None,
 ):
     """
     Process batch photo export operation.
@@ -35,18 +35,18 @@ async def process_batch_export(
         destination: Destination folder path
         format: Export format (original, jpg, png)
         max_dimension: Maximum dimension for resizing
-        job_store: Shared job status dictionary
+        job_store: JobStore instance for thread-safe job updates
     """
     if job_store is None:
         logger.warning("No job store provided for batch export")
         return
 
-    job = job_store.get(job_id)
+    job = job_store.get_sync(job_id)
     if not job:
         logger.error(f"Job {job_id} not found in store")
         return
 
-    job["status"] = "processing"
+    job_store.update_sync(job_id, "status", "processing")
     dest_path = Path(destination)
 
     try:
@@ -65,7 +65,7 @@ async def process_batch_export(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 rows = db_manager.execute_query(
@@ -74,7 +74,7 @@ async def process_batch_export(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 photo = Photo.from_db_row(rows[0])
@@ -83,7 +83,7 @@ async def process_batch_export(
                 if not source_path.exists():
                     logger.warning(f"Source file not found: {source_path}")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 # Determine output filename
@@ -91,46 +91,69 @@ async def process_batch_export(
                     output_path = dest_path / source_path.name
                     shutil.copy2(source_path, output_path)
                 else:
-                    # Convert/resize image
-                    img = Image.open(source_path)
+                    # Convert/resize image with proper resource management
+                    with Image.open(source_path) as img:
+                        # Convert to RGB if necessary for JPEG export
+                        # Note: convert() returns a new image, so we track it separately
+                        working_img = img
+                        converted_img = None
+                        try:
+                            if export_format.lower() in (
+                                "jpg",
+                                "jpeg",
+                            ) and img.mode in ("RGBA", "P"):
+                                converted_img = img.convert("RGB")
+                                working_img = converted_img
 
-                    # Resize if max_dimension is specified
-                    if max_dimension:
-                        img.thumbnail(
-                            (max_dimension, max_dimension), Image.Resampling.LANCZOS
-                        )
+                            # Resize if max_dimension is specified
+                            if max_dimension:
+                                working_img.thumbnail(
+                                    (max_dimension, max_dimension),
+                                    Image.Resampling.LANCZOS,
+                                )
 
-                    # Save in requested format
-                    output_name = source_path.stem + f".{export_format}"
-                    output_path = dest_path / output_name
-                    img.save(output_path, export_format.upper())
+                            # Save in requested format
+                            output_name = source_path.stem + f".{export_format}"
+                            output_path = dest_path / output_name
+                            working_img.save(output_path, export_format.upper())
+                        finally:
+                            # Close the converted image if we created one
+                            if converted_img is not None:
+                                converted_img.close()
 
                 processed += 1
-                job["processed_items"] = processed
+                job_store.update_sync(job_id, "processed_items", processed)
 
             except Exception as e:
                 logger.exception(f"Failed to export photo {photo_id}: {e}")
                 failed += 1
-                job["failed_items"] = failed
+                job_store.update_sync(job_id, "failed_items", failed)
 
         # Mark job as complete
-        job["status"] = "completed"
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {"status": "completed", "completed_at": datetime.now(UTC).isoformat()},
+        )
 
         logger.info(f"Batch export completed: {processed} exported, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch export job {job_id} failed: {e}")
-        job["status"] = "failed"
-        job["error"] = str(e)
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )
 
 
 async def process_batch_delete(
     job_id: str,
     photo_ids: list[str],
     permanent: bool = False,
-    job_store: dict | None = None,
+    job_store=None,
 ):
     """
     Process batch photo deletion operation.
@@ -139,18 +162,18 @@ async def process_batch_delete(
         job_id: Unique job identifier
         photo_ids: List of photo IDs to delete
         permanent: If True, permanently delete. If False, move to trash.
-        job_store: Shared job status dictionary
+        job_store: JobStore instance for thread-safe job updates
     """
     if job_store is None:
         logger.warning("No job store provided for batch delete")
         return
 
-    job = job_store.get(job_id)
+    job = job_store.get_sync(job_id)
     if not job:
         logger.error(f"Job {job_id} not found in store")
         return
 
-    job["status"] = "processing"
+    job_store.update_sync(job_id, "status", "processing")
 
     try:
         db_manager = get_database_manager()
@@ -165,7 +188,7 @@ async def process_batch_delete(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 rows = db_manager.execute_query(
@@ -174,7 +197,7 @@ async def process_batch_delete(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 photo = Photo.from_db_row(rows[0])
@@ -194,24 +217,31 @@ async def process_batch_delete(
                 db_manager.execute_update("DELETE FROM photos WHERE id = ?", (pid,))
 
                 processed += 1
-                job["processed_items"] = processed
+                job_store.update_sync(job_id, "processed_items", processed)
 
             except Exception as e:
                 logger.exception(f"Failed to delete photo {photo_id}: {e}")
                 failed += 1
-                job["failed_items"] = failed
+                job_store.update_sync(job_id, "failed_items", failed)
 
         # Mark job as complete
-        job["status"] = "completed"
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {"status": "completed", "completed_at": datetime.now(UTC).isoformat()},
+        )
 
         logger.info(f"Batch delete completed: {processed} deleted, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch delete job {job_id} failed: {e}")
-        job["status"] = "failed"
-        job["error"] = str(e)
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )
 
 
 async def process_batch_tag(
@@ -219,7 +249,7 @@ async def process_batch_tag(
     photo_ids: list[str],
     tags: list[str],
     operation: str = "add",
-    job_store: dict | None = None,
+    job_store=None,
 ):
     """
     Process batch photo tagging operation.
@@ -229,18 +259,18 @@ async def process_batch_tag(
         photo_ids: List of photo IDs to tag
         tags: Tags to add/remove/replace
         operation: Operation type (add, remove, replace)
-        job_store: Shared job status dictionary
+        job_store: JobStore instance for thread-safe job updates
     """
     if job_store is None:
         logger.warning("No job store provided for batch tag")
         return
 
-    job = job_store.get(job_id)
+    job = job_store.get_sync(job_id)
     if not job:
         logger.error(f"Job {job_id} not found in store")
         return
 
-    job["status"] = "processing"
+    job_store.update_sync(job_id, "status", "processing")
 
     try:
         db_manager = get_database_manager()
@@ -268,9 +298,14 @@ async def process_batch_tag(
             logger.warning(
                 "'tags' column not found on photos table; skipping batch tag operation"
             )
-            job["status"] = "failed"
-            job["error"] = "Tagging not supported: 'tags' column missing"
-            job["completed_at"] = datetime.now(UTC).isoformat()
+            job_store.update_job_sync(
+                job_id,
+                {
+                    "status": "failed",
+                    "error": "Tagging not supported: 'tags' column missing",
+                    "completed_at": datetime.now(UTC).isoformat(),
+                },
+            )
             return
 
         for photo_id in photo_ids:
@@ -281,7 +316,7 @@ async def process_batch_tag(
                 except Exception:
                     logger.warning(f"Invalid photo id: {photo_id}")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 rows = db_manager.execute_query(
@@ -291,7 +326,7 @@ async def process_batch_tag(
                 if not rows:
                     logger.warning(f"Photo {photo_id} not found in database")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 row = rows[0]
@@ -312,7 +347,7 @@ async def process_batch_tag(
                 else:
                     logger.warning(f"Invalid operation: {operation}")
                     failed += 1
-                    job["failed_items"] = failed
+                    job_store.update_sync(job_id, "failed_items", failed)
                     continue
 
                 # Update photo tags (store as comma-separated string)
@@ -321,21 +356,28 @@ async def process_batch_tag(
                 )
 
                 processed += 1
-                job["processed_items"] = processed
+                job_store.update_sync(job_id, "processed_items", processed)
 
             except Exception as e:
                 logger.exception(f"Failed to tag photo {photo_id}: {e}")
                 failed += 1
-                job["failed_items"] = failed
+                job_store.update_sync(job_id, "failed_items", failed)
 
         # Mark job as complete
-        job["status"] = "completed"
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {"status": "completed", "completed_at": datetime.now(UTC).isoformat()},
+        )
 
         logger.info(f"Batch tag completed: {processed} tagged, {failed} failed")
 
     except Exception as e:
         logger.exception(f"Batch tag job {job_id} failed: {e}")
-        job["status"] = "failed"
-        job["error"] = str(e)
-        job["completed_at"] = datetime.now(UTC).isoformat()
+        job_store.update_job_sync(
+            job_id,
+            {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )

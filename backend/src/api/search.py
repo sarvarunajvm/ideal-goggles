@@ -507,80 +507,163 @@ async def _execute_text_search(
 async def _execute_semantic_search(
     db_manager, query_embedding, top_k: int
 ) -> list[SearchResultItem]:
-    """Execute semantic search using CLIP embeddings."""
-    # This is a simplified implementation
-    # In a real system, you'd use FAISS for efficient vector search
+    """Execute semantic search using CLIP embeddings with FAISS optimization.
 
-    # Get all embeddings from database
-    embeddings_query = """
-        SELECT e.file_id, e.clip_vector, p.path, p.folder, p.filename,
-               t.thumb_path, ex.shot_dt
-        FROM embeddings e
-        JOIN photos p ON e.file_id = p.id
-        LEFT JOIN thumbnails t ON p.id = t.file_id
-        LEFT JOIN exif ex ON p.id = ex.file_id
-        WHERE p.indexed_at IS NOT NULL
+    Uses FAISS for efficient approximate nearest neighbor search when available,
+    falling back to brute-force search for small collections or when FAISS unavailable.
     """
-
-    logger.info("Executing embeddings query for semantic search")
-    rows = db_manager.execute_query(embeddings_query)
-    logger.info(f"Query returned {len(rows)} rows")
-
-    # Calculate similarities
-    similarities = []
     import numpy as np
 
     from ..models.embedding import Embedding
 
-    logger.info(f"Processing {len(rows)} embeddings for semantic search")
+    # Ensure query embedding is properly formatted
+    if not isinstance(query_embedding, np.ndarray):
+        query_embedding = np.array(query_embedding, dtype=np.float32)
+    query_flat = query_embedding.flatten().astype(np.float32)
 
-    for i, row in enumerate(rows):
-        try:
-            # Decode embedding from blob
-            stored_embedding = Embedding._blob_to_numpy(row[1])
+    # Normalize query vector
+    query_norm = np.linalg.norm(query_flat)
+    if query_norm > 0:
+        query_flat = query_flat / query_norm
 
-            # Ensure both embeddings are numpy arrays and have compatible shapes
-            if not isinstance(query_embedding, np.ndarray):
-                query_embedding = np.array(query_embedding, dtype=np.float32)
-            if not isinstance(stored_embedding, np.ndarray):
-                stored_embedding = np.array(stored_embedding, dtype=np.float32)
+    # Try to use FAISS for efficient search
+    try:
+        from ..services.vector_search import VectorSearchService
 
-            # Flatten both embeddings to ensure 1D arrays
-            query_flat = query_embedding.flatten()
-            stored_flat = stored_embedding.flatten()
+        vector_service = VectorSearchService()
 
-            # Check dimensions match
-            if len(query_flat) != len(stored_flat):
-                logger.warning(
-                    f"Embedding dimension mismatch: query={len(query_flat)}, stored={len(stored_flat)} for file_id {row[0]}"
-                )
+        # Check if FAISS index is available and populated
+        if vector_service.index is not None and vector_service.index.ntotal > 0:
+            logger.info(f"Using FAISS index with {vector_service.index.ntotal} vectors")
+
+            # Reshape for FAISS (expects 2D array)
+            query_vector = query_flat.reshape(1, -1)
+
+            # Search using FAISS
+            distances, indices = vector_service.index.search(query_vector, top_k)
+
+            # Get file_ids for the matched indices, keeping track of original positions
+            # to correctly align with distances array
+            valid_results = []
+            for original_idx, idx in enumerate(indices[0]):
+                if 0 <= idx < len(vector_service.id_map):
+                    file_id = vector_service.id_map[idx]
+                    distance = float(distances[0][original_idx])
+                    valid_results.append((file_id, distance))
+
+            if valid_results:
+                file_ids = [r[0] for r in valid_results]
+
+                # Fetch photo details for matched file_ids
+                placeholders = ",".join("?" * len(file_ids))
+                details_query = f"""
+                    SELECT p.id, p.path, p.folder, p.filename,
+                           t.thumb_path, ex.shot_dt
+                    FROM photos p
+                    LEFT JOIN thumbnails t ON p.id = t.file_id
+                    LEFT JOIN exif ex ON p.id = ex.file_id
+                    WHERE p.id IN ({placeholders})
+                """
+                rows = db_manager.execute_query(details_query, file_ids)
+
+                # Build results maintaining order from FAISS
+                id_to_row = {row[0]: row for row in rows}
+                results = []
+
+                for file_id, distance in valid_results:
+                    if file_id in id_to_row:
+                        row = id_to_row[file_id]
+                        # Convert distance to similarity score (FAISS returns L2 distance for IP)
+                        # For inner product, higher is better (already similarity)
+                        similarity = distance
+                        # Clamp to valid range
+                        similarity = max(0.0, min(1.0, similarity))
+
+                        item = SearchResultItem(
+                            file_id=row[0],
+                            path=row[1],
+                            folder=row[2],
+                            filename=row[3],
+                            thumb_path=row[4],
+                            shot_dt=datetime.fromisoformat(row[5]) if row[5] else None,
+                            score=similarity,
+                            badges=["semantic"],
+                            snippet=None,
+                        )
+                        results.append(item)
+
+                logger.info(f"FAISS search returned {len(results)} results")
+                return results
+
+    except ImportError:
+        logger.debug("FAISS not available, using brute-force search")
+    except Exception as e:
+        logger.warning(f"FAISS search failed, falling back to brute-force: {e}")
+
+    # Fallback: Brute-force search (for small collections or when FAISS unavailable)
+    logger.info("Using brute-force semantic search")
+
+    # Get embeddings in batches to avoid loading everything at once
+    count_query = "SELECT COUNT(*) FROM embeddings e JOIN photos p ON e.file_id = p.id WHERE p.indexed_at IS NOT NULL"
+    count_result = db_manager.execute_query(count_query)
+    total_embeddings = count_result[0][0] if count_result else 0
+
+    logger.info(f"Processing {total_embeddings} embeddings for brute-force search")
+
+    # For large collections, warn about performance
+    if total_embeddings > 50000:
+        logger.warning(
+            f"Large collection ({total_embeddings} vectors) - consider building FAISS index for better performance"
+        )
+
+    # Process in batches to manage memory
+    batch_size = 5000
+    all_similarities = []
+
+    for offset in range(0, total_embeddings, batch_size):
+        embeddings_query = f"""
+            SELECT e.file_id, e.clip_vector, p.path, p.folder, p.filename,
+                   t.thumb_path, ex.shot_dt
+            FROM embeddings e
+            JOIN photos p ON e.file_id = p.id
+            LEFT JOIN thumbnails t ON p.id = t.file_id
+            LEFT JOIN exif ex ON p.id = ex.file_id
+            WHERE p.indexed_at IS NOT NULL
+            LIMIT {batch_size} OFFSET {offset}
+        """
+
+        rows = db_manager.execute_query(embeddings_query)
+
+        for row in rows:
+            try:
+                stored_embedding = Embedding._blob_to_numpy(row[1])
+                if stored_embedding is None:
+                    continue
+
+                stored_flat = stored_embedding.flatten().astype(np.float32)
+
+                # Check dimensions match
+                if len(query_flat) != len(stored_flat):
+                    continue
+
+                # Normalize stored vector
+                stored_norm = np.linalg.norm(stored_flat)
+                if stored_norm > 0:
+                    stored_flat = stored_flat / stored_norm
+
+                # Calculate cosine similarity (dot product of normalized vectors)
+                similarity = float(np.dot(query_flat, stored_flat))
+                similarity = max(-1.0, min(1.0, similarity))
+
+                all_similarities.append((similarity, row))
+
+            except Exception as e:
+                logger.debug(f"Failed to process embedding for file_id {row[0]}: {e}")
                 continue
 
-            # Normalize both vectors (important for cosine similarity)
-            query_norm = query_flat / (np.linalg.norm(query_flat) + 1e-8)
-            stored_norm = stored_flat / (np.linalg.norm(stored_flat) + 1e-8)
-
-            # Calculate cosine similarity
-            similarity = float(np.dot(query_norm, stored_norm))
-
-            # Ensure similarity is in valid range [-1, 1]
-            similarity = max(-1.0, min(1.0, similarity))
-
-            similarities.append((similarity, row))
-
-            # Log first few similarities for debugging
-            if i < 5:
-                logger.info(
-                    f"Similarity {i}: {similarity:.4f} for file_id {row[0]} (query_dim: {len(query_flat)}, stored_dim: {len(stored_flat)})"
-                )
-
-        except Exception as e:
-            logger.exception(f"Failed to process embedding for file_id {row[0]}: {e}")
-            continue
-
     # Sort by similarity and take top results
-    similarities.sort(key=lambda x: x[0], reverse=True)
-    top_results = similarities[:top_k]
+    all_similarities.sort(key=lambda x: x[0], reverse=True)
+    top_results = all_similarities[:top_k]
 
     # Convert to SearchResultItem objects
     results = []
@@ -593,11 +676,12 @@ async def _execute_semantic_search(
             thumb_path=row[5],
             shot_dt=datetime.fromisoformat(row[6]) if row[6] else None,
             score=similarity,
-            badges=["image"],
+            badges=["semantic"],
             snippet=None,
         )
         results.append(item)
 
+    logger.info(f"Brute-force search returned {len(results)} results")
     return results
 
 

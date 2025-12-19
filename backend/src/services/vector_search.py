@@ -58,7 +58,9 @@ class FAISSVectorSearchService:
                 # Create new index
                 self._create_new_index()
                 if self.index:
-                    logger.info(f"Created new FAISS index (dimension: {self.dimension})")
+                    logger.info(
+                        f"Created new FAISS index (dimension: {self.dimension})"
+                    )
 
         except ImportError:
             logger.warning(

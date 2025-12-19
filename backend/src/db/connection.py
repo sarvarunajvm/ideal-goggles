@@ -116,6 +116,19 @@ CREATE INDEX IF NOT EXISTS idx_faces_person_id ON faces(person_id);
 CREATE INDEX IF NOT EXISTS idx_faces_confidence ON faces(confidence);
 CREATE INDEX IF NOT EXISTS idx_thumbnails_format ON thumbnails(format);
 
+-- Additional indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_photos_filename ON photos(filename);
+CREATE INDEX IF NOT EXISTS idx_photos_modified_ts ON photos(modified_ts);
+CREATE INDEX IF NOT EXISTS idx_photos_created_ts ON photos(created_ts);
+CREATE INDEX IF NOT EXISTS idx_photos_folder_indexed ON photos(folder, indexed_at);
+CREATE INDEX IF NOT EXISTS idx_faces_file_id ON faces(file_id);
+CREATE INDEX IF NOT EXISTS idx_exif_camera_make ON exif(camera_make);
+CREATE INDEX IF NOT EXISTS idx_exif_camera_model ON exif(camera_model);
+CREATE INDEX IF NOT EXISTS idx_exif_gps ON exif(gps_lat, gps_lon);
+CREATE INDEX IF NOT EXISTS idx_embeddings_model ON embeddings(embedding_model);
+CREATE INDEX IF NOT EXISTS idx_people_active ON people(active);
+CREATE INDEX IF NOT EXISTS idx_people_name ON people(name);
+
 -- Schema version tracking
 INSERT INTO settings (key, value, updated_at) VALUES ('schema_version', '1', datetime('now'));
 INSERT INTO settings (key, value, updated_at) VALUES ('index_version', '1', datetime('now'));
@@ -477,7 +490,6 @@ class DatabaseManager:
 
 # Global database manager instance
 _db_manager: DatabaseManager | None = None
-
 
 
 def get_database_manager(db_path: str | None = None) -> DatabaseManager:

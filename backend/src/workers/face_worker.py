@@ -211,7 +211,10 @@ class FaceDetectionWorker:
         return recognition_results
 
     async def process_batch(self, photos: list[Photo]) -> list[list[Face]]:
-        """Process multiple photos for face detection."""
+        """Process multiple photos for face detection.
+
+        Returns results in the same order as input photos.
+        """
         if not photos:
             return []
 
@@ -220,22 +223,31 @@ class FaceDetectionWorker:
         # Create tasks for concurrent processing
         tasks = [self.detect_faces(photo) for photo in photos]
 
-        # Process with progress logging
-        results = []
-        for i, task in enumerate(asyncio.as_completed(tasks)):
-            result = await task
-            results.append(result)
+        # Use asyncio.gather to preserve order (critical for matching results to photos)
+        # as_completed would return results in completion order, not input order
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results and handle any exceptions
+        processed_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    f"Face detection failed for photo {photos[i].path}: {result}"
+                )
+                processed_results.append([])  # Empty list for failed detection
+            else:
+                processed_results.append(result)
 
             # Log progress periodically
             if (i + 1) % 50 == 0:
                 logger.info(f"Face detection progress: {i + 1}/{len(photos)}")
 
-        total_faces = sum(len(face_list) for face_list in results)
+        total_faces = sum(len(face_list) for face_list in processed_results)
         logger.info(
             f"Face detection completed: {total_faces} faces detected across {len(photos)} photos"
         )
 
-        return results
+        return processed_results
 
     async def enroll_person(
         self, name: str, sample_photos: list[Photo]

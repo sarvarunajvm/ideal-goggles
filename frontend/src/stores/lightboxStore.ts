@@ -32,6 +32,7 @@ interface LightboxState {
   prevPhoto: () => void;
   goToPhoto: (index: number) => void;
   setPhotos: (photos: LightboxPhoto[]) => void;
+  clearPhotos: () => void;
 }
 
 export const useLightboxStore = create<LightboxState>((set) => ({
@@ -43,13 +44,14 @@ export const useLightboxStore = create<LightboxState>((set) => ({
     set({
       isOpen: true,
       photos,
-      currentIndex: startIndex,
+      currentIndex: Math.max(0, Math.min(startIndex, photos.length - 1)),
     }),
 
   closeLightbox: () =>
     set({
       isOpen: false,
       currentIndex: 0,
+      photos: [], // Clear photos to free memory
     }),
 
   nextPhoto: () =>
@@ -73,5 +75,11 @@ export const useLightboxStore = create<LightboxState>((set) => ({
   setPhotos: (photos) =>
     set({
       photos,
+    }),
+
+  clearPhotos: () =>
+    set({
+      photos: [],
+      currentIndex: 0,
     }),
 }));

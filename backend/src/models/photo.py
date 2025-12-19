@@ -18,7 +18,9 @@ class Photo:
     size: int = 0
     created_ts: float = 0.0
     modified_ts: float = 0.0
-    sha1: str = ""  # Stored as SHA-256 hex string
+    # Note: Field is named 'sha1' for database compatibility but stores SHA-256
+    # The database column name is 'sha1' from legacy schema
+    sha1: str = ""  # Actually SHA-256 hex string (64 chars)
     phash: str | None = None
     indexed_at: float | None = None
     index_version: int = 1
@@ -42,7 +44,7 @@ class Photo:
             size=stat.st_size,
             created_ts=stat.st_ctime,
             modified_ts=stat.st_mtime,
-            sha1=cls._calculate_sha1(file_path),
+            sha1=cls._calculate_file_hash(file_path),
         )
 
     @classmethod
@@ -133,18 +135,26 @@ class Photo:
         self.indexed_at = datetime.now().timestamp()
 
     @staticmethod
-    def _calculate_sha1(file_path: str) -> str:
-        """Calculate SHA-256 hash of file (legacy name retained for compatibility)."""
-        sha1_hash = hashlib.sha256()
+    def _calculate_file_hash(file_path: str) -> str:
+        """Calculate SHA-256 hash of file.
+
+        Returns a 64-character hex string (SHA-256).
+        Note: The database field is named 'sha1' for legacy compatibility,
+        but we actually use SHA-256 for stronger collision resistance.
+        """
+        hasher = hashlib.sha256()
 
         try:
             with open(file_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    sha1_hash.update(chunk)
+                for chunk in iter(lambda: f.read(8192), b""):
+                    hasher.update(chunk)
         except Exception:
             return ""
 
-        return sha1_hash.hexdigest()
+        return hasher.hexdigest()
+
+    # Alias for backward compatibility
+    _calculate_sha1 = _calculate_file_hash
 
     def calculate_perceptual_hash(self) -> str | None:
         """Calculate perceptual hash for duplicate detection."""

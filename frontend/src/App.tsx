@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Layout from './components/Layout'
 import { apiService } from './services/apiClient'
 import { OnboardingWizard } from './components/OnboardingWizard/OnboardingWizard'
@@ -9,38 +9,66 @@ import { Toaster } from './components/ui/toaster'
 function App() {
   const [backendOk, setBackendOk] = useState<boolean | null>(null)
   const { completed: onboardingCompleted, skipOnboarding } = useOnboardingStore()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const isVisibleRef = useRef(true)
+  // Use ref to track backend status for visibility handler without causing effect re-runs
+  const backendOkRef = useRef(backendOk)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    backendOkRef.current = backendOk
+  }, [backendOk])
+
+  const checkBackend = useCallback(async () => {
+    // Skip polling if page is not visible (save battery/resources)
+    if (!isVisibleRef.current) return
+
+    try {
+      // Use shared API client with fixed port 5555
+      // Use index/status instead of health since health check may fail due to missing ML models
+      const res = await apiService.getIndexStatus()
+      setBackendOk(!!res)
+      // Once backend is ready, stop the frequent polling
+      if (res && intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    } catch {
+      setBackendOk(false)
+    }
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
-    let intervalId: NodeJS.Timeout | null = null
+    // Handle visibility changes to pause/resume polling
+    const handleVisibilityChange = () => {
+      isVisibleRef.current = document.visibilityState === 'visible'
 
-    async function check() {
-      try {
-        // Use shared API client with fixed port 5555
-        // Use index/status instead of health since health check may fail due to missing ML models
-        const res = await apiService.getIndexStatus()
-        if (!cancelled) {
-          setBackendOk(!!res)
-          // Once backend is ready, stop the frequent polling
-          if (res && intervalId) {
-            clearInterval(intervalId)
-            intervalId = null
-          }
-        }
-      } catch {
-        if (!cancelled) setBackendOk(false)
+      // Resume polling if page becomes visible and backend isn't ready
+      // Use ref to read current value without needing it in effect dependencies
+      if (isVisibleRef.current && !backendOkRef.current && !intervalRef.current) {
+        checkBackend()
+        intervalRef.current = setInterval(checkBackend, 1000)
       }
     }
 
-    check()
+    // Listen for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Initial check
+    checkBackend()
+
     // Only poll frequently while backend is not ready
     // Once ready, StatusBar components handle periodic health checks
-    intervalId = setInterval(check, 1000)
+    intervalRef.current = setInterval(checkBackend, 1000)
+
     return () => {
-      cancelled = true
-      if (intervalId) clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
-  }, [])
+  }, [checkBackend]) // Removed backendOk - use ref instead to avoid re-running effect
 
   // Show loading screen until backend becomes ready
   if (backendOk !== true) {

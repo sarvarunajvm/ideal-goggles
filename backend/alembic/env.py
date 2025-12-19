@@ -23,8 +23,13 @@ if config.config_file_name is not None:
 
 # Override sqlalchemy.url with app settings ONLY if not already set
 # This allows connection.py to override the URL for tests and custom paths
-if not config.get_main_option("sqlalchemy.url") or config.get_main_option("sqlalchemy.url") == "sqlite:///./data/photos.db":
-    config.set_main_option("sqlalchemy.url", f"sqlite:///{settings.DATA_DIR / 'photos.db'}")
+if (
+    not config.get_main_option("sqlalchemy.url")
+    or config.get_main_option("sqlalchemy.url") == "sqlite:///./data/photos.db"
+):
+    config.set_main_option(
+        "sqlalchemy.url", f"sqlite:///{settings.DATA_DIR / 'photos.db'}"
+    )
 
 # NOTE: We're using raw SQLite, not SQLAlchemy ORM models
 # For Alembic to work with explicit SQL migrations instead of autogenerate,
@@ -63,9 +68,12 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
     """
     import logging
-    logger = logging.getLogger('alembic.env')
-    logger.info(f"Running migrations online for: {config.get_main_option('sqlalchemy.url')}")
-    
+
+    logger = logging.getLogger("alembic.env")
+    logger.info(
+        f"Running migrations online for: {config.get_main_option('sqlalchemy.url')}"
+    )
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
