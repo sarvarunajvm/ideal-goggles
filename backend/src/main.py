@@ -83,22 +83,28 @@ app.add_middleware(
     PerformanceMonitoringMiddleware, threshold_ms=settings.SLOW_REQUEST_THRESHOLD_MS
 )
 
-# CORS middleware for Electron frontend
+# CORS middleware for Electron/frontend
+_allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3333",
+    "http://127.0.0.1:3333",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173",
+]
+if settings.ALLOW_NULL_ORIGIN:
+    _allowed_origins.append("null")  # Electron file:// protocol
+if settings.EXTRA_ALLOWED_ORIGINS:
+    _allowed_origins.extend(
+        origin.strip()
+        for origin in settings.EXTRA_ALLOWED_ORIGINS.split(",")
+        if origin.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    # Electron renderer in production loads from file:// which presents
-    # as Origin "null" for CORS. Allow local dev origins and null origin
-    # for Electron. Note: "null" origin is necessary for file:// protocol.
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3333",
-        "http://127.0.0.1:3333",
-        "http://localhost:5173",  # Vite default port
-        "http://127.0.0.1:5173",
-        "null",  # Electron file:// protocol
-    ],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )

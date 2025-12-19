@@ -77,9 +77,6 @@ class FAISSIndexManager:
         self._lock = threading.RLock()
         self._optimization_in_progress = False
 
-        # Background task tracking
-        self._background_tasks = set()
-
         # Load existing stats
         self._load_stats()
 
@@ -520,9 +517,9 @@ class FAISSIndexManager:
                 try:
                     # Check for automatic optimization
                     if self.should_optimize():
-                        task = asyncio.create_task(self.optimize_index())
-                        self._background_tasks.add(task)
-                        task.add_done_callback(self._background_tasks.discard)
+                        # Run in a dedicated loop inside this thread to avoid
+                        # "no running event loop" errors.
+                        asyncio.run(self.optimize_index())
 
                     # Check for automatic backup
                     last_backup = self.stats.get("last_backup")
@@ -541,9 +538,7 @@ class FAISSIndexManager:
                             should_backup = True
 
                     if should_backup:
-                        task = asyncio.create_task(self.create_backup())
-                        self._background_tasks.add(task)
-                        task.add_done_callback(self._background_tasks.discard)
+                        asyncio.run(self.create_backup())
 
                     # Save stats periodically
                     self._save_stats()
@@ -563,10 +558,6 @@ class FAISSIndexManager:
         try:
             # Save final stats
             self._save_stats()
-
-            # Wait for background tasks to complete
-            if self._background_tasks:
-                await asyncio.gather(*self._background_tasks, return_exceptions=True)
 
             logger.info("FAISS index manager shutdown complete")
 

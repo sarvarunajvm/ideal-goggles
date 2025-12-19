@@ -18,7 +18,7 @@ class Photo:
     size: int = 0
     created_ts: float = 0.0
     modified_ts: float = 0.0
-    sha1: str = ""
+    sha1: str = ""  # Stored as SHA-256 hex string
     phash: str | None = None
     indexed_at: float | None = None
     index_version: int = 1
@@ -102,8 +102,8 @@ class Photo:
         if self.size <= 0:
             errors.append("File size must be positive")
 
-        if len(self.sha1) != 40:
-            errors.append("SHA1 hash must be 40 characters")
+        if len(self.sha1) != 64:
+            errors.append("SHA-256 hash must be 64 characters")
 
         if self.phash and len(self.phash) != 16:
             errors.append("Perceptual hash must be 16 characters")
@@ -134,7 +134,7 @@ class Photo:
 
     @staticmethod
     def _calculate_sha1(file_path: str) -> str:
-        """Calculate SHA256 hash of file."""
+        """Calculate SHA-256 hash of file (legacy name retained for compatibility)."""
         sha1_hash = hashlib.sha256()
 
         try:

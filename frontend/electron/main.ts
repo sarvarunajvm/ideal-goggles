@@ -185,6 +185,8 @@ async function startBackend(): Promise<void> {
         THUMBNAILS_DIR: join(cacheDir, 'thumbs'),
         DATABASE_URL: databaseUrl,
         MODELS_DIR: modelsDir,
+        // Allow file:// (null origin) only for the packaged Electron renderer.
+        ALLOW_NULL_ORIGIN: 'true',
       };
 
       console.log('[Backend] Spawning backend process with env:', {

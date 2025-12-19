@@ -70,7 +70,7 @@ class DatabaseHelper:
                     value = excluded.value,
                     updated_at = excluded.updated_at
             """
-            db_manager.execute_write(query, (key, json_value))
+            db_manager.execute_update(query, (key, json_value))
 
         logger.info(f"Updated config keys: {list(updates.keys())}")
 

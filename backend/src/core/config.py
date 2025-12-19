@@ -60,6 +60,12 @@ class Settings(BaseSettings):
         default=1000, env="SLOW_REQUEST_THRESHOLD_MS"
     )
 
+    # CORS / security
+    # Allow "null" origin (file://) only when explicitly enabled (Electron sets this).
+    ALLOW_NULL_ORIGIN: bool = Field(default=False, env="ALLOW_NULL_ORIGIN")
+    # Comma separated list of extra allowed origins (besides the built-ins below)
+    EXTRA_ALLOWED_ORIGINS: str | None = Field(default=None, env="EXTRA_ALLOWED_ORIGINS")
+
     class Config:
         """Pydantic configuration."""
 
