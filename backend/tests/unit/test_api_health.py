@@ -153,15 +153,35 @@ class TestDependencies:
         mock_result.stdout = "tesseract 5.0.0\n"
         mock_run.return_value = mock_result
 
-        result = _check_dependencies()
+        # Mock dependencies to avoid actual imports
+        mock_numpy = MagicMock()
+        mock_numpy.__version__ = "1.26.0"
+        mock_pil = MagicMock()
+        mock_pil.__version__ = "10.0.0"
+        mock_clip = MagicMock()
+        mock_insightface = MagicMock()
+        mock_watchdog = MagicMock()
+        mock_watchdog.__version__ = "3.0.0"
 
-        assert "dependencies" in result
-        assert "all_available" in result
-        assert "critical_available" in result
+        with patch.dict(
+            "sys.modules",
+            {
+                "numpy": mock_numpy,
+                "PIL": mock_pil,
+                "clip": mock_clip,
+                "insightface": mock_insightface,
+                "watchdog": mock_watchdog,
+            },
+        ):
+            result = _check_dependencies()
 
-        # Check PIL and numpy (should be available in test environment)
-        assert result["dependencies"]["PIL"]["available"] is True
-        assert result["dependencies"]["numpy"]["available"] is True
+            assert "dependencies" in result
+            assert "all_available" in result
+            assert "critical_available" in result
+
+            # Check PIL and numpy
+            assert result["dependencies"]["PIL"]["available"] is True
+            assert result["dependencies"]["numpy"]["available"] is True
 
     @patch("subprocess.run")
     def test_check_dependencies_tesseract_not_available(self, mock_run):
@@ -170,18 +190,58 @@ class TestDependencies:
         mock_result.returncode = 1
         mock_run.return_value = mock_result
 
-        result = _check_dependencies()
+        # Mock dependencies
+        mock_numpy = MagicMock()
+        mock_numpy.__version__ = "1.26.0"
+        mock_pil = MagicMock()
+        mock_pil.__version__ = "10.0.0"
+        mock_clip = MagicMock()
+        mock_insightface = MagicMock()
+        mock_watchdog = MagicMock()
+        mock_watchdog.__version__ = "3.0.0"
 
-        assert result["dependencies"]["tesseract"]["available"] is False
+        with patch.dict(
+            "sys.modules",
+            {
+                "numpy": mock_numpy,
+                "PIL": mock_pil,
+                "clip": mock_clip,
+                "insightface": mock_insightface,
+                "watchdog": mock_watchdog,
+            },
+        ):
+            result = _check_dependencies()
+
+            assert result["dependencies"]["tesseract"]["available"] is False
 
     @patch("subprocess.run")
     def test_check_dependencies_tesseract_timeout(self, mock_run):
         """Test when Tesseract check times out."""
         mock_run.side_effect = Exception("Timeout")
 
-        result = _check_dependencies()
+        # Mock dependencies
+        mock_numpy = MagicMock()
+        mock_numpy.__version__ = "1.26.0"
+        mock_pil = MagicMock()
+        mock_pil.__version__ = "10.0.0"
+        mock_clip = MagicMock()
+        mock_insightface = MagicMock()
+        mock_watchdog = MagicMock()
+        mock_watchdog.__version__ = "3.0.0"
 
-        assert result["dependencies"]["tesseract"]["available"] is False
+        with patch.dict(
+            "sys.modules",
+            {
+                "numpy": mock_numpy,
+                "PIL": mock_pil,
+                "clip": mock_clip,
+                "insightface": mock_insightface,
+                "watchdog": mock_watchdog,
+            },
+        ):
+            result = _check_dependencies()
+
+            assert result["dependencies"]["tesseract"]["available"] is False
 
 
 class TestHealthCheck:

@@ -148,14 +148,14 @@ class TestDatabaseHelperUpdateConfig:
                 )
                 conn.commit()
 
-            # Mock execute_write method
-            db_manager.execute_write = MagicMock(return_value=None)
+            # Mock execute_update method
+            db_manager.execute_update = MagicMock(return_value=None)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 DatabaseHelper.update_config({"new_key": {"data": "value"}})
 
-                # Verify execute_write was called
-                assert db_manager.execute_write.called
+                # Verify execute_update was called
+                assert db_manager.execute_update.called
 
     def test_update_config_multiple_keys(self):
         """Test updating multiple config keys."""
@@ -175,7 +175,7 @@ class TestDatabaseHelperUpdateConfig:
                 )
                 conn.commit()
 
-            db_manager.execute_write = MagicMock(return_value=None)
+            db_manager.execute_update = MagicMock(return_value=None)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 updates = {
@@ -187,7 +187,7 @@ class TestDatabaseHelperUpdateConfig:
                 DatabaseHelper.update_config(updates)
 
                 # Should be called once for each key
-                assert db_manager.execute_write.call_count == 3
+                assert db_manager.execute_update.call_count == 3
 
     def test_update_config_serializes_to_json(self):
         """Test that config values are serialized to JSON."""
@@ -207,13 +207,13 @@ class TestDatabaseHelperUpdateConfig:
                 )
                 conn.commit()
 
-            db_manager.execute_write = MagicMock(return_value=None)
+            db_manager.execute_update = MagicMock(return_value=None)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 DatabaseHelper.update_config({"test": {"nested": {"data": [1, 2, 3]}}})
 
                 # Check that JSON was serialized
-                call_args = db_manager.execute_write.call_args
+                call_args = db_manager.execute_update.call_args
                 assert call_args is not None
                 # The second argument should be the JSON-serialized value
                 assert '"nested"' in call_args[0][1][1]
@@ -589,10 +589,8 @@ class TestDatabaseHelperCleanupOrphanedRecords:
                 (99999, "/orphan.jpg", 200, 200, "JPEG", 1234567890.0),
             )
 
-            # Mock execute_write to return rowcount
-            mock_result = MagicMock()
-            mock_result.rowcount = 1
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            # Mock execute_update to return rowcount
+            db_manager.execute_update = MagicMock(return_value=1)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
@@ -611,9 +609,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
                 (99999, "2023-01-01"),
             )
 
-            mock_result = MagicMock()
-            mock_result.rowcount = 1
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            db_manager.execute_update = MagicMock(return_value=1)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
@@ -625,28 +621,26 @@ class TestDatabaseHelperCleanupOrphanedRecords:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
 
-            mock_result = MagicMock()
-            mock_result.rowcount = 0
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            db_manager.execute_update = MagicMock(return_value=0)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "embeddings" in cleaned
+                assert cleaned["embeddings"] == 0
 
     def test_cleanup_orphaned_faces(self):
         """Test cleaning up orphaned faces."""
         with tempfile.TemporaryDirectory() as temp_dir:
             db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
 
-            mock_result = MagicMock()
-            mock_result.rowcount = 0
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            db_manager.execute_update = MagicMock(return_value=0)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
                 assert "faces" in cleaned
+                assert cleaned["faces"] == 0
 
     def test_cleanup_no_orphaned_records(self):
         """Test cleanup when no orphaned records exist."""
@@ -671,9 +665,7 @@ class TestDatabaseHelperCleanupOrphanedRecords:
                 (photo_id, "/valid_thumb.jpg", 200, 200, "JPEG", 1234567890.0),
             )
 
-            mock_result = MagicMock()
-            mock_result.rowcount = 0
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            db_manager.execute_update = MagicMock(return_value=0)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
@@ -685,13 +677,15 @@ class TestDatabaseHelperCleanupOrphanedRecords:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_manager = DatabaseManager(str(Path(temp_dir) / "test.db"))
 
-            # Mock execute_write to return something without rowcount
-            mock_result = MagicMock()
-            del mock_result.rowcount
-            db_manager.execute_write = MagicMock(return_value=mock_result)
+            # Mock execute_update to return something that is not an int (unlikely but safe check)
+            # Actually, execute_update returns int (rowcount) directly now.
+            # So this test is less relevant or should check for return type being handled if it's not int?
+            # Or assume execute_update always returns int.
+            # If we want to simulate failure to get count, we can return 0.
+            db_manager.execute_update = MagicMock(return_value=0)
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
                 cleaned = DatabaseHelper.cleanup_orphaned_records()
 
-                # Should handle missing rowcount gracefully
+                # Should handle missing rowcount gracefully (by getting 0)
                 assert all(count == 0 for count in cleaned.values())

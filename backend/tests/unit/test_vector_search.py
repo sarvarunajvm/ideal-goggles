@@ -1,10 +1,9 @@
 """Unit tests for vector search service."""
 
 import os
-import pickle
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
@@ -36,7 +35,7 @@ class TestFAISSVectorSearchService:
             assert service.dimension == 512
             assert service.index_path == temp_index_path
             assert service.metadata_path == temp_index_path.replace(
-                ".bin", "_metadata.pkl"
+                ".bin", "_metadata.json"
             )
             assert service.index is not None
             assert service.id_to_file_id == {}
@@ -52,7 +51,7 @@ class TestFAISSVectorSearchService:
 
             # Create mock existing files
             Path(temp_index_path).touch()
-            metadata_path = temp_index_path.replace(".bin", "_metadata.pkl")
+            metadata_path = temp_index_path.replace(".bin", "_metadata.json")
             metadata = {
                 "id_to_file_id": {0: 10, 1: 20},
                 "file_id_to_index": {10: 0, 20: 1},
@@ -61,7 +60,7 @@ class TestFAISSVectorSearchService:
             }
 
             with patch("builtins.open", create=True):
-                with patch("pickle.load", return_value=metadata):
+                with patch("json.load", return_value=metadata):
                     Path(metadata_path).touch()
                     service = FAISSVectorSearchService(index_path=temp_index_path)
 
@@ -70,7 +69,7 @@ class TestFAISSVectorSearchService:
     def test_initialization_no_faiss(self, temp_index_path):
         """Test initialization when FAISS is not available."""
         with patch(
-            "builtins.__import__", side_effect=ImportError("No module named 'faiss'")
+            "src.services.vector_search.faiss", new=None
         ):
             with pytest.raises(RuntimeError, match="FAISS not available"):
                 FAISSVectorSearchService(index_path=temp_index_path)
@@ -230,12 +229,12 @@ class TestFAISSVectorSearchService:
             service._index_dirty = True
 
             with patch("builtins.open", create=True):
-                with patch("pickle.dump") as mock_pickle:
+                with patch("json.dump") as mock_json:
                     result = service.save_index()
 
                     assert result is True
                     mock_write.assert_called_once_with(mock_index, temp_index_path)
-                    mock_pickle.assert_called_once()
+                    mock_json.assert_called_once()
 
     def test_batch_search(self, temp_index_path):
         """Test batch vector search."""
@@ -370,7 +369,7 @@ class TestFAISSVectorSearchService:
             service.file_id_to_index = {10: 0, 30: 2}
 
             with patch("builtins.open", create=True):
-                with patch("pickle.dump"):
+                with patch("json.dump"):
                     result = service.rebuild_index()
 
             assert result is True

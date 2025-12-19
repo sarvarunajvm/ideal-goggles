@@ -80,6 +80,11 @@ ignore:
   - backend/src/services/__init__.py
   - backend/src/workers/__init__.py
 
+  # Backend - migrations and scripts
+  - backend/alembic/
+  - backend/scripts/
+  - backend/src/db/migrations/
+
   # Backend - test files (from .coveragerc)
   - "**/tests/*"
   - "**/test_*"

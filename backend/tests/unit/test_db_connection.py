@@ -351,6 +351,33 @@ class TestDatabaseManager:
 
                     mock_run_migrations.assert_called_once_with(from_version=0)
 
+    def test_run_migrations_legacy_fallback(self):
+        """Test fallback to legacy migrations when alembic config is missing."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "test.db"
+            db_manager = DatabaseManager(str(db_path))
+
+            with patch("pathlib.Path.exists") as mock_exists:
+                # Make alembic.ini not exist, but others exist
+                def side_effect(self):
+                    return not str(self).endswith("alembic.ini")
+
+                # We need to be careful not to break other path checks
+                # So we only mock the specific check in _run_migrations
+                # But since we can't easily target just that, let's mock _run_legacy_migrations
+
+                with patch.object(db_manager, "_run_legacy_migrations") as mock_legacy:
+                    # Force alembic import to fail or config check to fail
+                    with patch("src.db.connection.Path") as mock_path_cls:
+                        mock_path_instance = MagicMock()
+                        mock_path_cls.return_value = mock_path_instance
+                        mock_path_instance.parent.parent.parent.__truediv__.return_value.exists.return_value = False
+
+                        # We need to trigger _run_migrations
+                        # But simpler approach: mock ImportError for alembic
+                        with patch.dict("sys.modules", {"alembic": None}):
+                             db_manager._run_migrations(from_version=0)
+                             mock_legacy.assert_called_once_with(0)
 
 class TestDatabaseManagerGlobals:
     """Test global database manager functions."""
@@ -471,10 +498,12 @@ class TestDatabaseManagerGlobals:
             conn = sqlite3.connect(db_path)
             conn.close()
 
-            db_manager = DatabaseManager(str(db_path))
-            # After initialization, it should have created the schema
+            db_manager = DatabaseManager.__new__(DatabaseManager)
+            db_manager.db_path = Path(db_path)
+
+            # Should return 0 when settings table doesn't exist
             version = db_manager._get_schema_version()
-            assert version >= 0
+            assert version == 0
 
     def test_get_latest_migration_version_with_no_migrations(self):
         """Test getting latest migration version when no migrations exist."""
@@ -637,11 +666,10 @@ class TestDatabaseManagerGlobals:
 
             db_manager = DatabaseManager(str(db_path))
 
-            # Mock migrations_dir to point to empty directory
-            # Since patching __truediv__ is complex, just ensure no migration files exist
-            # The method will look in the real src/db/migrations but we can test it returns 0
-            version = db_manager._get_latest_migration_version()
-            # Should return the version from existing migrations (if any) or 0
+            # Mock migrations directory not existing
+            with patch.object(Path, "exists", return_value=False):
+                version = db_manager._get_latest_migration_version()
+                assert version == 1
 
     def test_run_migrations_with_invalid_migration_file(self):
         """Test _run_migrations skips invalid migration files."""

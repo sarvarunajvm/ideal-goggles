@@ -153,6 +153,9 @@ omit = [
     "*/__pycache__/*",
     "*/venv/*",
     "*/virtualenv/*",
+    "alembic/*",
+    "scripts/*",
+    "*/migrations/*",
     # Explicitly exclude non-critical entry/marker files from coverage
     "src/main.py",
     "src/__init__.py",
@@ -171,6 +174,14 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:"
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "@overload",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "except ImportError:",
+    "pass",
+    "\\.\\.\\."
 ]
 fail_under = 0

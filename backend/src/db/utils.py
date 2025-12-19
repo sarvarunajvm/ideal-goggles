@@ -220,32 +220,32 @@ class DatabaseHelper:
             DELETE FROM thumbnails
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
-        result = db_manager.execute_write(query)
-        cleaned["thumbnails"] = result.rowcount if hasattr(result, "rowcount") else 0
+        result = db_manager.execute_update(query)
+        cleaned["thumbnails"] = result
 
         # Clean orphaned EXIF
         query = """
             DELETE FROM exif
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
-        result = db_manager.execute_write(query)
-        cleaned["exif"] = result.rowcount if hasattr(result, "rowcount") else 0
+        result = db_manager.execute_update(query)
+        cleaned["exif"] = result
 
         # Clean orphaned embeddings
         query = """
             DELETE FROM embeddings
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
-        result = db_manager.execute_write(query)
-        cleaned["embeddings"] = result.rowcount if hasattr(result, "rowcount") else 0
+        result = db_manager.execute_update(query)
+        cleaned["embeddings"] = result
 
         # Clean orphaned faces
         query = """
             DELETE FROM faces
             WHERE file_id NOT IN (SELECT id FROM photos)
         """
-        result = db_manager.execute_write(query)
-        cleaned["faces"] = result.rowcount if hasattr(result, "rowcount") else 0
+        result = db_manager.execute_update(query)
+        cleaned["faces"] = result
 
         logger.info(f"Cleaned orphaned records: {cleaned}")
         return cleaned

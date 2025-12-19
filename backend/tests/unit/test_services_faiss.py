@@ -1,1 +1,0 @@
-test_faiss_manager.py

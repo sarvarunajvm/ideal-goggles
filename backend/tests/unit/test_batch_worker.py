@@ -16,16 +16,37 @@ from src.workers.batch_worker import (
 )
 
 
+class MockJobStore:
+    def __init__(self, jobs=None):
+        self.jobs = jobs or {
+            "test_job_1": {
+                "status": "pending",
+                "processed_items": 0,
+                "failed_items": 0,
+            }
+        }
+
+    def get_sync(self, job_id):
+        return self.jobs.get(job_id)
+
+    def update_sync(self, job_id, key, value):
+        if job_id in self.jobs:
+            self.jobs[job_id][key] = value
+
+    def update_job_sync(self, job_id, updates):
+        if job_id in self.jobs:
+            self.jobs[job_id].update(updates)
+
+    def __getitem__(self, item):
+        return self.jobs[item]
+
+    def get(self, key, default=None):
+        return self.jobs.get(key, default)
+
 @pytest.fixture
 def mock_job_store():
     """Create a mock job store."""
-    return {
-        "test_job_1": {
-            "status": "pending",
-            "processed_items": 0,
-            "failed_items": 0,
-        }
-    }
+    return MockJobStore()
 
 
 @pytest.fixture
@@ -75,7 +96,7 @@ class TestBatchExport:
     @pytest.mark.asyncio
     async def test_process_batch_export_job_not_found(self):
         """Test batch export when job not found in store."""
-        job_store = {}
+        job_store = MockJobStore({})
         await process_batch_export(
             job_id="missing_job",
             photo_ids=["1", "2"],
@@ -306,7 +327,7 @@ class TestBatchDelete:
     @pytest.mark.asyncio
     async def test_process_batch_delete_job_not_found(self):
         """Test batch delete when job not found in store."""
-        job_store = {}
+        job_store = MockJobStore({})
         await process_batch_delete(
             job_id="missing_job",
             photo_ids=["1", "2"],
@@ -532,7 +553,7 @@ class TestBatchTag:
     @pytest.mark.asyncio
     async def test_process_batch_tag_job_not_found(self):
         """Test batch tag when job not found in store."""
-        job_store = {}
+        job_store = MockJobStore({})
         await process_batch_tag(
             job_id="missing_job",
             photo_ids=["1", "2"],
