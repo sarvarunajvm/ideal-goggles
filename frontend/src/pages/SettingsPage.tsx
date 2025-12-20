@@ -396,6 +396,7 @@ export default function SettingsPage() {
                                 ? 'destructive'
                                 : 'secondary'
                           }
+                          data-testid="indexing-status"
                         >
                           {indexStatus.status}
                         </Badge>

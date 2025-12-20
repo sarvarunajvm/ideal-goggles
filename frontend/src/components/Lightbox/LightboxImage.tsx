@@ -98,6 +98,7 @@ export function LightboxImage({ photo }: LightboxImageProps) {
           onError={handleImageError}
           className="max-h-full max-w-full object-contain"
           draggable={false}
+          data-testid="lightbox-image"
         />
       )}
     </div>

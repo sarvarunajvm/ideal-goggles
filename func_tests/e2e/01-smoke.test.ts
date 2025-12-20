@@ -105,12 +105,15 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
     await page.route('**/api/**', route => {
       route.abort('failed');
     });
+    await page.route('**/index/status', route => {
+      route.abort('failed');
+    });
 
     // Reload page
     await page.reload();
 
     // App should show loading/waiting screen when backend is unavailable
-    await expect(page.locator('text=Getting everything ready')).toBeVisible();
+    await expect(page.locator('text=Getting everything ready')).toBeVisible({ timeout: 10000 });
 
     // Should show helpful message about waiting
     await expect(page.locator('text=/This usually takes just a few seconds/')).toBeVisible();

@@ -174,7 +174,7 @@ function CompactSearchBar({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="search-input">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           {/* Mode icons on the left */}
@@ -421,7 +421,7 @@ function ResultsGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3" data-testid="search-results">
       {results.map(item => {
         const safeFilename = sanitizeFilename(item.filename)
 
@@ -430,6 +430,7 @@ function ResultsGrid({
             key={item.file_id}
             className="group cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
             onClick={() => onItemClick(item)}
+            data-testid="search-result-item"
           >
             <div className="relative aspect-square bg-muted">
               {item.thumb_path ? (
@@ -638,7 +639,7 @@ export default function SearchPage() {
 
 
   return (
-    <>
+    <div data-testid="search-page" className="h-screen flex flex-col">
       {/* Compact Search Header */}
       <div className="bg-card border-b">
         <div className="p-4">
@@ -674,7 +675,7 @@ export default function SearchPage() {
         <div className="max-w-[1920px] mx-auto p-4">
           {loading ? (
             // Loading skeleton
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3" data-testid="loading-indicator">
               {Array.from({ length: 24 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="aspect-square" />
@@ -740,6 +741,6 @@ export default function SearchPage() {
 
       {/* Lightbox */}
       <Lightbox />
-    </>
+    </div>
   )
 }

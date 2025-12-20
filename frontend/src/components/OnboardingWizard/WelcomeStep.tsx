@@ -34,7 +34,7 @@ export function WelcomeStep() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="welcome-step">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground">
           Welcome to Ideal Goggles
@@ -63,12 +63,14 @@ export function WelcomeStep() {
         <Button
           onClick={handleSkip}
           className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all"
+          data-testid="skip-onboarding-btn"
         >
           Skip setup
         </Button>
         <Button
           onClick={nextStep}
           className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all"
+          data-testid="get-started-btn"
         >
           Get Started
         </Button>

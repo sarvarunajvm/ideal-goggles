@@ -165,7 +165,7 @@ export function IndexingStep() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="indexing-step">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-foreground">
           Setting Up Your Photo Library
@@ -178,7 +178,7 @@ export function IndexingStep() {
       {/* Status display */}
       <div className="rounded-lg border border-border/50 bg-background/50 p-6">
         {error ? (
-          <div className="space-y-4">
+          <div className="space-y-4" data-testid="indexing-error">
             <div className="flex items-center space-x-3 text-destructive">
               <AlertCircle className="h-6 w-6" />
               <div className="flex-1">
@@ -197,6 +197,7 @@ export function IndexingStep() {
                 disabled={isRetrying || retryAttempts >= 3}
                 size="sm"
                 className="!bg-gradient-to-r !from-[rgb(var(--red-rgb))] !to-[rgb(var(--red-rgb))] hover:!from-[rgb(var(--red-rgb))]/80 hover:!to-[rgb(var(--red-rgb))]/80 !text-white !border-[rgb(var(--red-rgb))]/50 !shadow-[var(--shadow-red)] hover:!shadow-[var(--shadow-red)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+                data-testid="retry-indexing-btn"
               >
                 {isRetrying ? (
                   <div className="flex items-center space-x-2">
@@ -217,7 +218,7 @@ export function IndexingStep() {
             </div>
           </div>
         ) : isComplete ? (
-          <div className="flex items-center space-x-3 text-green-400">
+          <div className="flex items-center space-x-3 text-green-400" data-testid="indexing-complete">
             <CheckCircle2 className="h-6 w-6" />
             <div>
               <p className="font-medium">All done!</p>
@@ -249,7 +250,7 @@ export function IndexingStep() {
             </div>
 
             {/* Enhanced Progress bar with phase indicator */}
-            <div className="space-y-3">
+            <div className="space-y-3" data-testid="indexing-progress">
               {/* Current phase badge */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -266,7 +267,7 @@ export function IndexingStep() {
               </div>
 
               {/* Progress bar */}
-              <div className="h-4 w-full overflow-hidden rounded-full bg-muted/50 border border-border/50 shadow-inner">
+              <div className="h-4 w-full overflow-hidden rounded-full bg-muted/50 border border-border/50 shadow-inner" data-testid="progress-bar">
                 {status?.progress?.total_files === 0 ? (
                   // Indeterminate progress bar for discovery phase
                   <div className="h-full bg-gradient-to-r from-primary via-yellow-300 to-primary animate-pulse">
@@ -405,6 +406,7 @@ export function IndexingStep() {
           onClick={handleNext}
           disabled={!isComplete}
           className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+          data-testid="continue-after-index-btn"
         >
           {isComplete ? 'Continue' : 'Waiting...'}
         </Button>

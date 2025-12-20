@@ -60,7 +60,10 @@ export function OnboardingWizard() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-hidden"
+      data-testid="onboarding-modal"
+    >
       <div className="w-full max-w-3xl rounded-lg bg-card border border-border/50 p-6 shadow-2xl my-auto max-h-[90vh] flex flex-col overflow-hidden">
         {/* Progress indicator */}
         <div className="mb-6">

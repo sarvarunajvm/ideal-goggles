@@ -21,13 +21,14 @@ interface MetadataRowProps {
   icon: React.ReactNode;
   label: string;
   value: string | number | undefined;
+  testId?: string;
 }
 
-function MetadataRow({ icon, label, value }: MetadataRowProps) {
+function MetadataRow({ icon, label, value, testId }: MetadataRowProps) {
   if (!value) return null;
 
   return (
-    <div className="flex items-start space-x-3 py-2">
+    <div className="flex items-start space-x-3 py-2" data-testid={testId}>
       <div className="flex-shrink-0 text-primary">{icon}</div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
@@ -41,7 +42,10 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
   const { metadata } = photo;
 
   return (
-    <div className="h-full w-80 overflow-y-auto bg-card/95 backdrop-blur border-l border-primary/20 p-6 pt-20">
+    <div 
+      className="h-full w-80 overflow-y-auto bg-card/95 backdrop-blur border-l border-primary/20 p-6 pt-20"
+      data-testid="lightbox-metadata"
+    >
       {/* Photo Details - Combined filename and path */}
       <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/10 to-[rgb(var(--cyan-rgb))]/15 border border-[rgb(var(--cyan-rgb))]/20 shadow-[var(--shadow-cyan)]">
         <div className="flex items-center space-x-2 mb-3">
@@ -51,7 +55,7 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
         <div className="space-y-3">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Filename</p>
-            <p className="text-sm text-foreground break-all font-mono">{photo.filename}</p>
+            <p className="text-sm text-foreground break-all font-mono" data-testid="metadata-filename">{photo.filename}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Location</p>
@@ -131,6 +135,7 @@ export function LightboxMetadata({ photo }: LightboxMetadataProps) {
             icon={<MapPin className="h-5 w-5" />}
             label="Dimensions"
             value={`${metadata.width} × ${metadata.height}`}
+            testId="metadata-dimensions"
           />
         </div>
       )}

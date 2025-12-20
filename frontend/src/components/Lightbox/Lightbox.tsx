@@ -58,6 +58,7 @@ export function Lightbox() {
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm"
           onClick={closeLightbox}
+          data-testid="lightbox"
         >
           {/* Main content area */}
           <div
@@ -86,7 +87,10 @@ export function Lightbox() {
           </div>
 
           {/* Photo counter */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-card/95 backdrop-blur border border-[rgb(var(--cyan-rgb))]/30 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/10 to-[rgb(var(--cyan-rgb))]/15 text-[var(--neon-cyan)] shadow-[var(--shadow-cyan)] text-center">
+          <div 
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-card/95 backdrop-blur border border-[rgb(var(--cyan-rgb))]/30 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[rgb(var(--cyan-rgb))]/10 to-[rgb(var(--cyan-rgb))]/15 text-[var(--neon-cyan)] shadow-[var(--shadow-cyan)] text-center"
+            data-testid="lightbox-counter"
+          >
             {currentIndex + 1} / {photos.length}
           </div>
         </motion.div>

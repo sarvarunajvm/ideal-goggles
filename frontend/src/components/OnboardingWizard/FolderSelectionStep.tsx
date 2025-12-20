@@ -56,7 +56,7 @@ export function FolderSelectionStep() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="folder-selection-step">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-foreground">
           Where Are Your Photos?
@@ -151,6 +151,7 @@ export function FolderSelectionStep() {
           onClick={handleSelectFolder}
           disabled={isSelecting}
           className="w-full !bg-gradient-to-r !from-[rgb(var(--pink-rgb))] !to-[rgb(var(--pink-rgb))] hover:!from-[rgb(var(--pink-rgb))]/80 hover:!to-[rgb(var(--pink-rgb))]/80 !text-black !border-[rgb(var(--pink-rgb))]/50 !shadow-[var(--shadow-pink)] hover:!shadow-[var(--shadow-pink)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+          data-testid="add-folder-btn"
         >
           <FolderPlus className="h-5 w-5 mr-2" />
           <span>
@@ -171,6 +172,7 @@ export function FolderSelectionStep() {
           onClick={handleNext}
           disabled={selectedFolders.length === 0}
           className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100"
+          data-testid="continue-btn"
         >
           Next
         </Button>

@@ -69,7 +69,7 @@ export function CompleteStep() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="complete-step">
       <div className="text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-900/30 border border-green-600/50">
           <CheckCircle className="h-10 w-10 text-green-400" />
@@ -157,6 +157,7 @@ export function CompleteStep() {
           onClick={handleFinish}
           size="lg"
           className="!bg-gradient-to-r !from-[rgb(var(--gold-rgb))] !to-[rgb(var(--gold-rgb))] hover:!from-[rgb(var(--gold-rgb))]/80 hover:!to-[rgb(var(--gold-rgb))]/80 !text-black !border-[rgb(var(--gold-rgb))]/50 !shadow-[var(--shadow-gold)] hover:!shadow-[var(--shadow-gold)] hover:scale-105 !font-semibold transition-all px-8"
+          data-testid="start-using-btn"
         >
           Start Using Ideal Goggles
         </Button>

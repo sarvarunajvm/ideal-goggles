@@ -66,7 +66,7 @@ test.describe('@P0 Critical User Flows', () => {
       expect(isEnabled).toBeTruthy();
 
       // Mock and perform search
-      await page.route('**/api/search/text**', route => {
+      await page.route('**/api/search*', route => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -114,6 +114,7 @@ test.describe('@P0 Critical User Flows', () => {
       // Intercept all API calls to simulate failure BEFORE navigation
       await page.route('**/health', route => route.abort('failed'));
       await page.route('**/api/**', route => route.abort('failed'));
+      await page.route('**/index/status', route => route.abort('failed'));
 
       // Navigate directly without using basePage.goto() which waits for nav
       await page.goto('http://localhost:3333');

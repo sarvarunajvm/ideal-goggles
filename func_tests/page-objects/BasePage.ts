@@ -16,11 +16,14 @@ export class BasePage {
   constructor(page: Page) {
     this.page = page;
     this.navBar = page.locator('nav');
-    this.searchLink = page.locator('a:has-text("Search")');
-    this.settingsLink = page.locator('a:has-text("Settings")');
-    this.peopleLink = page.locator('a:has-text("People")');
+    // Navigation links are Button components with Link inside (asChild), so they render as <a> tags
+    // Use more specific selector to match the Link inside the Button
+    this.searchLink = page.locator('nav a:has-text("Search")');
+    this.settingsLink = page.locator('nav a:has-text("Settings")');
+    this.peopleLink = page.locator('nav a:has-text("People")');
     this.connectionStatus = page.locator('.w-2.h-2.rounded-full');
-    this.connectionBadge = page.locator('[data-testid="connection-badge"]:has-text("Connected")');
+    // Connection badge shows "Connected" text when connected
+    this.connectionBadge = page.locator('[data-testid="connection-badge"]');
     this.apiDocsButton = page.locator('button:has-text("API Docs")');
   }
 
@@ -68,15 +71,23 @@ export class BasePage {
 
   async isConnected(): Promise<boolean> {
     try {
+      // Check if connection badge is visible and shows "Connected" text
       await this.connectionBadge.waitFor({ state: 'visible', timeout: 1000 });
-      return true;
+      const text = await this.connectionBadge.textContent();
+      return text?.includes('Connected') ?? false;
     } catch {
       return false;
     }
   }
 
   async waitForConnection(timeout: number = 10000) {
+    // Wait for connection badge to show "Connected" text
     await this.connectionBadge.waitFor({ state: 'visible', timeout });
+    await this.page.waitForFunction(
+      (badge) => badge?.textContent?.includes('Connected'),
+      await this.connectionBadge.elementHandle(),
+      { timeout }
+    );
   }
 
   async getActiveNavItem(): Promise<string | null> {

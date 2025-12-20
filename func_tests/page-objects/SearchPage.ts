@@ -15,15 +15,21 @@ export class SearchPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
+    // Search input placeholder changes based on mode: "Search by filename, date, or text..." or "Describe what you're looking for..."
     this.searchInput = page.locator('input[type="text"][placeholder*="Search"], input[type="text"][placeholder*="Describe"]');
+    // Search button is a submit button with text "Search"
     this.searchButton = page.locator('button[type="submit"]:has-text("Search")');
-    // Updated to match current UI with Quick Find (Search icon) and Smart Search (Sparkles icon)
+    // Search mode buttons use aria-label attributes
     this.textSearchButton = page.locator('button[aria-label*="Quick Find"]');
     this.semanticSearchButton = page.locator('button[aria-label*="Smart Search"]');
     this.imageSearchButton = page.locator('button[aria-label*="Similar Photos"]');
+    // Filter button has title="Advanced filters"
     this.filterButton = page.locator('button[title="Advanced filters"]');
+    // Results are displayed in a grid
     this.resultsContainer = page.locator('.grid').first(); // Grid of results
+    // Empty state message
     this.emptyState = page.locator('text=Start searching your photos');
+    // Upload area for image search mode
     this.uploadArea = page.locator('text=Drop an image or click to browse');
     this.loadingSpinner = page.locator('.animate-spin');
   }
@@ -58,11 +64,17 @@ export class SearchPage extends BasePage {
 
   async getSearchResults(): Promise<number> {
     // Count Card elements in the results grid
-    const results = await this.page.locator('.grid > div.group').count();
+    const results = await this.page.locator('[data-testid="search-result-item"]').count();
     return results;
   }
 
   async getActiveSearchMode(): Promise<string | null> {
+    // Check if image mode is active by looking for upload area (image mode shows upload area instead of input)
+    const uploadAreaVisible = await this.uploadArea.isVisible().catch(() => false);
+    if (uploadAreaVisible) {
+      return 'Image Search';
+    }
+
     // Check the placeholder text to determine active mode
     const placeholder = await this.searchInput.getAttribute('placeholder').catch(() => null);
 
@@ -74,14 +86,8 @@ export class SearchPage extends BasePage {
       }
     }
 
-    // Check if image mode is active by looking for upload area
-    const uploadAreaVisible = await this.uploadArea.isVisible().catch(() => false);
-    if (uploadAreaVisible) {
-      return 'Image Search';
-    }
-
-    // Default to Text Search (the default mode)
-    return 'Text Search';
+    // Default to Semantic Search (the default mode in the current implementation)
+    return 'Semantic Search';
   }
 
   async toggleFilters() {
