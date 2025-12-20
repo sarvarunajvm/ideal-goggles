@@ -14,7 +14,7 @@ export default defineConfig({
   timeout: 60 * 1000,
 
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
 
   /* Fail the build on CI if you accidentally left test.only in the source code */
   forbidOnly: !!process.env.CI,
@@ -23,7 +23,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   /* Opt out of parallel tests on CI */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
 
   /* Reporter to use */
   reporter: [
@@ -37,7 +37,8 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: 'http://localhost:3333',
+    // Use 127.0.0.1 to avoid IPv6 ::1 resolution issues (Vite/uvicorn may bind differently).
+    baseURL: 'http://127.0.0.1:3333',
 
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
@@ -71,19 +72,27 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: 'cd .. && pnpm run dev:frontend',
-          port: 3333,
+          // Use exec so Playwright can reliably terminate the dev server (avoid orphaned vite processes)
+          command:
+            'cd .. && exec node node_modules/vite/bin/vite.js --config frontend/vite.config.ts --host 127.0.0.1 --port 3333',
+          // Use explicit URL (127.0.0.1) so we don't get tripped up by an unrelated ::1 listener on localhost
+          url: 'http://127.0.0.1:3333',
           timeout: 120 * 1000,
-          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
+          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER,
         },
         {
-          command:
-            'cd ../backend && python3 init_test_db.py && DATABASE_URL=sqlite+aiosqlite:///test_data/photos.db python3 -m src.main',
-          port: 5555,
+          // Use exec so Playwright can reliably terminate the backend (avoid orphaned python processes)
+          command: 'cd ../backend && python3 init_test_db.py && exec python3 -m src.main',
+          // Use explicit URL (127.0.0.1) for the same reason as above
+          url: 'http://127.0.0.1:5555/health',
           timeout: 120 * 1000,
-          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER || !process.env.CI,
+          reuseExistingServer: !!process.env.REUSE_EXISTING_SERVER,
           env: {
             DATABASE_URL: 'sqlite+aiosqlite:///test_data/photos.db',
+            // Enable backend test-mode hooks (e.g. predictable People enrollment without real faces)
+            E2E_TEST: '1',
+            // Ensure backend settings parsing isn't broken by Playwright/Node DEBUG envs
+            DEBUG: 'false',
           },
         },
       ],

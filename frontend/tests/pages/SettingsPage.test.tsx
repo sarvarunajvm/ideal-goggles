@@ -5,8 +5,6 @@ import { MemoryRouter } from 'react-router-dom'
 import SettingsPage from '../../src/pages/SettingsPage'
 jest.setTimeout(30000)
 
-// Use fake timers within tests where debounce needs controlling
-
 // Mock toast and Toaster dependency shape to avoid UI internals
 // Create stable mock inside factory to prevent infinite loops from unstable references
 const mockToast = jest.fn()
@@ -85,6 +83,12 @@ describe('SettingsPage', () => {
     })
   }
 
+  const waitDebounce = async () => {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1100))
+    })
+  }
+
   test('loads initial data and shows settings UI', async () => {
     renderPage()
 
@@ -109,21 +113,12 @@ describe('SettingsPage', () => {
 
     const addButton = await screen.findByRole('button', { name: 'Add' }, { timeout: 10000 })
 
-    // Use fake timers before triggering debounce scheduling
-    jest.useFakeTimers()
     await userEvent.click(addButton)
-    await flushPromises()
-
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-      jest.runOnlyPendingTimers()
-    })
+    await waitDebounce()
 
     await waitFor(() => {
       expect(apiService.updateRoots).toHaveBeenCalled()
     })
-
-    jest.useRealTimers()
   }, 20000)
 
   test('toggles feature switches and triggers debounced saves', async () => {
@@ -135,38 +130,23 @@ describe('SettingsPage', () => {
 
     await screen.findByRole('button', { name: 'Add' }, { timeout: 10000 })
 
-    jest.useFakeTimers()
-
     // OCR toggle should exist (available in features)
     const ocrSwitch = screen.getByLabelText('Text Recognition')
     await userEvent.click(ocrSwitch)
-    await flushPromises()
-
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-      jest.runOnlyPendingTimers()
-    })
+    await waitDebounce()
     expect(apiService.updateConfig).toHaveBeenCalledWith({ ocr_enabled: true })
 
     // Semantic Search toggle
     const semanticSwitch = screen.getByLabelText('Smart Search')
     await userEvent.click(semanticSwitch)
-    await flushPromises()
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-      jest.runOnlyPendingTimers()
-    })
+    await waitDebounce()
     expect(apiService.updateConfig).toHaveBeenCalledWith({ semantic_search_enabled: false })
 
     // Face Search toggle
     const faceSwitch = screen.getByLabelText('People Search')
     await userEvent.click(faceSwitch)
-    await flushPromises()
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-    })
+    await waitDebounce()
     expect(apiService.updateConfig).toHaveBeenCalledWith({ face_search_enabled: true })
-    jest.useRealTimers()
   }, 20000)
 
   test('selects OCR languages when OCR enabled', async () => {
@@ -178,25 +158,15 @@ describe('SettingsPage', () => {
 
     await screen.findByRole('button', { name: 'Add' }, { timeout: 10000 })
 
-    jest.useFakeTimers()
-
     // Enable OCR first
     await userEvent.click(screen.getByLabelText('Text Recognition'))
-    await flushPromises()
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-    })
+    await waitDebounce()
 
     // Select English and Tamil
     await userEvent.click(screen.getByLabelText('English'))
     await userEvent.click(screen.getByLabelText('Tamil'))
-    await flushPromises()
-
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-    })
+    await waitDebounce()
     expect(apiService.updateConfig).toHaveBeenCalledWith({ ocr_languages: ['eng', 'tam'] })
-    jest.useRealTimers()
   }, 20000)
 
   test('start indexing and full refresh trigger API calls', async () => {
@@ -256,16 +226,11 @@ describe('SettingsPage', () => {
     const firstFolder = screen.getByText('/a')
     const row = firstFolder.closest('div') as HTMLElement
     const removeBtn = within(row).getByRole('button')
-    jest.useFakeTimers()
     await userEvent.click(removeBtn)
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-      jest.runOnlyPendingTimers()
-    })
+    await waitDebounce()
     await waitFor(() => {
       expect(apiService.updateRoots).toHaveBeenCalled()
     })
-    jest.useRealTimers()
   }, 20000)
 
   test('shows initializing message when indexing with unknown total', async () => {
@@ -307,16 +272,12 @@ describe('SettingsPage', () => {
     await screen.findByRole('button', { name: 'Add' }, { timeout: 10000 })
 
     jest.mocked(apiService.updateConfig).mockRejectedValueOnce(new Error('save failed'))
-    jest.useFakeTimers()
     // Toggle Smart Search to trigger save
     await userEvent.click(screen.getByLabelText('Smart Search'))
-    await act(async () => {
-      jest.advanceTimersByTime(1000)
-    })
+    await waitDebounce()
     await waitFor(() => {
       expect(actualMockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Error' }))
     })
-    jest.useRealTimers()
   }, 20000)
 
   test('reset onboarding triggers toast', async () => {

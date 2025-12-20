@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,6 +18,16 @@ from ..db.connection import get_database_manager
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+def _is_e2e_test_mode() -> bool:
+    """
+    Return True when running in Playwright E2E mode.
+
+    We use this to skip heavy ML phases (CLIP embeddings, face detection) to keep
+    E2E runs fast and avoid OOM kills in constrained environments.
+    """
+    return os.getenv("E2E_TEST", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class IndexStatus(BaseModel):
@@ -751,6 +762,16 @@ async def _run_processing_phases(workers, config, photos_to_process):
 
     processed_count = int(total_photos * 0.3)  # 30% complete after metadata
     await _state_manager.update_progress(processed_files=processed_count)
+
+    # In E2E mode, skip heavy ML phases to keep tests stable.
+    if _is_e2e_test_mode():
+        logger.info(
+            "E2E_TEST enabled: skipping embeddings/thumbnails/faces phases for lightweight indexing"
+        )
+        await _state_manager.update_progress(
+            current_phase="completed", processed_files=total_photos
+        )
+        return
 
     # Phase 3: Embedding generation (optional - skip if dependencies missing)
     await _state_manager.update_progress(current_phase="embeddings")

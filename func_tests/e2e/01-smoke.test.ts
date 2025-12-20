@@ -98,19 +98,19 @@ test.describe('Smoke Tests - Ideal Goggles', () => {
   });
 
   test('error handling when backend is unavailable', async ({ page }) => {
-    // Intercept API calls and simulate backend failure
-    await page.route('**/health', route => {
-      route.abort('failed');
-    });
-    await page.route('**/api/**', route => {
-      route.abort('failed');
-    });
-    await page.route('**/index/status', route => {
-      route.abort('failed');
-    });
-
-    // Reload page
-    await page.reload();
+    // Navigate first to load the page
+    await page.goto('http://127.0.0.1:3333');
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Then intercept API calls to simulate failure
+    await page.route('**/health', route => route.abort('failed'));
+    await page.route('**/api/**', route => route.abort('failed'));
+    await page.route('**/index/status', route => route.abort('failed'));
+    
+    // Reload the page to trigger the error state (using explicit IP to match config)
+    // Actually reload is fine since we are already on the page (from beforeEach or test start)
+    // But let's be safe and goto explicit URL if we want to be sure about host
+    await page.goto('http://127.0.0.1:3333');
 
     // App should show loading/waiting screen when backend is unavailable
     await expect(page.locator('text=Getting everything ready')).toBeVisible({ timeout: 10000 });

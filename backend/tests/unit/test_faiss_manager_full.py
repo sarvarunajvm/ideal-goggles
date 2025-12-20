@@ -16,6 +16,12 @@ from src.services.vector_search import FAISSVectorSearchService
 class TestFAISSIndexManager:
     """Test FAISSIndexManager class."""
 
+    @pytest.fixture(autouse=True)
+    def stop_scheduler(self):
+        """Prevent background scheduler from starting in tests."""
+        with patch("src.services.faiss_manager.FAISSIndexManager._start_background_scheduler"):
+            yield
+
     @pytest.fixture
     def temp_dir(self):
         """Create temporary directory for tests."""
@@ -42,10 +48,9 @@ class TestFAISSIndexManager:
         with patch("src.services.faiss_manager.get_settings") as mock_settings:
             mock_settings.return_value.app_data_dir = temp_dir
 
-            manager = FAISSIndexManager(vector_search_service=mock_vector_service)
-            # Stop background scheduler for tests
-            manager._scheduler_thread = None
-            yield manager
+            with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                manager = FAISSIndexManager(vector_search_service=mock_vector_service)
+                yield manager
 
     def test_initialization(self, temp_dir, mock_vector_service):
         """Test manager initialization."""
@@ -166,7 +171,9 @@ class TestFAISSIndexManager:
         manager._optimization_in_progress = False
 
         with (
-            patch.object(manager, "_perform_optimization", new_callable=AsyncMock) as mock_opt,
+            patch.object(
+                manager, "_perform_optimization", new_callable=AsyncMock
+            ) as mock_opt,
             patch.object(manager, "create_backup", new_callable=AsyncMock),
         ):
             mock_opt.return_value = True
@@ -332,7 +339,9 @@ class TestFAISSIndexManager:
         )
 
         # Create mock files
-        Path(manager.vector_service.index_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(manager.vector_service.index_path).parent.mkdir(
+            parents=True, exist_ok=True
+        )
         Path(manager.vector_service.index_path).touch()
         Path(manager.vector_service.metadata_path).touch()
 
@@ -351,7 +360,9 @@ class TestFAISSIndexManager:
             Path(manager.base_path) / "metadata.json"
         )
 
-        Path(manager.vector_service.index_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(manager.vector_service.index_path).parent.mkdir(
+            parents=True, exist_ok=True
+        )
         Path(manager.vector_service.index_path).touch()
         Path(manager.vector_service.metadata_path).touch()
 
@@ -456,4 +467,3 @@ class TestFAISSIndexManager:
             await manager.shutdown()
 
             mock_save.assert_called_once()
-

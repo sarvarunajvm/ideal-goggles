@@ -55,31 +55,24 @@ test.describe('Dependencies and Error Handling', () => {
 
   test.describe('Error Boundaries', () => {
     test('handles component errors gracefully', async ({ page }) => {
-      test.skip('Error boundary surface not available in current UI');
-      // Simulate component error
-      await page.route('**/api/**', route => {
-        route.fulfill({
-          status: 500,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Internal server error' })
-        });
-      });
+      // The app uses React Router's `errorElement` (RouteErrorBoundary). Trigger a 404 route error.
+      await page.goto('/this-route-does-not-exist');
 
-      await basePage.goto();
-
-      // Should show error boundary
-      const errorBoundary = page.locator('[data-testid="error-boundary"]');
-      const errorMessage = page.locator('[data-testid="error-message"]');
-
-      // Error should be handled gracefully
+      // Should render the route error boundary UI
+      await expect(page.locator('text=The page you are looking for does not exist')).toBeVisible();
+      await expect(page.locator('button:has-text("Go Home")')).toBeVisible();
+      await expect(page.locator('button:has-text("Reload")')).toBeVisible();
     });
 
     test('provides error recovery options', async ({ page }) => {
-      // Test error recovery mechanisms
-      const retryButton = page.locator('button:has-text("Retry")');
-      const reloadButton = page.locator('button:has-text("Reload")');
+      await page.goto('/this-route-does-not-exist');
 
-      // Should provide recovery options
+      const goHomeButton = page.locator('button:has-text("Go Home")');
+      await expect(goHomeButton).toBeVisible();
+      await goHomeButton.click();
+
+      // Should navigate back to the main app
+      await expect(page.locator('[data-testid="search-page"]')).toBeVisible();
     });
 
     test('logs errors for debugging', async ({ page }) => {
@@ -102,11 +95,13 @@ test.describe('Dependencies and Error Handling', () => {
 
   test.describe('Network Error Handling', () => {
     test('handles API unavailability', async ({ page }) => {
-      test.skip('App shell depends on backend availability; skipping API outage simulation');
       // Simulate API being down
       await page.route('**/api/**', route => route.abort('failed'));
+      await page.route('**/health', route => route.abort('failed'));
+      await page.route('**/index/status', route => route.abort('failed'));
 
-      await basePage.goto();
+      // Navigate directly; BasePage.waitForApp expects nav which won't render when backend is down
+      await page.goto('/');
 
       // Should show appropriate message
       const errorMessage = page.locator('text=Getting everything ready');
@@ -132,15 +127,16 @@ test.describe('Dependencies and Error Handling', () => {
     });
 
     test('shows offline indicator when network is unavailable', async ({ page }) => {
-      test.skip('Offline indicator not exposed in current UI');
-      // Simulate network being offline
-      await page.route('**/*', route => route.abort('failed'));
+      // Simulate backend endpoints being unreachable (but still allow the SPA to load)
+      await page.route('**/api/index/status', route => route.abort('failed'));
+      await page.route('**/api/index/stats', route => route.abort('failed'));
 
       await basePage.goto();
 
-      // Should show offline state
-      const offlineIndicator = page.locator('[data-testid="offline-indicator"]');
-      // await expect(offlineIndicator).toBeVisible();
+      // Connection badge should show disconnected
+      await expect(basePage.connectionBadge.filter({ hasText: 'Disconnected' })).toBeVisible({
+        timeout: 15000,
+      });
     });
   });
 

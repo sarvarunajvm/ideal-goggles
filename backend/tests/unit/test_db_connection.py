@@ -372,13 +372,16 @@ class TestDatabaseManager:
                     with patch("src.db.connection.Path") as mock_path_cls:
                         mock_path_instance = MagicMock()
                         mock_path_cls.return_value = mock_path_instance
-                        mock_path_instance.parent.parent.parent.__truediv__.return_value.exists.return_value = False
+                        mock_path_instance.parent.parent.parent.__truediv__.return_value.exists.return_value = (
+                            False
+                        )
 
                         # We need to trigger _run_migrations
                         # But simpler approach: mock ImportError for alembic
                         with patch.dict("sys.modules", {"alembic": None}):
-                             db_manager._run_migrations(from_version=0)
-                             mock_legacy.assert_called_once_with(0)
+                            db_manager._run_migrations(from_version=0)
+                            mock_legacy.assert_called_once_with(0)
+
 
 class TestDatabaseManagerGlobals:
     """Test global database manager functions."""

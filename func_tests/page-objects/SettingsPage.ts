@@ -18,8 +18,9 @@ export class SettingsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.rootFoldersSection = page.locator('text=Photo Folders').locator('..');
-    this.addFolderButton = page.locator('button:has-text("Add")');
+    this.rootFoldersSection = page.locator('.space-y-6 > div').first(); // Adjust locator as needed
+    // Use strict "Add" match or filter
+    this.addFolderButton = page.locator('button').filter({ hasText: 'Add' }).first();
     this.folderInput = page.locator('input[placeholder*="path/to/your/photos"]'); // Not used in new UI - uses dialog
     this.saveButton = page.locator('button:has-text("Save Configuration")'); // Auto-save now - no button
     this.resetButton = page.locator('button:has-text("Reset to Defaults")'); // Not in new UI
@@ -33,9 +34,17 @@ export class SettingsPage extends BasePage {
     this.thumbnailSizeSelect = page.locator('#thumbnail-size'); // Not in new UI
   }
 
+  private async isSwitchChecked(locator: Locator): Promise<boolean> {
+    // shadcn/Radix Switch renders a button with role="switch" and aria-checked
+    const ariaChecked = await locator.getAttribute('aria-checked').catch(() => null);
+    if (ariaChecked !== null) return ariaChecked === 'true';
+    // Fallback for native checkbox inputs
+    return await locator.isChecked();
+  }
+
   async waitForSettingsLoaded() {
-    const loader = this.page.locator('text=Loading settings...');
-    await loader.waitFor({ state: 'hidden', timeout: 10000 });
+    // Wait for "Photo Folders" card to be visible
+    await this.page.locator('text=Photo Folders').waitFor({ state: 'visible', timeout: 10000 });
     // Also wait for the main content to be visible
     await this.indexingButton.waitFor({ state: 'visible', timeout: 10000 });
   }
@@ -47,11 +56,29 @@ export class SettingsPage extends BasePage {
 
   async addRootFolder(path: string) {
     // The new UI uses prompt() when not in Electron
+    let dialogHandled = false;
     this.page.once('dialog', async dialog => {
       await dialog.accept(path);
+      dialogHandled = true;
     });
+    
+    // Ensure button is visible
+    try {
+        await this.addFolderButton.waitFor({ state: 'attached', timeout: 5000 });
+        await this.addFolderButton.scrollIntoViewIfNeeded();
+        await this.addFolderButton.waitFor({ state: 'visible', timeout: 5000 });
+    } catch (e) {
+        console.log('Failed to find Add button. Dumping page content...');
+        throw e;
+    }
     await this.addFolderButton.click();
-    await this.page.waitForTimeout(500);
+    
+    // Wait a bit to see if dialog was handled
+    await this.page.waitForTimeout(1000);
+    
+    if (!dialogHandled) {
+        console.log('Warning: Dialog handler was not called. This might be due to Electron API mocking or timing.');
+    }
   }
 
   async removeRootFolder(index: number) {
@@ -141,6 +168,7 @@ export class SettingsPage extends BasePage {
         const status = document.querySelector('[data-testid="indexing-status"]');
         return status?.textContent?.includes('Complete') || status?.textContent?.includes('Idle');
       },
+      undefined,
       { timeout }
     );
   }
@@ -156,6 +184,7 @@ export class SettingsPage extends BasePage {
                statusText.includes('Running') ||
                statusText.includes('In Progress');
       },
+      undefined,
       { timeout: 10000 }
     ).catch(() => {
       // If the status element is not found, just continue
@@ -165,7 +194,7 @@ export class SettingsPage extends BasePage {
 
   async toggleOCR(enable: boolean) {
     // No tab navigation needed - all on one page now
-    const isChecked = await this.ocrToggle.isChecked();
+    const isChecked = await this.isSwitchChecked(this.ocrToggle);
     if (isChecked !== enable) {
       await this.ocrToggle.click();
       // Wait for auto-save
@@ -175,7 +204,7 @@ export class SettingsPage extends BasePage {
 
   async toggleFaceSearch(enable: boolean) {
     // No tab navigation needed - all on one page now
-    const isChecked = await this.faceSearchToggle.isChecked();
+    const isChecked = await this.isSwitchChecked(this.faceSearchToggle);
     if (isChecked !== enable) {
       await this.faceSearchToggle.click({ force: true });
       // Verify state changed
@@ -198,19 +227,14 @@ export class SettingsPage extends BasePage {
 
   async toggleSemanticSearch(enable: boolean) {
     // No tab navigation needed - all on one page now
-    const isChecked = await this.semanticSearchToggle.isChecked();
+    const isChecked = await this.isSwitchChecked(this.semanticSearchToggle);
     if (isChecked !== enable) {
-      await this.semanticSearchToggle.click({ force: true });
+      await this.semanticSearchToggle.click();
       // Verify state changed
       try {
-        await this.page.waitForFunction(
-          (args) => {
-            const el = document.querySelector(args.selector);
-            return el?.getAttribute('aria-checked') === (args.enable ? 'true' : 'false');
-          },
-          { selector: '#semantic-search', enable },
-          { timeout: 2000 }
-        );
+        const expectedState = enable ? 'true' : 'false';
+        // Use a more robust selector check for the switch state
+        await this.page.waitForSelector(`#semantic-search[aria-checked="${expectedState}"]`, { timeout: 5000 });
       } catch (e) {
         console.log('Warning: Toggle state check timed out');
       }
@@ -241,6 +265,18 @@ export class SettingsPage extends BasePage {
     await this.page.waitForTimeout(1500);
   }
 
+  async waitForIndexingProgress(timeout: number = 30000): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      const status = await this.getIndexingStatus();
+      if (status.status !== 'idle' && status.status !== 'error') {
+        return true;
+      }
+      await this.page.waitForTimeout(500);
+    }
+    return false;
+  }
+
   async waitForSaveComplete() {
     await this.page.waitForTimeout(500);
     // Look for success toast - using either the new shadcn toast or the old toast
@@ -254,9 +290,11 @@ export class SettingsPage extends BasePage {
     // Ensure elements are ready
     await this.semanticSearchToggle.waitFor({ state: 'visible' });
     
-    const semanticSearchEnabled = await this.semanticSearchToggle.isChecked();
-    const ocrEnabled = await this.ocrToggle.isVisible() ? await this.ocrToggle.isChecked() : false;
-    const faceSearchEnabled = await this.faceSearchToggle.isChecked();
+    const semanticSearchEnabled = await this.isSwitchChecked(this.semanticSearchToggle);
+    const ocrEnabled = await this.ocrToggle.isVisible()
+      ? await this.isSwitchChecked(this.ocrToggle)
+      : false;
+    const faceSearchEnabled = await this.isSwitchChecked(this.faceSearchToggle);
 
     return {
       ocrEnabled,

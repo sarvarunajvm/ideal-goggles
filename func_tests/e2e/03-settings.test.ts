@@ -38,18 +38,24 @@ test.describe('Settings and Configuration', () => {
     });
 
     test('removes a root folder', async () => {
-      // Check if there are any folders to remove
-      const folders = await settingsPage.getRootFolders();
-      if (folders.length > 0) {
-        const initialCount = folders.length;
-        await settingsPage.removeRootFolder(0);
-        await settingsPage.page.waitForTimeout(500);
-        // Just verify the remove action was triggered
-        await expect(settingsPage.page).toHaveURL(/settings/);
-      } else {
-        // Skip if no folders
-        test.skip();
+      // Ensure there is a removable folder (avoid skipping)
+      const testFolder = `/tmp/test-photos-remove-${Date.now()}`;
+      if (!fs.existsSync(testFolder)) {
+        fs.mkdirSync(testFolder, { recursive: true });
       }
+
+      await settingsPage.addRootFolder(testFolder);
+      await settingsPage.page.waitForTimeout(1500);
+
+      const foldersAfterAdd = await settingsPage.getRootFolders();
+      const index = foldersAfterAdd.indexOf(testFolder);
+      expect(index).toBeGreaterThanOrEqual(0);
+
+      await settingsPage.removeRootFolder(index);
+      await settingsPage.page.waitForTimeout(1500);
+
+      const foldersAfterRemove = await settingsPage.getRootFolders();
+      expect(foldersAfterRemove).not.toContain(testFolder);
     });
 
     test('validates folder paths', async () => {
@@ -60,7 +66,6 @@ test.describe('Settings and Configuration', () => {
     });
 
     test('handles duplicate folders', async () => {
-      test.skip('Folder duplicate handling differs in current UI');
       // Verify duplicate prevention in the UI
       const testFolder = '/tmp/duplicate-test';
       if (!fs.existsSync(testFolder)) {
@@ -133,14 +138,29 @@ test.describe('Settings and Configuration', () => {
 
   test.describe('Feature Toggles', () => {
     test('toggles face search feature', async () => {
-      test.skip('Face search toggle not reliable in headless UI');
+      // Toggle on
       await settingsPage.toggleFaceSearch(true);
-      let config = await settingsPage.getConfiguration();
-      expect(config.faceSearchEnabled).toBeTruthy();
+      await expect.poll(async () => {
+        const response = await apiClient.getConfig();
+        const cfg = await response.json();
+        return cfg.face_search_enabled;
+      }).toBe(true);
 
+      // Toggle off
       await settingsPage.toggleFaceSearch(false);
-      config = await settingsPage.getConfiguration();
-      expect(config.faceSearchEnabled).toBeFalsy();
+      await expect.poll(async () => {
+        const response = await apiClient.getConfig();
+        const cfg = await response.json();
+        return cfg.face_search_enabled;
+      }).toBe(false);
+
+      // Restore default (avoid impacting other suites)
+      await settingsPage.toggleFaceSearch(true);
+      await expect.poll(async () => {
+        const response = await apiClient.getConfig();
+        const cfg = await response.json();
+        return cfg.face_search_enabled;
+      }).toBe(true);
     });
 
     test('toggles semantic search feature', async () => {
@@ -157,16 +177,13 @@ test.describe('Settings and Configuration', () => {
 
   test.describe('Configuration Presets', () => {
     test('applies minimal configuration preset', async () => {
-      test.skip('Minimal preset not fully supported in current UI');
       const preset = TestData.CONFIG_PRESETS.minimal;
 
-      // OCR has been removed from the application
+      // Batch size and thumbnail size are no longer exposed in the UI
       await settingsPage.toggleFaceSearch(preset.face_search_enabled);
       await settingsPage.toggleSemanticSearch(preset.semantic_search_enabled);
-      // Batch size and thumbnail size removed from UI
 
       const config = await settingsPage.getConfiguration();
-      // No longer checking OCR
       expect(config.faceSearchEnabled).toBe(preset.face_search_enabled);
       expect(config.semanticSearchEnabled).toBe(preset.semantic_search_enabled);
     });
@@ -187,15 +204,22 @@ test.describe('Settings and Configuration', () => {
   });
 
   test.describe('Reset Configuration', () => {
-    test.skip('resets configuration to defaults', async () => {
-      // Make some changes first
-      await settingsPage.toggleFaceSearch(true);
+    test('can reset onboarding from settings', async ({ page }) => {
+      // Settings exposes "Run Setup Again" (onboarding reset)
+      const runSetupAgain = page.locator('button:has-text("Run Setup Again")');
+      await expect(runSetupAgain).toBeVisible();
+      await runSetupAgain.click();
 
-      // Reset configuration
-      await settingsPage.resetConfiguration();
+      // Toast should appear (there are multiple Toasters in the app; pick the first match)
+      await expect(page.locator('text=Onboarding Reset').first()).toBeVisible({ timeout: 5000 });
 
-      // Just verify the page is still functional
-      await expect(settingsPage.page).toHaveURL(/settings/);
+      // Reload: onboarding wizard should re-appear
+      await page.reload();
+      await expect(page.locator('[data-testid="onboarding-modal"]')).toBeVisible({ timeout: 10000 });
+
+      // Close it so the rest of the app is accessible
+      await page.locator('[data-testid="skip-onboarding-btn"]').click();
+      await expect(page.locator('[data-testid="onboarding-modal"]')).toBeHidden({ timeout: 10000 });
     });
 
     test('clears all root folders on reset', async () => {
@@ -213,7 +237,7 @@ test.describe('Settings and Configuration', () => {
   });
 
   test.describe('Settings Persistence', () => {
-    test.skip('persists settings after page reload', async ({ page }) => {
+    test('persists settings after page reload', async ({ page }) => {
       // Make changes (auto-saves)
       await settingsPage.toggleSemanticSearch(true);
       await settingsPage.toggleFaceSearch(false);

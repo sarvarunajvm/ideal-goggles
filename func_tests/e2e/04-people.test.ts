@@ -3,7 +3,7 @@ import { PeoplePage } from '../page-objects/PeoplePage';
 import { APIClient } from '../helpers/api-client';
 import { TestData } from '../helpers/test-data';
 
-test.describe.skip('People Management', () => {
+test.describe('People Management', () => {
   let peoplePage: PeoplePage;
   let apiClient: APIClient;
   let testImages: string[] = [];
@@ -25,12 +25,14 @@ test.describe.skip('People Management', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    // Ensure face search is enabled for tests that create people (backend requires it)
+    await apiClient.updateConfig({ face_search_enabled: true });
     peoplePage = new PeoplePage(page);
     await peoplePage.goto('/people');
   });
 
   test('adds a new person with selected photos', async () => {
-    const personName = TestData.getRandomPersonName();
+    const personName = `${TestData.getRandomPersonName()} ${Date.now()}`;
     await peoplePage.addPerson(personName, testImages.slice(0, 3));
 
     const people = await peoplePage.getAllPeople();
@@ -55,8 +57,8 @@ test.describe.skip('People Management', () => {
   });
 
   test('filters people by name search', async () => {
-    const alice = 'Alice Search';
-    const bob = 'Bob Search';
+    const alice = `Alice Search ${Date.now()}`;
+    const bob = `Bob Search ${Date.now()}`;
 
     await peoplePage.addPerson(alice, [testImages[0]]);
     await peoplePage.addPerson(bob, [testImages[1]]);
@@ -71,23 +73,38 @@ test.describe.skip('People Management', () => {
   });
 
   test('disables find photos when face search is off', async () => {
-    await apiClient.updateConfig({ face_search_enabled: false });
+    // Create a person while face search is enabled (backend requires it for enrollment)
+    await apiClient.updateConfig({ face_search_enabled: true });
     await peoplePage.goto('/people');
 
-    const name = 'Face Off Test';
+    const name = `Face Off Test ${Date.now()}`;
     await peoplePage.addPerson(name, [testImages[0]]);
 
-    const card = peoplePage.page.locator('[data-testid="person-item"]', { hasText: name }).first();
-    const findButton = card.locator('button:has-text("Find Photos")');
-    await findButton.waitFor({ state: 'visible', timeout: 5000 });
-    expect(await findButton.isDisabled()).toBeTruthy();
+    // Disable face search and reload so the UI picks up the new config
+    try {
+      const updateResp = await apiClient.updateConfig({ face_search_enabled: false });
+      expect(updateResp.ok()).toBeTruthy();
 
-    // Restore for other tests
-    await apiClient.updateConfig({ face_search_enabled: true });
+      const cfgResp = await apiClient.getConfig();
+      const cfg = await cfgResp.json();
+      expect(cfg.face_search_enabled).toBe(false);
+
+      await peoplePage.page.reload();
+      await peoplePage.waitForApp();
+
+      const card = peoplePage.page
+        .locator('[data-testid="person-item"]', { hasText: name })
+        .first();
+      const findButton = card.locator('button:has-text("Find Photos")');
+      await expect(findButton).toBeDisabled({ timeout: 10000 });
+    } finally {
+      // Restore default for other suites even if assertion fails
+      await apiClient.updateConfig({ face_search_enabled: true });
+    }
   });
 
   test('deletes a person after confirmation', async () => {
-    const personName = 'Delete Flow Test';
+    const personName = `Delete Flow Test ${Date.now()}`;
     await peoplePage.addPerson(personName, [testImages[0]]);
 
     await peoplePage.deletePerson(personName);

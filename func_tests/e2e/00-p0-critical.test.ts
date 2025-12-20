@@ -111,13 +111,20 @@ test.describe('@P0 Critical User Flows', () => {
 
   test.describe('Error Handling', () => {
     test('@P0 application handles backend unavailability', async ({ page }) => {
-      // Intercept all API calls to simulate failure BEFORE navigation
+      // Navigate first to load the page
+      await page.goto('http://127.0.0.1:3333');
+      
+      // Wait for page to load
+      await page.waitForLoadState('domcontentloaded');
+      
+      // Then intercept API calls to simulate failure
       await page.route('**/health', route => route.abort('failed'));
       await page.route('**/api/**', route => route.abort('failed'));
       await page.route('**/index/status', route => route.abort('failed'));
-
+      
       // Navigate directly without using basePage.goto() which waits for nav
-      await page.goto('http://localhost:3333');
+      // Use 127.0.0.1 to avoid IPv6 issues
+      await page.goto('http://127.0.0.1:3333');
 
       // Should show appropriate loading state
       await expect(page.locator('text=Getting everything ready')).toBeVisible({ timeout: 10000 });

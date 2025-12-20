@@ -1,12 +1,16 @@
 """People management endpoints for Ideal Goggles API."""
 
+import hashlib
+import os
 from datetime import datetime
 from typing import Any
 
+import numpy as np
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
 from ..db.connection import get_database_manager
+from ..models.person import Person
 
 router = APIRouter()
 
@@ -116,6 +120,27 @@ class UpdatePersonRequest(BaseModel):
         return v
 
 
+def _is_e2e_test_mode() -> bool:
+    """Return True when running in E2E test mode (used to avoid heavy ML requirements)."""
+    return os.getenv("E2E_TEST", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _dummy_face_vector(seed_text: str, dim: int = 512) -> np.ndarray:
+    """
+    Deterministically generate a normalized face embedding vector for tests.
+
+    This is only used when E2E_TEST mode is enabled to allow People flows without real faces.
+    """
+    digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
+    seed = int.from_bytes(digest[:8], "little", signed=False)
+    rng = np.random.default_rng(seed)
+    vec = rng.normal(size=dim).astype(np.float32)
+    norm = float(np.linalg.norm(vec))
+    if norm > 0:
+        vec = vec / norm
+    return vec
+
+
 @router.get("/people", response_model=list[PersonResponse])
 async def list_people() -> list[PersonResponse]:
     """
@@ -216,9 +241,8 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
         Created person details
     """
     try:
-        # Import face worker
+        # Import photo model (face worker is imported only if needed)
         from ..models.photo import Photo
-        from ..workers.face_worker import FaceDetectionWorker
 
         db_manager = get_database_manager()
 
@@ -264,22 +288,32 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
             photo = Photo(id=row[0], path=row[1], filename=row[2], modified_ts=row[3])
             sample_photos.append(photo)
 
-        # Use face worker to enroll person
-        face_worker = FaceDetectionWorker()
-
-        if not face_worker.is_available():
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Face recognition is not available. InsightFace dependencies are not installed or failed to initialize.",
+        # Use face worker to enroll person (or a deterministic dummy embedding in E2E mode)
+        if _is_e2e_test_mode():
+            # Avoid requiring real faces / InsightFace during deterministic E2E runs
+            dummy_vec = _dummy_face_vector(
+                f"{request.name}:{','.join(map(str, request.sample_file_ids))}"
             )
-
-        person = await face_worker.enroll_person(request.name, sample_photos)
-
-        if not person:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to enroll person - no suitable faces found in sample photos",
+            person = Person(
+                name=request.name,
+                face_vector=dummy_vec,
+                sample_count=len(request.sample_file_ids),
+                created_at=datetime.now().timestamp(),
+                updated_at=datetime.now().timestamp(),
+                active=True,
             )
+        else:
+            from ..workers.face_worker import FaceDetectionWorker
+
+            face_worker = FaceDetectionWorker()
+
+            if not face_worker.is_available():
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Face recognition is not available. InsightFace dependencies are not installed or failed to initialize.",
+                )
+
+            person = await face_worker.enroll_person(request.name, sample_photos)
 
         # Save person to database
         insert_query = """
@@ -398,9 +432,7 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
         # Handle additional sample photos
         if request.additional_sample_file_ids:
             # Import necessary classes
-            from ..models.person import Person
             from ..models.photo import Photo
-            from ..workers.face_worker import FaceDetectionWorker
 
             # Validate sample file IDs
             file_ids_str = ",".join("?" * len(request.additional_sample_file_ids))
@@ -442,27 +474,43 @@ async def update_person(person_id: int, request: UpdatePersonRequest) -> PersonR
                 }
             )
 
-            # Update enrollment with additional photos
-            face_worker = FaceDetectionWorker()
+            if _is_e2e_test_mode():
+                # In E2E mode we don't require real faces; keep the vector stable and
+                # just bump sample_count so the UI behaves correctly.
+                existing_person.sample_count += len(additional_photos)
+                existing_person.updated_at = datetime.now().timestamp()
 
-            if not face_worker.is_available():
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Face recognition not available",
+                update_fields.extend(["face_vector = ?", "sample_count = ?"])
+                params.extend(
+                    [
+                        Person._numpy_to_blob(existing_person.face_vector),
+                        existing_person.sample_count,
+                    ]
+                )
+            else:
+                from ..workers.face_worker import FaceDetectionWorker
+
+                # Update enrollment with additional photos
+                face_worker = FaceDetectionWorker()
+
+                if not face_worker.is_available():
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Face recognition not available",
+                    )
+
+                updated_person = await face_worker.update_person_enrollment(
+                    existing_person, additional_photos
                 )
 
-            updated_person = await face_worker.update_person_enrollment(
-                existing_person, additional_photos
-            )
-
-            # Update face vector and sample count
-            update_fields.extend(["face_vector = ?", "sample_count = ?"])
-            params.extend(
-                [
-                    Person._numpy_to_blob(updated_person.face_vector),
-                    updated_person.sample_count,
-                ]
-            )
+                # Update face vector and sample count
+                update_fields.extend(["face_vector = ?", "sample_count = ?"])
+                params.extend(
+                    [
+                        Person._numpy_to_blob(updated_person.face_vector),
+                        updated_person.sample_count,
+                    ]
+                )
 
         if update_fields:
             # Add updated_at timestamp

@@ -81,26 +81,13 @@ export class TestData {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // Create a simple PNG image (1x1 pixel)
-    const pngHeader = Buffer.from([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-      0x00, 0x00, 0x00, 0x0D, // IHDR chunk size
-      0x49, 0x48, 0x44, 0x52, // IHDR
-      0x00, 0x00, 0x00, 0x01, // width = 1
-      0x00, 0x00, 0x00, 0x01, // height = 1
-      0x08, 0x02, // bit depth = 8, color type = 2 (RGB)
-      0x00, 0x00, 0x00, // compression, filter, interlace
-      0x90, 0x77, 0x53, 0xDE, // CRC
-      0x00, 0x00, 0x00, 0x0C, // IDAT chunk size
-      0x49, 0x44, 0x41, 0x54, // IDAT
-      0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x02, // compressed data
-      0x00, 0x01, // CRC
-      0x00, 0x00, 0x00, 0x00, // IEND chunk size
-      0x49, 0x45, 0x4E, 0x44, // IEND
-      0xAE, 0x42, 0x60, 0x82  // CRC
-    ]);
+    // Create a valid 1x1 PNG (opaque white pixel)
+    // Using a known-good base64 avoids subtle CRC/deflate issues that break libpng/PIL.
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAn8B9p0p7QAAAABJRU5ErkJggg=='
+    const pngData = Buffer.from(pngBase64, 'base64')
 
-    fs.writeFileSync(imagePath, pngHeader);
+    fs.writeFileSync(imagePath, pngData);
     return imagePath;
   }
 
@@ -124,9 +111,11 @@ export class TestData {
     const folders: string[] = [];
 
     for (const folderPath of this.TEST_FOLDERS) {
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
+      // Always start from a clean folder to avoid leaking corrupt/old fixtures between runs
+      if (fs.existsSync(folderPath)) {
+        fs.rmSync(folderPath, { recursive: true, force: true });
       }
+      fs.mkdirSync(folderPath, { recursive: true });
 
       // Add some test images to each folder
       for (let i = 0; i < 5; i++) {

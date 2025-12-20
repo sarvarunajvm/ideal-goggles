@@ -76,6 +76,7 @@ class FAISSIndexManager:
         # Thread safety
         self._lock = threading.RLock()
         self._optimization_in_progress = False
+        self._stop_event = threading.Event()
 
         # Load existing stats
         self._load_stats()
@@ -510,10 +511,13 @@ class FAISSIndexManager:
 
     def _start_background_scheduler(self):
         """Start background scheduler for automatic optimization and backups."""
+        # Skip scheduler in tests to avoid thread leaks and race conditions
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return
 
         def scheduler():
             """Background scheduler loop."""
-            while True:
+            while not self._stop_event.is_set():
                 try:
                     # Check for automatic optimization
                     if self.should_optimize():
@@ -547,7 +551,8 @@ class FAISSIndexManager:
                     logger.exception(f"Error in background scheduler: {e}")
 
                 # Sleep for 1 hour before next check
-                time.sleep(3600)
+                if self._stop_event.wait(3600):
+                    break
 
         # Start scheduler in daemon thread
         scheduler_thread = threading.Thread(target=scheduler, daemon=True)
@@ -556,6 +561,9 @@ class FAISSIndexManager:
     async def shutdown(self):
         """Graceful shutdown of the manager."""
         try:
+            # Signal scheduler to stop
+            self._stop_event.set()
+
             # Save final stats
             self._save_stats()
 

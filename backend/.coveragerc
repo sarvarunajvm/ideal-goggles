@@ -43,7 +43,7 @@ exclude_lines =
     # Abstract methods and protocols
     @(abc\.)?abstractmethod
     @overload
-    class .*\\bProtocol\\):
+    class .*\bProtocol\):
     @runtime_checkable
 
     # Import error handling (defensive, tested separately)

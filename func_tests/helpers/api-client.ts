@@ -7,7 +7,8 @@ export class APIClient {
   private context: APIRequestContext;
   private baseURL: string;
 
-  constructor(baseURL: string = 'http://localhost:5555') {
+  // Use 127.0.0.1 to avoid IPv6 ::1 resolution issues on some machines (backend binds to IPv4).
+  constructor(baseURL: string = 'http://127.0.0.1:5555') {
     this.baseURL = baseURL;
   }
 
@@ -124,25 +125,20 @@ export class APIClient {
     return await this.context.get(`/people/${personId}`);
   }
 
-  async createPerson(name: string, photoPaths: string[]) {
-    const formData = new FormData();
-    formData.append('name', name);
-
-    for (const path of photoPaths) {
-      const buffer = await require('fs').promises.readFile(path);
-      formData.append('photos', new Blob([buffer]), path.split('/').pop() || 'photo.jpg');
-    }
-
+  async createPerson(name: string, sample_file_ids: number[]) {
     return await this.context.post('/people', {
-      multipart: {
+      data: {
         name,
-        photos: photoPaths.map(path => ({
-          name: path.split('/').pop() || 'photo.jpg',
-          mimeType: 'image/jpeg',
-          buffer: require('fs').readFileSync(path),
-        }))
+        sample_file_ids
       }
     });
+  }
+
+  // Helper to get indexed photos for testing
+  async getIndexedPhotos(limit: number = 20) {
+    const response = await this.textSearch('', limit);
+    const data = await response.json();
+    return data.items || [];
   }
 
   async updatePerson(personId: string, updates: any) {

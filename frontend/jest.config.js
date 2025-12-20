@@ -11,6 +11,7 @@ module.exports = {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
+    '.*constants$': '<rootDir>/tests/mocks/constants.ts',
   },
   testMatch: [
     '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js|jsx)',

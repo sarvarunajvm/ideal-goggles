@@ -120,8 +120,8 @@ describe('lightboxStore', () => {
 
       expect(result.current.isOpen).toBe(false)
       expect(result.current.currentIndex).toBe(0)
-      // Photos array should remain
-      expect(result.current.photos).toEqual(photos)
+      // Photos array should be cleared to free memory
+      expect(result.current.photos).toEqual([])
     })
 
     it('should work when lightbox is already closed', () => {

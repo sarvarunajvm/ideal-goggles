@@ -213,6 +213,8 @@ class ApiService {
       const response = await fetch(url, {
         ...options,
         headers: finalHeaders,
+        // Avoid stale cached GET responses (config/people lists must reflect recent updates)
+        cache: 'no-store',
       })
 
       const duration = performance.now() - startTime
@@ -246,6 +248,10 @@ class ApiService {
           severity: mappedError.severity,
         })
         throw error
+      }
+
+      if (response.status === 204) {
+        return {} as T
       }
 
       const data = await response.json()

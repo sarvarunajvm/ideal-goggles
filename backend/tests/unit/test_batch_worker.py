@@ -43,6 +43,7 @@ class MockJobStore:
     def get(self, key, default=None):
         return self.jobs.get(key, default)
 
+
 @pytest.fixture
 def mock_job_store():
     """Create a mock job store."""

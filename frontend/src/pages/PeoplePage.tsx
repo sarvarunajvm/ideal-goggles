@@ -157,7 +157,9 @@ export default function PeoplePage() {
       resetForm()
       setTimeout(() => setToast(null), 1200)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save person')
+      console.error('Save person error object:', err);
+      const detailedError = (err as any).originalError ? `${(err as any).originalError}` : (err instanceof Error ? err.message : 'Failed to save person');
+      setError(detailedError)
     } finally {
       setLoading(false)
     }

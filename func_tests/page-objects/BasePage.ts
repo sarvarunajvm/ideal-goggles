@@ -33,40 +33,52 @@ export class BasePage {
   }
 
   async waitForApp() {
-    // Wait for either the onboarding wizard or the main app navigation
-    try {
-      await Promise.race([
-        this.navBar.waitFor({ state: 'visible', timeout: 5000 }),
-        this.page.locator('text=Welcome to Ideal Goggles').waitFor({ state: 'visible', timeout: 5000 })
-      ]);
-    } catch {
-      // Ignore timeout, we'll check individual elements
-    }
-
+    // Wait for page to load
+    await this.page.waitForLoadState('domcontentloaded');
+    
     // Check if onboarding wizard is present and skip it
-    const skipButton = this.page.locator('button:has-text("Skip setup")');
-    if (await skipButton.isVisible()) {
+    const onboardingModal = this.page.locator('[data-testid="onboarding-modal"]');
+    const skipButton = this.page.locator('button:has-text("Skip setup"), [data-testid="skip-onboarding-btn"]');
+    
+    // Wait a bit for onboarding to potentially appear
+    await this.page.waitForTimeout(500);
+    
+    const isOnboardingVisible = await onboardingModal.isVisible().catch(() => false);
+    
+    if (isOnboardingVisible) {
+      // Wait for skip button to be visible and clickable
+      await skipButton.waitFor({ state: 'visible', timeout: 5000 });
       await skipButton.click();
-      // Wait for onboarding to disappear
-      await skipButton.waitFor({ state: 'hidden', timeout: 5000 });
+      // Wait for onboarding modal to disappear
+      await onboardingModal.waitFor({ state: 'hidden', timeout: 10000 });
+      // Wait a bit more for UI to settle
+      await this.page.waitForTimeout(300);
     }
-
+    
+    // Wait for navigation bar to be visible (app is loaded)
     await this.navBar.waitFor({ state: 'visible', timeout: 30000 });
+    
+    // Additional wait for app to be fully interactive
+    // Removed strict networkidle to avoid flakiness with polling
+    // await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
   }
 
   async navigateToSearch() {
+    await this.searchLink.waitFor({ state: 'visible', timeout: 10000 });
     await this.searchLink.click();
-    await this.page.waitForURL('**/');
+    await this.page.waitForURL(/\/$|\/search/, { timeout: 5000 });
   }
 
   async navigateToSettings() {
+    await this.settingsLink.waitFor({ state: 'visible', timeout: 10000 });
     await this.settingsLink.click();
-    await this.page.waitForURL('**/settings');
+    await this.page.waitForURL(/\/settings/, { timeout: 5000 });
   }
 
   async navigateToPeople() {
+    await this.peopleLink.waitFor({ state: 'visible', timeout: 10000 });
     await this.peopleLink.click();
-    await this.page.waitForURL('**/people');
+    await this.page.waitForURL(/\/people/, { timeout: 5000 });
   }
 
   async isConnected(): Promise<boolean> {
@@ -81,11 +93,15 @@ export class BasePage {
   }
 
   async waitForConnection(timeout: number = 10000) {
-    // Wait for connection badge to show "Connected" text
+    // Wait for connection badge to be visible first
     await this.connectionBadge.waitFor({ state: 'visible', timeout });
+    // Then wait for it to show "Connected" text (it might start as "Checking...")
     await this.page.waitForFunction(
-      (badge) => badge?.textContent?.includes('Connected'),
-      await this.connectionBadge.elementHandle(),
+      (testId) => {
+        const badge = document.querySelector(`[data-testid="${testId}"]`);
+        return badge?.textContent?.includes('Connected') ?? false;
+      },
+      'connection-badge',
       { timeout }
     );
   }

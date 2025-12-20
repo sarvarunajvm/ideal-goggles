@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 
 from ..core.logging_config import get_logger
 from ..core.utils import get_default_photo_roots, validate_path
@@ -82,7 +83,7 @@ async def get_configuration() -> ConfigurationResponse:
         db_manager = get_database_manager()
 
         # Get configuration from database
-        config_data = _get_config_from_db(db_manager)
+        config_data = await run_in_threadpool(_get_config_from_db, db_manager)
 
         return ConfigurationResponse(
             roots=(config_data.get("roots") or get_default_photo_roots()),
@@ -113,62 +114,7 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
     """
     try:
         db_manager = get_database_manager()
-
-        # Get current roots before updating
-        config_data = _get_config_from_db(db_manager)
-        old_roots = config_data.get("roots", [])
-
-        # Convert to absolute paths
-        absolute_roots = []
-        for root_path in request.roots:
-            abs_path = str(Path(root_path).absolute())
-            absolute_roots.append(abs_path)
-
-        # Find removed roots (paths that were in old but not in new)
-        removed_roots = [root for root in old_roots if root not in absolute_roots]
-
-        # Clear photos from removed roots
-        if removed_roots:
-            for removed_root in removed_roots:
-                # Delete photos from removed root paths
-                delete_query = """
-                    DELETE FROM photos
-                    WHERE path LIKE ? || '%'
-                """
-                db_manager.execute_update(delete_query, (removed_root,))
-
-                # Also delete associated faces
-                delete_faces_query = """
-                    DELETE FROM faces
-                    WHERE file_id NOT IN (SELECT id FROM photos)
-                """
-                db_manager.execute_update(delete_faces_query)
-
-            # Reset indexing state if roots changed
-            # Note: IndexingStateManager doesn't exist, state reset not implemented yet
-            import logging
-
-            temp_logger = logging.getLogger(__name__)
-            temp_logger.info("Root folders changed - indexing state should be reset")
-
-        # Update configuration in database
-        _update_config_in_db(db_manager, "roots", absolute_roots)
-
-        # Log the configuration change
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(f"Root folders updated: {absolute_roots}")
-        if removed_roots:
-            logger.info(f"Removed roots and cleared associated photos: {removed_roots}")
-
-        return {
-            "message": "Root folders updated successfully",
-            "roots": absolute_roots,
-            "removed_roots": removed_roots if removed_roots else [],
-            "updated_at": datetime.now().isoformat(),
-        }
-
+        return await run_in_threadpool(_update_root_folders_sync, db_manager, request)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -176,6 +122,66 @@ async def update_root_folders(request: UpdateRootsRequest) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update root folders: {e!s}",
         )
+
+
+def _update_root_folders_sync(
+    db_manager, request: UpdateRootsRequest
+) -> dict[str, Any]:
+    """Synchronous implementation of update_root_folders."""
+    # Get current roots before updating
+    config_data = _get_config_from_db(db_manager)
+    old_roots = config_data.get("roots", [])
+
+    # Convert to absolute paths
+    absolute_roots = []
+    for root_path in request.roots:
+        abs_path = str(Path(root_path).absolute())
+        absolute_roots.append(abs_path)
+
+    # Find removed roots (paths that were in old but not in new)
+    removed_roots = [root for root in old_roots if root not in absolute_roots]
+
+    # Clear photos from removed roots
+    if removed_roots:
+        for removed_root in removed_roots:
+            # Delete photos from removed root paths
+            delete_query = """
+                DELETE FROM photos
+                WHERE path LIKE ? || '%'
+            """
+            db_manager.execute_update(delete_query, (removed_root,))
+
+            # Also delete associated faces
+            delete_faces_query = """
+                DELETE FROM faces
+                WHERE file_id NOT IN (SELECT id FROM photos)
+            """
+            db_manager.execute_update(delete_faces_query)
+
+        # Reset indexing state if roots changed
+        # Note: IndexingStateManager doesn't exist, state reset not implemented yet
+        import logging
+
+        temp_logger = logging.getLogger(__name__)
+        temp_logger.info("Root folders changed - indexing state should be reset")
+
+    # Update configuration in database
+    _update_config_in_db(db_manager, "roots", absolute_roots)
+
+    # Log the configuration change
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Root folders updated: {absolute_roots}")
+    if removed_roots:
+        logger.info(f"Removed roots and cleared associated photos: {removed_roots}")
+
+    return {
+        "message": "Root folders updated successfully",
+        "roots": absolute_roots,
+        "removed_roots": removed_roots if removed_roots else [],
+        "updated_at": datetime.now().isoformat(),
+    }
 
 
 @router.put("/config")
@@ -191,59 +197,7 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
     """
     try:
         db_manager = get_database_manager()
-        updated_fields = []
-
-        # Update face search setting if provided
-        if request.face_search_enabled is not None:
-            _update_config_in_db(
-                db_manager, "face_search_enabled", request.face_search_enabled
-            )
-            updated_fields.append("face_search_enabled")
-
-        # Update semantic search setting if provided
-        if request.semantic_search_enabled is not None:
-            _update_config_in_db(
-                db_manager, "semantic_search_enabled", request.semantic_search_enabled
-            )
-            updated_fields.append("semantic_search_enabled")
-
-        # Update batch size if provided
-        if request.batch_size is not None:
-            _update_config_in_db(db_manager, "batch_size", request.batch_size)
-            updated_fields.append("batch_size")
-
-        # Update thumbnail settings if provided
-        if request.thumbnail_size is not None:
-            _update_config_in_db(db_manager, "thumbnail_size", request.thumbnail_size)
-            updated_fields.append("thumbnail_size")
-
-        if request.thumbnail_quality is not None:
-            _update_config_in_db(
-                db_manager, "thumbnail_quality", request.thumbnail_quality
-            )
-            updated_fields.append("thumbnail_quality")
-
-        if not updated_fields:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No configuration fields provided for update",
-            )
-
-        # Get updated configuration
-        updated_config = _get_config_from_db(db_manager)
-
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(f"Configuration updated: {updated_fields}")
-
-        return {
-            "message": "Configuration updated successfully",
-            "updated_fields": updated_fields,
-            "configuration": updated_config,
-            "updated_at": datetime.now().isoformat(),
-        }
-
+        return await run_in_threadpool(_update_configuration_sync, db_manager, request)
     except HTTPException:
         raise
     except Exception as e:
@@ -251,6 +205,62 @@ async def update_configuration(request: UpdateConfigRequest) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update configuration: {e!s}",
         )
+
+
+def _update_configuration_sync(
+    db_manager, request: UpdateConfigRequest
+) -> dict[str, Any]:
+    """Synchronous implementation of update_configuration."""
+    updated_fields = []
+
+    # Update face search setting if provided
+    if request.face_search_enabled is not None:
+        _update_config_in_db(
+            db_manager, "face_search_enabled", request.face_search_enabled
+        )
+        updated_fields.append("face_search_enabled")
+
+    # Update semantic search setting if provided
+    if request.semantic_search_enabled is not None:
+        _update_config_in_db(
+            db_manager, "semantic_search_enabled", request.semantic_search_enabled
+        )
+        updated_fields.append("semantic_search_enabled")
+
+    # Update batch size if provided
+    if request.batch_size is not None:
+        _update_config_in_db(db_manager, "batch_size", request.batch_size)
+        updated_fields.append("batch_size")
+
+    # Update thumbnail settings if provided
+    if request.thumbnail_size is not None:
+        _update_config_in_db(db_manager, "thumbnail_size", request.thumbnail_size)
+        updated_fields.append("thumbnail_size")
+
+    if request.thumbnail_quality is not None:
+        _update_config_in_db(db_manager, "thumbnail_quality", request.thumbnail_quality)
+        updated_fields.append("thumbnail_quality")
+
+    if not updated_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No configuration fields provided for update",
+        )
+
+    # Get updated configuration
+    updated_config = _get_config_from_db(db_manager)
+
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Configuration updated: {updated_fields}")
+
+    return {
+        "message": "Configuration updated successfully",
+        "updated_fields": updated_fields,
+        "configuration": updated_config,
+        "updated_at": datetime.now().isoformat(),
+    }
 
 
 @router.get("/config/defaults")
@@ -298,33 +308,7 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
     """
     try:
         db_manager = get_database_manager()
-
-        # Get current roots
-        config_data = _get_config_from_db(db_manager)
-        current_roots = config_data.get("roots", [])
-
-        if root_index < 0 or root_index >= len(current_roots):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Root folder index {root_index} not found",
-            )
-
-        # Remove the specified root
-        removed_root = current_roots.pop(root_index)
-        _update_config_in_db(db_manager, "roots", current_roots)
-
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info(f"Root folder removed: {removed_root}")
-
-        return {
-            "message": "Root folder removed successfully",
-            "removed_root": removed_root,
-            "remaining_roots": current_roots,
-            "updated_at": datetime.now().isoformat(),
-        }
-
+        return await run_in_threadpool(_remove_root_folder_sync, db_manager, root_index)
     except HTTPException:
         raise
     except Exception as e:
@@ -332,6 +316,35 @@ async def remove_root_folder(root_index: int) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to remove root folder: {e!s}",
         )
+
+
+def _remove_root_folder_sync(db_manager, root_index: int) -> dict[str, Any]:
+    """Synchronous implementation of remove_root_folder."""
+    # Get current roots
+    config_data = _get_config_from_db(db_manager)
+    current_roots = config_data.get("roots", [])
+
+    if root_index < 0 or root_index >= len(current_roots):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Root folder index {root_index} not found",
+        )
+
+    # Remove the specified root
+    removed_root = current_roots.pop(root_index)
+    _update_config_in_db(db_manager, "roots", current_roots)
+
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Root folder removed: {removed_root}")
+
+    return {
+        "message": "Root folder removed successfully",
+        "removed_root": removed_root,
+        "remaining_roots": current_roots,
+        "updated_at": datetime.now().isoformat(),
+    }
 
 
 @router.post("/config/reset")
@@ -344,36 +357,39 @@ async def reset_configuration() -> dict[str, Any]:
     """
     try:
         db_manager = get_database_manager()
-
-        # Reset to default values
-        default_config = {
-            "roots": [],
-            "face_search_enabled": True,
-            "semantic_search_enabled": True,
-            "thumbnail_size": "medium",
-            "thumbnail_quality": 85,
-        }
-
-        # Update each setting
-        for key, value in default_config.items():
-            _update_config_in_db(db_manager, key, value)
-
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.info("Configuration reset to defaults")
-
-        return {
-            "message": "Configuration reset to defaults",
-            "configuration": default_config,
-            "reset_at": datetime.now().isoformat(),
-        }
-
+        return await run_in_threadpool(_reset_configuration_sync, db_manager)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset configuration: {e!s}",
         )
+
+
+def _reset_configuration_sync(db_manager) -> dict[str, Any]:
+    """Synchronous implementation of reset_configuration."""
+    # Reset to default values
+    default_config = {
+        "roots": [],
+        "face_search_enabled": True,
+        "semantic_search_enabled": True,
+        "thumbnail_size": "medium",
+        "thumbnail_quality": 85,
+    }
+
+    # Update each setting
+    for key, value in default_config.items():
+        _update_config_in_db(db_manager, key, value)
+
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info("Configuration reset to defaults")
+
+    return {
+        "message": "Configuration reset to defaults",
+        "configuration": default_config,
+        "reset_at": datetime.now().isoformat(),
+    }
 
 
 def _parse_json_setting(key: str, value: str) -> Any:

@@ -3,13 +3,23 @@
 import contextlib
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 # Note: These fixtures use mocks since implementation doesn't exist yet
 # They will be updated to use real implementations once T026-T047 are complete
+
+
+@pytest.fixture(autouse=True)
+def prevent_faiss_scheduler():
+    """Prevent FAISS background scheduler from starting in any test."""
+    # Import inside fixture to avoid circular imports during collection
+    from src.services.faiss_manager import FAISSIndexManager
+
+    with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+        yield
 
 
 @pytest.fixture(autouse=True)

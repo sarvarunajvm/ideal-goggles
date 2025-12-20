@@ -4,6 +4,7 @@ import { SettingsPage } from '../page-objects/SettingsPage';
 import { PeoplePage } from '../page-objects/PeoplePage';
 import { APIClient } from '../helpers/api-client';
 import { TestData } from '../helpers/test-data';
+import * as fs from 'fs';
 
 test.describe('End-to-End Workflows', () => {
   let searchPage: SearchPage;
@@ -21,11 +22,7 @@ test.describe('End-to-End Workflows', () => {
   });
 
   test('person enrollment and face search workflow', async ({ page }) => {
-    test.skip('People enrollment flow disabled until indexed photos are available');
     await apiClient.updateConfig({ face_search_enabled: true });
-
-    // 1. Create test images
-    const testImages = await TestData.createTestImages(5);
 
     // 2. Navigate to people page
     peoplePage = new PeoplePage(page);
@@ -33,7 +30,7 @@ test.describe('End-to-End Workflows', () => {
 
     // 3. Add a new person
     const personName = 'Workflow Test Person';
-    await peoplePage.addPerson(personName, testImages.slice(0, 3));
+    await peoplePage.addPerson(personName);
 
     // 4. Verify person was added
     const people = await peoplePage.getAllPeople();
@@ -170,33 +167,50 @@ test.describe('End-to-End Workflows', () => {
   });
 
   test('data migration workflow', async ({ page }) => {
-    test.skip('Migration workflow depends on local folders not available in CI');
     settingsPage = new SettingsPage(page);
 
     await settingsPage.goto('/settings');
 
     // Add a couple of folders through the prompt-driven UI
-    const initialFolder = '/tmp/photos-migration-initial';
-    const migratedFolder = '/tmp/photos-migration-new';
+    const ts = Date.now();
+    const initialFolder = `/tmp/photos-migration-initial-${ts}`;
+    const migratedFolder = `/tmp/photos-migration-new-${ts}`;
 
-    await settingsPage.addRootFolder(initialFolder);
-    await settingsPage.addRootFolder(migratedFolder);
+    // Ensure folders exist (backend validates they must exist)
+    fs.mkdirSync(initialFolder, { recursive: true });
+    fs.mkdirSync(migratedFolder, { recursive: true });
 
-    // Start a quick update to pick up changes
-    await settingsPage.startIndexing(false);
-    await settingsPage.waitForIndexingStart();
+    try {
+      await settingsPage.addRootFolder(initialFolder);
+      await settingsPage.addRootFolder(migratedFolder);
 
-    // Remove the initial folder to simulate migration
-    const folders = await settingsPage.getRootFolders();
-    const oldIndex = folders.indexOf(initialFolder);
-    if (oldIndex >= 0) {
-      await settingsPage.removeRootFolder(oldIndex);
+      // Start a quick update to pick up changes
+      await settingsPage.startIndexing(false);
+      await settingsPage.waitForIndexingStart();
+
+      // Remove the initial folder to simulate migration
+      const folders = await settingsPage.getRootFolders();
+      const oldIndex = folders.indexOf(initialFolder);
+      if (oldIndex >= 0) {
+        await settingsPage.removeRootFolder(oldIndex);
+      }
+
+      // Confirm only the migrated folder remains
+      const finalFolders = await settingsPage.getRootFolders();
+      expect(finalFolders).toContain(migratedFolder);
+      expect(finalFolders).not.toContain(initialFolder);
+    } finally {
+      // Cleanup added roots if still present (avoid affecting other suites)
+      const currentFolders = await settingsPage.getRootFolders();
+      const migratedIdx = currentFolders.indexOf(migratedFolder);
+      if (migratedIdx >= 0) {
+        await settingsPage.removeRootFolder(migratedIdx);
+      }
+
+      // Remove created folders from disk
+      fs.rmSync(initialFolder, { recursive: true, force: true });
+      fs.rmSync(migratedFolder, { recursive: true, force: true });
     }
-
-    // Confirm only the migrated folder remains
-    const finalFolders = await settingsPage.getRootFolders();
-    expect(finalFolders).toContain(migratedFolder);
-    expect(finalFolders).not.toContain(initialFolder);
   });
 
   test('performance optimization workflow', async ({ page }) => {

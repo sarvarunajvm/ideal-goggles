@@ -34,6 +34,7 @@ export default defineConfig({
     postcss: path.resolve(__dirname, 'postcss.config.js'),
   },
   server: {
+    host: '127.0.0.1',
     port: 3333,
     strictPort: true,
     proxy: {

@@ -334,44 +334,50 @@ test.describe('Search Functionality', () => {
       // await expect(emptyState).toBeVisible();
     });
 
-    test.skip('supports result pagination', async () => {
-      await searchPage.textSearchButton.click();
-
-      // Mock paginated results
+    test('respects the result limit filter', async () => {
+      // Mock results based on the requested limit (current UI uses limit, not pagination)
       await searchPage.page.route('**/api/search*', route => {
         const url = new URL(route.request().url());
-        const offset = parseInt(url.searchParams.get('offset') || '0');
         const limit = parseInt(url.searchParams.get('limit') || '50');
+        const q = url.searchParams.get('q') || '';
 
-        const totalResults = Array.from({ length: 150 }, (_, i) => ({
-          id: i + 1,
-          file_path: `/test/page_photo${i + 1}.jpg`,
-          similarity_score: 0.9 - (i * 0.001),
-          thumbnail_path: `/thumbnails/page_photo${i + 1}.jpg`
+        const items = Array.from({ length: limit }, (_, i) => ({
+          file_id: i + 1,
+          path: `/test/page_photo${i + 1}.jpg`,
+          folder: '/test',
+          filename: `page_photo${i + 1}.jpg`,
+          thumb_path: `page_photo${i + 1}.jpg`,
+          shot_dt: new Date().toISOString(),
+          score: 0.9 - i * 0.001,
+          badges: [],
+          snippet: null,
         }));
-
-        const paginatedResults = totalResults.slice(offset, offset + limit);
 
         route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            results: paginatedResults,
-            total: totalResults.length,
-            offset,
-            limit
-          })
+            query: q,
+            total_matches: 150,
+            items,
+            took_ms: 5,
+          }),
         });
       });
 
-      await searchPage.searchInput.fill('paginated');
+      await searchPage.textSearchButton.click();
+      await searchPage.page.waitForTimeout(200);
+
+      // Open advanced filters and set a small limit
+      await searchPage.filterButton.click();
+      const limitInput = searchPage.page.locator('input[type="number"]').first();
+      await limitInput.fill('10');
+
+      await searchPage.searchInput.fill('limit-test');
       await searchPage.performSearch();
 
-      // Should show pagination controls
-      const pagination = searchPage.page.locator('[data-testid="pagination"]');
-      const nextButton = searchPage.page.locator('button:has-text("Next")');
-
-      // Test pagination if implemented
+      const resultCount = await searchPage.getSearchResults();
+      expect(resultCount).toBe(10);
     });
   });
 

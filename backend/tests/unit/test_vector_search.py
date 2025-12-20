@@ -68,7 +68,9 @@ class TestFAISSVectorSearchService:
 
     def test_initialization_no_faiss(self, temp_index_path):
         """Test initialization when FAISS is not available."""
-        with patch("builtins.__import__", side_effect=ImportError("No module named 'faiss'")):
+        with patch(
+            "builtins.__import__", side_effect=ImportError("No module named 'faiss'")
+        ):
             service = FAISSVectorSearchService(index_path=temp_index_path)
             # Should set index to None but not raise
             assert service.index is None
@@ -604,7 +606,9 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 10
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path, dimension=512)
+            service = FAISSVectorSearchService(
+                index_path=temp_index_path, dimension=512
+            )
 
             query_vector = np.random.randn(256).astype(np.float32)  # Wrong dimension
 
@@ -716,7 +720,9 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path, dimension=512)
+            service = FAISSVectorSearchService(
+                index_path=temp_index_path, dimension=512
+            )
 
             vector = np.random.randn(256).astype(np.float32)  # Wrong dimension
             result = service.add_vector(file_id=1, vector=vector)
@@ -796,7 +802,9 @@ class TestFAISSVectorSearchService:
 
                     with patch("pickle.load", return_value=pickle_metadata):
                         with patch("json.dump"):
-                            service = FAISSVectorSearchService(index_path=temp_index_path)
+                            service = FAISSVectorSearchService(
+                                index_path=temp_index_path
+                            )
 
                             # Should have loaded from pickle
                             assert service.index is not None
@@ -861,9 +869,7 @@ class TestFAISSVectorSearchService:
             initial_index = Mock()
             initial_index.ntotal = 250000
             vectors = np.random.randn(250000, 512).astype(np.float32)
-            initial_index.reconstruct.side_effect = [
-                vectors[i] for i in range(250000)
-            ]
+            initial_index.reconstruct.side_effect = [vectors[i] for i in range(250000)]
 
             mock_ip.return_value = initial_index
 
