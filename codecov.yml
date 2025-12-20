@@ -66,6 +66,7 @@ ignore:
   - "backend/alembic/"
   - "backend/scripts/"
   - "backend/src/db/migrations/"
+  - "backend/src/core/logging_config.py" # Align with pyproject.toml
   
   # --- Frontend ---
   - "**/*.d.ts"

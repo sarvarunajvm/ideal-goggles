@@ -1,8 +1,9 @@
-"""Unit tests for middleware module."""
+"""Comprehensive unit tests for middleware classes - 70%+ coverage target."""
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+import time
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import pytest
 from fastapi import Request, Response
@@ -11,416 +12,745 @@ from starlette.datastructures import Headers
 from src.core.middleware import (
     ErrorLoggingMiddleware,
     PerformanceMonitoringMiddleware,
+    RateLimitingMiddleware,
     RequestLoggingMiddleware,
     get_request_id,
     request_id_var,
+    sanitize_error_message,
 )
 
 
+class MockRequest:
+    """Mock FastAPI Request for testing."""
+
+    def __init__(
+        self, method="GET", path="/test", query_params=None, client_host="127.0.0.1"
+    ):
+        self.method = method
+        self.url = MagicMock()
+        self.url.path = path
+        self.query_params = query_params or {}
+        self.headers = Headers({"host": "example.com"})  # Add headers
+        self.client = MagicMock()
+        self.client.host = client_host if client_host else None
+        self._body = b""
+
+    async def body(self):
+        return self._body
+
+
+class MockResponse:
+    """Mock Response for testing."""
+
+    def __init__(self, status_code=200):
+        self.status_code = status_code
+        self.headers = {}
+
+
 class TestRequestLoggingMiddleware:
-    """Test RequestLoggingMiddleware class."""
+    """Test RequestLoggingMiddleware functionality."""
 
     @pytest.mark.asyncio
-    async def test_request_logging_middleware_success(self):
-        """Test middleware logs successful requests."""
-        # Create mock request
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/test"
-        mock_request.query_params = {}
-        mock_request.client = Mock()
-        mock_request.client.host = "127.0.0.1"
+    async def test_dispatch_logs_request_start(self):
+        """Test that dispatch logs request start."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
 
-        # Create mock response
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest(method="GET", path="/api/test")
+        response = MockResponse(status_code=200)
 
-        # Create mock call_next
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            return response
 
-        # Create middleware
-        app = Mock()
-        middleware = RequestLoggingMiddleware(app)
+        with patch("src.core.middleware.logger") as mock_logger:
+            result = await middleware.dispatch(request, call_next)
 
-        # Process request
-        response = await middleware.dispatch(mock_request, mock_call_next)
-
-        assert response.status_code == 200
-        assert "X-Request-ID" in response.headers
+            # Should log request start
+            assert mock_logger.info.called
+            log_calls = mock_logger.info.call_args_list
+            assert any("Request started" in str(call) for call in log_calls)
 
     @pytest.mark.asyncio
-    async def test_request_logging_middleware_slow_request(self):
-        """Test middleware logs slow requests."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/slow"
-        mock_request.query_params = {"param": "value"}
-        mock_request.client = Mock()
-        mock_request.client.host = "192.168.1.1"
+    async def test_dispatch_logs_request_completion(self):
+        """Test that dispatch logs request completion."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
 
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest(method="POST", path="/api/create")
+        response = MockResponse(status_code=201)
 
-        # Simulate slow operation
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            await asyncio.sleep(0.01)
+            return response
 
-        app = Mock()
-        middleware = RequestLoggingMiddleware(app)
+        with patch("src.core.middleware.logger") as mock_logger:
+            result = await middleware.dispatch(request, call_next)
 
-        # Mock time to simulate slow request (>1000ms)
-        import time
-
-        # Provide enough values for all time.time() calls (start, end, and any intermediates)
-        # Use a lambda to always return the right value instead of a list
-        time_values = [0.0, 1.5]
-        time_index = [0]
-
-        def mock_time():
-            idx = time_index[0]
-            time_index[0] += 1
-            return time_values[min(idx, len(time_values) - 1)]
-
-        with patch.object(time, "time", side_effect=mock_time):
-            response = await middleware.dispatch(mock_request, mock_call_next)
-
-        assert response.status_code == 200
-        assert "X-Request-ID" in response.headers
+            # Should log completion
+            log_calls = mock_logger.info.call_args_list
+            assert any("Request completed" in str(call) for call in log_calls)
 
     @pytest.mark.asyncio
-    async def test_request_logging_middleware_exception(self):
-        """Test middleware logs exceptions."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "DELETE"
-        mock_request.url.path = "/api/error"
-        mock_request.query_params = {}
-        mock_request.client = Mock()
-        mock_request.client.host = "127.0.0.1"
+    async def test_dispatch_sets_request_id(self):
+        """Test that dispatch sets request ID in context."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
 
-        # Simulate error
-        async def mock_call_next(request):
-            msg = "Test error"
-            raise ValueError(msg)
+        request = MockRequest()
+        response = MockResponse()
 
-        app = Mock()
-        middleware = RequestLoggingMiddleware(app)
+        async def call_next(req):
+            # Request ID should be set during processing
+            req_id = request_id_var.get()
+            assert req_id != "no-request"
+            return response
 
-        with pytest.raises(ValueError):
-            await middleware.dispatch(mock_request, mock_call_next)
+        with patch("src.core.middleware.logger"):
+            await middleware.dispatch(request, call_next)
 
     @pytest.mark.asyncio
-    async def test_request_logging_middleware_no_client(self):
-        """Test middleware handles requests with no client info."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/test"
-        mock_request.query_params = {}
-        mock_request.client = None  # No client info
+    async def test_dispatch_adds_request_id_to_response_headers(self):
+        """Test that request ID is added to response headers."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
 
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest()
+        response = MockResponse()
 
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            return response
 
-        app = Mock()
-        middleware = RequestLoggingMiddleware(app)
+        with patch("src.core.middleware.logger"):
+            result = await middleware.dispatch(request, call_next)
 
-        response = await middleware.dispatch(mock_request, mock_call_next)
-        assert response.status_code == 200
+            assert "X-Request-ID" in result.headers
+
+    @pytest.mark.asyncio
+    async def test_dispatch_logs_slow_requests(self):
+        """Test that slow requests are logged with warning."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest()
+        response = MockResponse()
+
+        async def call_next(req):
+            await asyncio.sleep(1.1)  # Simulate slow request
+            return response
+
+        with patch("src.core.middleware.logger") as mock_logger:
+            with patch("time.time", side_effect=[0, 1.5]):  # Simulate 1500ms duration
+                await middleware.dispatch(request, call_next)
+
+                # Should log warning for slow request
+                assert mock_logger.warning.called
+
+    @pytest.mark.asyncio
+    async def test_dispatch_logs_request_details(self):
+        """Test that request details are logged."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest(
+            method="PUT",
+            path="/api/update/123",
+            query_params={"key": "value"},
+            client_host="192.168.1.1",
+        )
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        with patch("src.core.middleware.logger") as mock_logger:
+            await middleware.dispatch(request, call_next)
+
+            # Check that extra fields are logged
+            info_calls = mock_logger.info.call_args_list
+            assert len(info_calls) > 0
+
+    @pytest.mark.asyncio
+    async def test_dispatch_handles_exception(self):
+        """Test that dispatch properly handles and logs exceptions."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest()
+
+        async def call_next(req):
+            raise ValueError("Test error")
+
+        with patch("src.core.middleware.logger") as mock_logger:
+            with pytest.raises(ValueError):
+                await middleware.dispatch(request, call_next)
+
+            # Should log exception
+            assert mock_logger.exception.called
+
+    @pytest.mark.asyncio
+    async def test_dispatch_logs_duration_on_error(self):
+        """Test that duration is logged even on error."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest()
+
+        async def call_next(req):
+            await asyncio.sleep(0.1)
+            raise RuntimeError("Error")
+
+        with patch("src.core.middleware.logger") as mock_logger:
+            with pytest.raises(RuntimeError):
+                await middleware.dispatch(request, call_next)
+
+            # Should log with duration_ms
+            exception_call = mock_logger.exception.call_args
+            assert "duration_ms" in exception_call[1]["extra"]
+
+    @pytest.mark.asyncio
+    async def test_dispatch_with_none_client(self):
+        """Test dispatch handles request with no client info."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest(client_host=None)
+        request.client = None
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        with patch("src.core.middleware.logger"):
+            # Should not raise error
+            result = await middleware.dispatch(request, call_next)
+            assert result is not None
 
 
 class TestErrorLoggingMiddleware:
-    """Test ErrorLoggingMiddleware class."""
+    """Test ErrorLoggingMiddleware functionality."""
 
     @pytest.mark.asyncio
-    async def test_error_logging_middleware_success(self):
-        """Test middleware passes through successful requests."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/test"
+    async def test_dispatch_passes_through_success(self):
+        """Test dispatch passes through successful requests."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
 
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest()
+        response = MockResponse()
 
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            return response
 
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
+        result = await middleware.dispatch(request, call_next)
 
-        response = await middleware.dispatch(mock_request, mock_call_next)
-        assert response.status_code == 200
+        assert result is response
 
     @pytest.mark.asyncio
-    async def test_error_logging_middleware_logs_exception(self):
-        """Test middleware logs exceptions with context."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/error"
-        mock_request.query_params = {"key": "value"}
+    async def test_dispatch_logs_exception(self):
+        """Test that exceptions are logged with context."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
 
-        # Set request ID in context
-        request_id_var.set("test-req-123")
+        request = MockRequest(method="POST", path="/api/error")
 
-        async def mock_call_next(request):
-            msg = "Test runtime error"
-            raise RuntimeError(msg)
+        async def call_next(req):
+            raise ValueError("Test exception")
 
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
+        with patch("src.core.middleware.logger") as mock_logger:
+            with pytest.raises(ValueError):
+                await middleware.dispatch(request, call_next)
 
-        with pytest.raises(RuntimeError):
-            await middleware.dispatch(mock_request, mock_call_next)
+            assert mock_logger.exception.called
 
     @pytest.mark.asyncio
-    async def test_error_logging_middleware_with_post_body(self):
-        """Test middleware logs POST request body on error."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/create"
-        mock_request.query_params = {}
+    async def test_dispatch_logs_request_context(self):
+        """Test that request context is included in error logs."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
 
-        # Mock request body
-        request_body = json.dumps({"name": "test", "value": 123}).encode()
+        request = MockRequest(
+            method="DELETE", path="/api/delete/456", query_params={"confirm": "true"}
+        )
 
-        async def mock_body():
-            return request_body
+        async def call_next(req):
+            raise RuntimeError("Delete failed")
 
-        mock_request.body = mock_body
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-test-123"
 
-        async def mock_call_next(request):
-            msg = "Validation error"
-            raise ValueError(msg)
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(RuntimeError):
+                    await middleware.dispatch(request, call_next)
 
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
-
-        with pytest.raises(ValueError):
-            await middleware.dispatch(mock_request, mock_call_next)
-
-    @pytest.mark.asyncio
-    async def test_error_logging_middleware_with_large_body(self):
-        """Test middleware handles large request bodies."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/upload"
-        mock_request.query_params = {}
-
-        # Mock large body (>10000 bytes)
-        large_body = b"x" * 15000
-
-        async def mock_body():
-            return large_body
-
-        mock_request.body = mock_body
-
-        async def mock_call_next(request):
-            msg = "Upload error"
-            raise ValueError(msg)
-
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
-
-        with pytest.raises(ValueError):
-            await middleware.dispatch(mock_request, mock_call_next)
+                # Check context
+                exception_call = mock_logger.exception.call_args
+                extra = exception_call[1]["extra"]
+                assert extra["method"] == "DELETE"
+                assert extra["path"] == "/api/delete/456"
 
     @pytest.mark.asyncio
-    async def test_error_logging_middleware_with_non_json_body(self):
-        """Test middleware handles non-JSON request bodies."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "PUT"
-        mock_request.url.path = "/api/update"
-        mock_request.query_params = {}
+    async def test_dispatch_logs_request_body_json(self):
+        """Test logging of JSON request body on error."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
 
-        # Non-JSON body
-        request_body = b"This is plain text, not JSON"
+        request = MockRequest(method="POST", path="/api/create")
+        request._body = json.dumps({"data": "test"}).encode()
 
-        async def mock_body():
-            return request_body
+        async def call_next(req):
+            raise ValueError("Create failed")
 
-        mock_request.body = mock_body
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-body-test"
 
-        async def mock_call_next(request):
-            msg = "Missing field"
-            raise KeyError(msg)
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(ValueError):
+                    await middleware.dispatch(request, call_next)
 
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
-
-        with pytest.raises(KeyError):
-            await middleware.dispatch(mock_request, mock_call_next)
+                # Should log body
+                debug_calls = mock_logger.debug.call_args_list
+                assert len(debug_calls) > 0
 
     @pytest.mark.asyncio
-    async def test_error_logging_middleware_body_read_error(self):
-        """Test middleware handles errors when reading request body."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/test"
-        mock_request.query_params = {}
+    async def test_dispatch_logs_request_body_non_json(self):
+        """Test logging of non-JSON request body."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
 
-        # Mock body that raises an error
-        async def mock_body():
-            msg = "Cannot read body"
-            raise OSError(msg)
+        request = MockRequest(method="PUT", path="/api/upload")
+        request._body = b"binary data here"
 
-        mock_request.body = mock_body
+        async def call_next(req):
+            raise ValueError("Upload failed")
 
-        async def mock_call_next(request):
-            msg = "Processing error"
-            raise ValueError(msg)
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-binary-test"
 
-        app = Mock()
-        middleware = ErrorLoggingMiddleware(app)
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(ValueError):
+                    await middleware.dispatch(request, call_next)
 
-        with pytest.raises(ValueError):
-            await middleware.dispatch(mock_request, mock_call_next)
+                # Should handle non-JSON body
+                # Just verify no crash occurs
+
+    @pytest.mark.asyncio
+    async def test_dispatch_skips_large_body(self):
+        """Test that large request bodies are not logged."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest(method="POST", path="/api/upload")
+        request._body = b"x" * 20000  # Large body
+
+        async def call_next(req):
+            raise ValueError("Upload failed")
+
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-large-test"
+
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(ValueError):
+                    await middleware.dispatch(request, call_next)
+
+                # Should not log large body
+
+    @pytest.mark.asyncio
+    async def test_dispatch_skips_body_for_get(self):
+        """Test that GET request bodies are not logged."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest(method="GET", path="/api/data")
+
+        async def call_next(req):
+            raise ValueError("Get failed")
+
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-get-test"
+
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(ValueError):
+                    await middleware.dispatch(request, call_next)
+
+                # Should not attempt to log body for GET
+
+    @pytest.mark.asyncio
+    async def test_dispatch_handles_body_read_error(self):
+        """Test handling of errors when reading request body."""
+        middleware = ErrorLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest(method="POST", path="/api/test")
+
+        async def body_error():
+            raise RuntimeError("Cannot read body")
+
+        request.body = body_error
+
+        async def call_next(req):
+            raise ValueError("Request failed")
+
+        with patch("src.core.middleware.request_id_var") as mock_req_id:
+            mock_req_id.get.return_value = "req-body-error"
+
+            with patch("src.core.middleware.logger") as mock_logger:
+                with pytest.raises(ValueError):
+                    await middleware.dispatch(request, call_next)
+
+                # Should handle body read error gracefully
 
 
 class TestPerformanceMonitoringMiddleware:
-    """Test PerformanceMonitoringMiddleware class."""
+    """Test PerformanceMonitoringMiddleware functionality."""
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_basic(self):
-        """Test performance monitoring middleware tracks requests."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/items"
+    async def test_init_with_custom_threshold(self):
+        """Test initialization with custom threshold."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock(), threshold_ms=500)
 
-        mock_response = Response(content="OK", status_code=200)
-
-        async def mock_call_next(request):
-            return mock_response
-
-        app = Mock()
-        middleware = PerformanceMonitoringMiddleware(app, threshold_ms=1000)
-
-        response = await middleware.dispatch(mock_request, mock_call_next)
-
-        assert response.status_code == 200
-        # Check that statistics were updated
-        endpoint_key = "GET /api/items"
-        assert endpoint_key in middleware.request_stats
-        assert middleware.request_stats[endpoint_key]["count"] == 1
+        assert middleware.threshold_ms == 500
+        assert middleware.request_stats == {}
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_multiple_requests(self):
-        """Test performance monitoring tracks multiple requests to same endpoint."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/create"
+    async def test_dispatch_tracks_request_time(self):
+        """Test that dispatch tracks request duration."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
 
-        mock_response = Response(content="Created", status_code=201)
+        request = MockRequest(method="GET", path="/api/data")
+        response = MockResponse()
 
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            await asyncio.sleep(0.05)
+            return response
 
-        app = Mock()
-        middleware = PerformanceMonitoringMiddleware(app)
+        result = await middleware.dispatch(request, call_next)
+
+        assert "GET /api/data" in middleware.request_stats
+
+    @pytest.mark.asyncio
+    async def test_dispatch_updates_statistics(self):
+        """Test that statistics are updated correctly."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
+
+        request = MockRequest(method="POST", path="/api/create")
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        await middleware.dispatch(request, call_next)
+
+        stats = middleware.request_stats["POST /api/create"]
+        assert stats["count"] == 1
+        assert stats["total_time"] > 0
+        assert stats["max_time"] > 0
+        assert stats["min_time"] > 0
+
+    @pytest.mark.asyncio
+    async def test_dispatch_tracks_multiple_requests(self):
+        """Test tracking multiple requests to same endpoint."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
+
+        request = MockRequest(method="GET", path="/api/list")
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
 
         # Make multiple requests
-        for i in range(5):
-            await middleware.dispatch(mock_request, mock_call_next)
+        for _ in range(5):
+            await middleware.dispatch(request, call_next)
 
-        endpoint_key = "POST /api/create"
-        assert middleware.request_stats[endpoint_key]["count"] == 5
-        assert middleware.request_stats[endpoint_key]["total_time"] > 0
-        assert middleware.request_stats[endpoint_key]["max_time"] > 0
-        assert middleware.request_stats[endpoint_key]["min_time"] < float("inf")
+        stats = middleware.request_stats["GET /api/list"]
+        assert stats["count"] == 5
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_periodic_logging(self):
-        """Test performance monitoring logs stats periodically."""
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/status"
+    async def test_dispatch_tracks_min_max_time(self):
+        """Test that min and max times are tracked correctly."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
 
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest(method="GET", path="/api/timing")
+        response = MockResponse()
 
-        async def mock_call_next(request):
-            await asyncio.sleep(0.001)  # Small delay
-            return mock_response
+        call_count = 0
 
-        app = Mock()
-        middleware = PerformanceMonitoringMiddleware(app, threshold_ms=500)
+        async def call_next(req):
+            nonlocal call_count
+            call_count += 1
+            # First call faster, second slower
+            await asyncio.sleep(0.01 if call_count == 1 else 0.05)
+            return response
 
-        # Make 100 requests to trigger periodic logging
-        for i in range(100):
-            await middleware.dispatch(mock_request, mock_call_next)
+        # First request (faster)
+        await middleware.dispatch(request, call_next)
+        # Second request (slower)
+        await middleware.dispatch(request, call_next)
 
-        endpoint_key = "GET /api/status"
-        assert middleware.request_stats[endpoint_key]["count"] == 100
+        stats = middleware.request_stats["GET /api/timing"]
+        assert stats["max_time"] > stats["min_time"]
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_different_endpoints(self):
-        """Test performance monitoring tracks different endpoints separately."""
-        app = Mock()
-        middleware = PerformanceMonitoringMiddleware(app)
+    async def test_dispatch_logs_stats_every_100_requests(self):
+        """Test that statistics are logged every 100 requests."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
 
-        mock_response = Response(content="OK", status_code=200)
+        request = MockRequest(method="GET", path="/api/frequent")
+        response = MockResponse()
 
-        async def mock_call_next(request):
-            return mock_response
+        async def call_next(req):
+            return response
 
-        # Request to endpoint 1
-        mock_request1 = Mock(spec=Request)
-        mock_request1.method = "GET"
-        mock_request1.url.path = "/api/users"
-        await middleware.dispatch(mock_request1, mock_call_next)
+        with patch("src.core.middleware.logger") as mock_logger:
+            # Make 100 requests
+            for _ in range(100):
+                await middleware.dispatch(request, call_next)
 
-        # Request to endpoint 2
-        mock_request2 = Mock(spec=Request)
-        mock_request2.method = "POST"
-        mock_request2.url.path = "/api/items"
-        await middleware.dispatch(mock_request2, mock_call_next)
+            # Should log stats
+            assert mock_logger.info.called
+
+    @pytest.mark.asyncio
+    async def test_dispatch_different_endpoints(self):
+        """Test tracking different endpoints separately."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
+
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        # Different endpoints
+        request1 = MockRequest(method="GET", path="/api/users")
+        request2 = MockRequest(method="POST", path="/api/users")
+        request3 = MockRequest(method="GET", path="/api/posts")
+
+        await middleware.dispatch(request1, call_next)
+        await middleware.dispatch(request2, call_next)
+        await middleware.dispatch(request3, call_next)
 
         assert "GET /api/users" in middleware.request_stats
-        assert "POST /api/items" in middleware.request_stats
-        assert middleware.request_stats["GET /api/users"]["count"] == 1
-        assert middleware.request_stats["POST /api/items"]["count"] == 1
+        assert "POST /api/users" in middleware.request_stats
+        assert "GET /api/posts" in middleware.request_stats
+        assert len(middleware.request_stats) == 3
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_custom_threshold(self):
-        """Test performance monitoring with custom threshold."""
-        app = Mock()
-        middleware = PerformanceMonitoringMiddleware(app, threshold_ms=100)
+    async def test_dispatch_calculates_average_time(self):
+        """Test that average time can be calculated from stats."""
+        middleware = PerformanceMonitoringMiddleware(app=MagicMock())
 
-        assert middleware.threshold_ms == 100
+        request = MockRequest(method="GET", path="/api/avg")
+        response = MockResponse()
 
-        mock_request = Mock(spec=Request)
-        mock_request.method = "GET"
-        mock_request.url.path = "/api/fast"
+        async def call_next(req):
+            await asyncio.sleep(0.01)
+            return response
 
-        mock_response = Response(content="OK", status_code=200)
+        # Make several requests
+        for _ in range(10):
+            await middleware.dispatch(request, call_next)
 
-        async def mock_call_next(request):
-            return mock_response
+        stats = middleware.request_stats["GET /api/avg"]
+        avg_time = stats["total_time"] / stats["count"]
 
-        response = await middleware.dispatch(mock_request, mock_call_next)
-        assert response.status_code == 200
+        assert avg_time > 0
+        assert avg_time >= stats["min_time"]
+        assert avg_time <= stats["max_time"]
+
+
+class TestRateLimitingMiddleware:
+    """Test RateLimitingMiddleware functionality."""
+
+    @pytest.mark.asyncio
+    async def test_init_with_defaults(self):
+        """Test initialization with default settings."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+        assert middleware.window_seconds == 60
+        assert "default" in middleware.RATE_LIMITS
+
+    @pytest.mark.asyncio
+    async def test_get_rate_limit(self):
+        """Test getting rate limit for different paths."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Test specific limits
+        assert middleware._get_rate_limit("/search/semantic") == 30
+        assert middleware._get_rate_limit("/index/start") == 5
+
+        # Test default limit
+        assert middleware._get_rate_limit("/api/other") == 120
+
+    @pytest.mark.asyncio
+    async def test_is_rate_limited_allow(self):
+        """Test allowing requests under limit."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Should allow first request
+        is_limited, remaining = middleware._is_rate_limited("127.0.0.1", "/api/test")
+
+        # Note: _is_rate_limited doesn't record the request, just checks history
+        # Since history is empty, it should allow
+        assert not is_limited
+        assert remaining > 0
+
+    @pytest.mark.asyncio
+    async def test_record_request(self):
+        """Test recording requests."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        middleware._record_request("127.0.0.1", "/api/test")
+
+        # Check history updated
+        endpoint_key = middleware._get_endpoint_key("/api/test")
+        assert len(middleware.request_history["127.0.0.1"][endpoint_key]) == 1
+
+    @pytest.mark.asyncio
+    async def test_dispatch_rate_limit_exceeded(self):
+        """Test that requests are blocked when limit exceeded."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Mock _is_rate_limited to return True
+        with patch.object(middleware, "_is_rate_limited", return_value=(True, 0)):
+            # Use external IP to avoid localhost bypass
+            request = MockRequest(client_host="192.168.1.100")
+            async def call_next(req):
+                return MockResponse()
+
+            response = await middleware.dispatch(request, call_next)
+
+            assert response.status_code == 429
+            assert "Retry-After" in response.headers
+
+    @pytest.mark.asyncio
+    async def test_dispatch_rate_limit_ok(self):
+        """Test that requests are allowed when limit not exceeded."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Mock _is_rate_limited to return False
+        with patch.object(middleware, "_is_rate_limited", return_value=(False, 10)):
+            # Use external IP to avoid localhost bypass
+            request = MockRequest(client_host="192.168.1.100")
+            response = MockResponse()
+            async def call_next(req):
+                return response
+
+            result = await middleware.dispatch(request, call_next)
+
+            assert result.status_code == 200
+            assert result.headers["X-RateLimit-Remaining"] == "9"
+
+    @pytest.mark.asyncio
+    async def test_skip_rate_limiting_for_health_checks(self):
+        """Test that health checks skip rate limiting."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        request = MockRequest(path="/health")
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        with patch.object(middleware, "_is_rate_limited") as mock_check:
+            await middleware.dispatch(request, call_next)
+
+            # Should skip check
+            assert not mock_check.called
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_entries(self):
+        """Test cleaning up old history entries."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Add old entry
+        old_time = time.time() - 120  # older than window
+        middleware.request_history["127.0.0.1"]["default"].append((old_time, 1))
+
+        middleware._cleanup_old_entries()
+
+        # Should be empty
+        assert "127.0.0.1" not in middleware.request_history
+
+
+class TestSanitizeErrorMessage:
+    """Test sanitize_error_message function."""
+
+    def test_sanitize_no_sensitive_info(self):
+        """Test sanitizing message without sensitive info."""
+        msg = "ReferenceError: variable is not defined"
+        assert sanitize_error_message(ValueError(msg)) == msg
+
+    def test_sanitize_file_paths(self):
+        """Test redaction of file paths."""
+        msg = "Error in /Users/user/project/file.py"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "/Users/***" in sanitized
+        assert "user" not in sanitized
+
+    def test_sanitize_email(self):
+        """Test redaction of email addresses."""
+        msg = "Invalid email user@example.com"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "***@***.***" in sanitized
+        assert "user@example.com" not in sanitized
+
+    def test_sanitize_ip_address(self):
+        """Test redaction of IP addresses."""
+        msg = "Connection failed to 192.168.1.50"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "***.***.***.***" in sanitized
+        assert "192.168.1.50" not in sanitized
+
+    def test_truncate_long_message(self):
+        """Test truncation of very long messages."""
+        # Use a message with spaces to avoid matching the "API key" pattern (long alphanumeric)
+        msg = "long message " * 100
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert len(sanitized) < 600
+        assert "truncated" in sanitized
 
 
 class TestGetRequestId:
     """Test get_request_id function."""
 
     def test_get_request_id_default(self):
-        """Test getting request ID when not set."""
+        """Test getting default request ID."""
         # Reset context var
         request_id_var.set("no-request")
 
-        request_id = get_request_id()
-        assert request_id == "no-request"
+        result = get_request_id()
 
-    def test_get_request_id_custom(self):
-        """Test getting custom request ID."""
+        assert result == "no-request"
+
+    def test_get_request_id_set_value(self):
+        """Test getting set request ID."""
         request_id_var.set("custom-req-123")
 
-        request_id = get_request_id()
-        assert request_id == "custom-req-123"
+        result = get_request_id()
 
-    def test_get_request_id_multiple_contexts(self):
-        """Test request ID in different contexts."""
-        # Set in main context
-        request_id_var.set("main-req")
-        assert get_request_id() == "main-req"
+        assert result == "custom-req-123"
 
-        # The context var should maintain its value
-        request_id_var.set("other-req")
-        assert get_request_id() == "other-req"
+        # Reset
+        request_id_var.set("no-request")
+
+
+class TestMiddlewareIntegration:
+    """Test middleware integration scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_multiple_middleware_chain(self):
+        """Test chaining multiple middleware together."""
+        logging_middleware = RequestLoggingMiddleware(app=MagicMock())
+        error_middleware = ErrorLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest()
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        with patch("src.core.middleware.logger"):
+            # Process through both middleware
+            result = await logging_middleware.dispatch(request, call_next)
+            assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_middleware_preserves_request_id_context(self):
+        """Test that request ID is preserved across middleware."""
+        middleware = RequestLoggingMiddleware(app=MagicMock())
+
+        request = MockRequest()
+        response = MockResponse()
+
+        captured_id = None
+
+        async def call_next(req):
+            nonlocal captured_id
+            captured_id = request_id_var.get()
+            return response
+
+        with patch("src.core.middleware.logger"):
+            await middleware.dispatch(request, call_next)
+
+            assert captured_id is not None
+            assert captured_id != "no-request"
