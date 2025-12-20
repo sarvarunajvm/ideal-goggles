@@ -122,8 +122,25 @@ class TestHealthEndpoints:
         assert data["database"]["healthy"] is False
         assert "error" in data["database"]
 
-    def test_health_system_info(self, client):
+    @patch("src.api.health.psutil")
+    def test_health_system_info(self, mock_psutil, client):
         """Test that system information is included in health check."""
+        # Mock psutil responses
+        mock_memory = MagicMock()
+        mock_memory.total = 16 * 1024**3
+        mock_memory.available = 8 * 1024**3
+        mock_memory.percent = 50.0
+        mock_psutil.virtual_memory.return_value = mock_memory
+
+        mock_disk = MagicMock()
+        mock_disk.total = 500 * 1024**3
+        mock_disk.free = 250 * 1024**3
+        mock_disk.used = 250 * 1024**3
+        mock_psutil.disk_usage.return_value = mock_disk
+
+        mock_psutil.cpu_percent.return_value = 15.5
+        mock_psutil.cpu_count.return_value = 8
+
         response = client.get("/health")
         assert response.status_code == 200
 
