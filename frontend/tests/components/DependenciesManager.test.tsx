@@ -6,22 +6,37 @@ jest.mock('../../src/components/ui/use-toast', () => ({
   useToast: () => ({ toast: jest.fn() }),
 }))
 
+// Define mock implementation inside the factory
 jest.mock('../../src/services/apiClient', () => ({
   apiService: {
-    getDependencies: jest.fn().mockResolvedValue({
+    getDependencies: jest.fn(),
+    installDependencies: jest.fn(),
+  },
+}))
+
+describe('DependenciesManager', () => {
+  // Get reference to mocked functions
+  const { apiService } = require('../../src/services/apiClient')
+  const getDependenciesMock = apiService.getDependencies as jest.Mock
+  const installDependenciesMock = apiService.installDependencies as jest.Mock
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    
+    // Default successful response
+    getDependenciesMock.mockResolvedValue({
       core: [
         { name: 'SQLite', installed: true, required: true, version: '3.0+', description: 'DB' },
       ],
       ml: [
         { name: 'Tesseract', installed: false, required: false, version: null, description: 'OCR' },
+        { name: 'PyTorch', installed: false, required: false, version: null, description: 'ML' },
       ],
       features: { text_recognition: false },
-    }),
-    installDependencies: jest.fn().mockResolvedValue({ status: 'success' }),
-  },
-}))
+    })
+    installDependenciesMock.mockResolvedValue({ status: 'success' })
+  })
 
-describe('DependenciesManager', () => {
   test('renders core and ML dependencies and allows install', async () => {
     render(<DependenciesManager />)
 
@@ -33,64 +48,100 @@ describe('DependenciesManager', () => {
     expect(screen.getByText('Tesseract')).toBeInTheDocument()
 
     // Click Install on specific ML dependency card
-    const installBtn = screen.getByRole('button', { name: /^Install$/ })
+    const installBtn = screen.getAllByRole('button', { name: /^Install$/ })[0]
     await userEvent.click(installBtn)
 
     await waitFor(() => {
-      const { apiService } = require('../../src/services/apiClient')
-      expect(apiService.installDependencies).toHaveBeenCalled()
+      expect(installDependenciesMock).toHaveBeenCalled()
     })
   })
 
   test('refresh button re-fetches dependencies', async () => {
-    const { apiService } = require('../../src/services/apiClient')
     render(<DependenciesManager />)
     await waitFor(() => screen.getByText(/ML Dependencies/))
     const refresh = screen.getByRole('button', { name: /Refresh/i })
     await userEvent.click(refresh)
+    
     await waitFor(() => {
-      expect(apiService.getDependencies).toHaveBeenCalledTimes(2)
+      expect(getDependenciesMock).toHaveBeenCalledTimes(2)
     })
   })
 
   test('handles fetch error and shows fallback in dev mode', async () => {
-    const { apiService } = require('../../src/services/apiClient')
-    apiService.getDependencies.mockRejectedValueOnce(new Error('Network error'))
+    getDependenciesMock.mockReset()
+    getDependenciesMock.mockRejectedValueOnce(new Error('Network error'))
     
-    // Mock dev environment via Electron (since we can't easily change window.location in JSDOM)
     const originalElectron = (window as any).electronAPI
     ;(window as any).electronAPI = { selectDirectory: jest.fn() }
 
     render(<DependenciesManager />)
 
     await waitFor(() => {
-      // In dev/electron mode, it shows a warning and sets default ML dependencies (including Pillow)
       expect(screen.getByText('Pillow')).toBeInTheDocument()
-      // It should also try to show ML deps
       expect(screen.getByText('Tesseract')).toBeInTheDocument()
     })
 
-    // Restore
     ;(window as any).electronAPI = originalElectron
   })
 
   test('handles fetch error and shows no ML deps in production', async () => {
-    const { apiService } = require('../../src/services/apiClient')
-    apiService.getDependencies.mockRejectedValueOnce(new Error('Network error'))
+    getDependenciesMock.mockReset()
+    getDependenciesMock.mockRejectedValueOnce(new Error('Network error'))
     
-    // In JSDOM with testEnvironmentOptions.url = 'http://example.com/', hostname is example.com
-    // And ensure no electronAPI
     const originalElectron = (window as any).electronAPI;
     (window as any).electronAPI = undefined;
 
     render(<DependenciesManager />)
 
     await waitFor(() => {
-      expect(screen.getByText('Pillow')).toBeInTheDocument() // Core deps are still set in fallback
-      expect(screen.queryByText('Tesseract')).not.toBeInTheDocument() // ML deps should be empty in prod fallback
+      expect(screen.getByText('Pillow')).toBeInTheDocument()
+      expect(screen.queryByText('Tesseract')).not.toBeInTheDocument()
     })
 
     // Restore
     ;(window as any).electronAPI = originalElectron;
+  })
+
+  test('handles Install All functionality', async () => {
+    render(<DependenciesManager />)
+    await waitFor(() => screen.getByText(/ML Dependencies/))
+
+    const installAllBtn = screen.getByRole('button', { name: /Install All/i })
+    await userEvent.click(installAllBtn)
+
+    await waitFor(() => {
+      expect(installDependenciesMock).toHaveBeenCalledWith(['all'])
+    })
+  })
+
+  test('displays warning toast on installation warning', async () => {
+    installDependenciesMock.mockResolvedValueOnce({ 
+      status: 'warning', 
+      errors: 'Some warning' 
+    })
+
+    render(<DependenciesManager />)
+    await waitFor(() => screen.getByText(/ML Dependencies/))
+
+    const installBtn = screen.getAllByRole('button', { name: /^Install$/ })[0]
+    await userEvent.click(installBtn)
+
+    await waitFor(() => {
+      expect(installDependenciesMock).toHaveBeenCalled()
+    })
+  })
+
+  test('displays error toast on installation exception', async () => {
+    installDependenciesMock.mockRejectedValueOnce(new Error('Install failed'))
+
+    render(<DependenciesManager />)
+    await waitFor(() => screen.getByText(/ML Dependencies/))
+
+    const installBtn = screen.getAllByRole('button', { name: /^Install$/ })[0]
+    await userEvent.click(installBtn)
+
+    await waitFor(() => {
+      expect(installDependenciesMock).toHaveBeenCalled()
+    })
   })
 })
