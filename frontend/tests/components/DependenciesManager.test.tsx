@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DependenciesManager from '../../src/components/DependenciesManager'
 
@@ -51,5 +51,46 @@ describe('DependenciesManager', () => {
     await waitFor(() => {
       expect(apiService.getDependencies).toHaveBeenCalledTimes(2)
     })
+  })
+
+  test('handles fetch error and shows fallback in dev mode', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.getDependencies.mockRejectedValueOnce(new Error('Network error'))
+    
+    // Mock dev environment via Electron (since we can't easily change window.location in JSDOM)
+    const originalElectron = (window as any).electronAPI
+    ;(window as any).electronAPI = { selectDirectory: jest.fn() }
+
+    render(<DependenciesManager />)
+
+    await waitFor(() => {
+      // In dev/electron mode, it shows a warning and sets default ML dependencies (including Pillow)
+      expect(screen.getByText('Pillow')).toBeInTheDocument()
+      // It should also try to show ML deps
+      expect(screen.getByText('Tesseract')).toBeInTheDocument()
+    })
+
+    // Restore
+    ;(window as any).electronAPI = originalElectron
+  })
+
+  test('handles fetch error and shows no ML deps in production', async () => {
+    const { apiService } = require('../../src/services/apiClient')
+    apiService.getDependencies.mockRejectedValueOnce(new Error('Network error'))
+    
+    // In JSDOM with testEnvironmentOptions.url = 'http://example.com/', hostname is example.com
+    // And ensure no electronAPI
+    const originalElectron = (window as any).electronAPI;
+    (window as any).electronAPI = undefined;
+
+    render(<DependenciesManager />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pillow')).toBeInTheDocument() // Core deps are still set in fallback
+      expect(screen.queryByText('Tesseract')).not.toBeInTheDocument() // ML deps should be empty in prod fallback
+    })
+
+    // Restore
+    ;(window as any).electronAPI = originalElectron;
   })
 })

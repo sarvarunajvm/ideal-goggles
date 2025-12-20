@@ -2,13 +2,11 @@
  * Tests for BatchActions component
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BatchActions } from '../../src/components/BatchActions/BatchActions';
 import { useBatchSelectionStore } from '../../src/stores/batchSelectionStore';
-import axios from 'axios';
 
 // Mock axios
 jest.mock('axios');

@@ -7,7 +7,6 @@ import {
   mapErrorToUserMessage,
   shouldHideError,
   formatErrorForNotification,
-  ErrorMapping
 } from '../../src/utils/errorMessages'
 
 describe('Error Messages Utility', () => {

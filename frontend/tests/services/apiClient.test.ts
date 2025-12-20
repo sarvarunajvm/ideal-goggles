@@ -721,7 +721,7 @@ describe('API Client Service', () => {
 
       const largeBody = { data: 'x'.repeat(1500) }
 
-      await apiService.updateConfig(largeBody)
+      await apiService.updateConfig(largeBody as any)
 
       expect(logger.logApiCall).toHaveBeenCalledWith(
         'PUT',

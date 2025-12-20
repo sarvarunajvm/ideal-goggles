@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ErrorBoundary, withErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/utils/logger';

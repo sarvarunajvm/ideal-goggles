@@ -2,7 +2,6 @@
  * Unit tests for VirtualGrid component
  */
 
-import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 // Mock useVirtualGrid hook to control virtualization behavior

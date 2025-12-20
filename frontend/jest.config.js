@@ -1,17 +1,20 @@
 module.exports = {
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    url: 'http://example.com/',
+  },
   preset: 'ts-jest',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.json',
+      tsconfig: '<rootDir>/tsconfig.test.json',
       diagnostics: false,
     }],
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
-    '.*constants$': '<rootDir>/tests/mocks/constants.ts',
+    '.*config/constants$': '<rootDir>/tests/mocks/constants.ts',
   },
   testMatch: [
     '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js|jsx)',
@@ -42,8 +45,6 @@ module.exports = {
   moduleDirectories: ['node_modules', '<rootDir>/'],
   testPathIgnorePatterns: [
     '<rootDir>/tests/e2e/',
-    '<rootDir>/tests/main.test.tsx.skip',
-    '<rootDir>/tests/components/ui/*.skip',
     '<rootDir>/node_modules/',
     '<rootDir>/dist',
     '<rootDir>/dist-electron'

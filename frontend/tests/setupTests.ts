@@ -7,7 +7,7 @@ global.TextDecoder = TextDecoder as any
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
-  constructor(cb: any) {}
+  constructor(_cb: any) {}
   observe() {}
   unobserve() {}
   disconnect() {}
@@ -15,7 +15,7 @@ global.ResizeObserver = class ResizeObserver {
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
-  constructor(cb: any) {}
+  constructor(_cb: any) {}
   observe() { return null }
   unobserve() { return null }
   disconnect() { return null }

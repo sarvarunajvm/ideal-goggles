@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react'
-import { render, screen } from '@testing-library/react'
 import { RouteErrorBoundary } from '../../src/components/RouteErrorBoundary'
 
 jest.mock('react-router-dom', () => {

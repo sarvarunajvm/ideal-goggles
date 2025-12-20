@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { LogsPage } from '../../src/pages/LogsPage'
 
 // Mock the LogViewer component to isolate LogsPage testing

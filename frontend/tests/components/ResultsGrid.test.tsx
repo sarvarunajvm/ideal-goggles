@@ -5,9 +5,9 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ResultsGrid from '../../src/components/ResultsGrid'
-import { SearchResultItem } from '@shared/types/api'
+import { SearchResult } from '../../src/services/apiClient'
 
-const mockResults: SearchResultItem[] = [
+const mockResults: SearchResult[] = [
   {
     file_id: 1,
     path: '/test/photos/wedding1.jpg',
@@ -28,7 +28,7 @@ const mockResults: SearchResultItem[] = [
     shot_dt: '2023-07-20T16:45:00Z',
     score: 0.87,
     badges: ['Face', 'Photo-Match'],
-    snippet: undefined
+    snippet: null
   }
 ]
 
@@ -119,21 +119,68 @@ describe('ResultsGrid Component', () => {
 
   test('supports keyboard navigation', async () => {
     const user = userEvent.setup()
-    render(<ResultsGrid {...mockProps} />)
+    // Create enough items for multiple rows (assuming 4 columns)
+    const manyResults = Array(6).fill(mockResults[0]).map((item, i) => ({ ...item, file_id: i }))
+    render(<ResultsGrid {...mockProps} results={manyResults} />)
 
-    const grid = screen.getByTestId('results-grid')
-    await user.tab() // Focus on grid
+    const gridContainer = screen.getByRole('grid')
+    
+    // Focus the grid to receive key events
+    gridContainer.focus()
 
-    // Arrow keys should navigate between items
+    // Initially focusedIndex is 0
+    // Right -> 1
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByTestId('result-item-2')).toHaveFocus()
+    expect(screen.getByTestId('result-item-1')).toHaveFocus()
+
+    // Left -> 0
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByTestId('result-item-0')).toHaveFocus()
+
+    // Down -> 4 (0 + 4)
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByTestId('result-item-4')).toHaveFocus()
+
+    // Up -> 0 (4 - 4)
+    await user.keyboard('{ArrowUp}')
+    expect(screen.getByTestId('result-item-0')).toHaveFocus()
 
     // Enter should trigger double-click action
     await user.keyboard('{Enter}')
-    expect(mockProps.onItemDoubleClick).toHaveBeenCalled()
+    expect(mockProps.onItemDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ file_id: 0 }))
   })
 
-  // Removed: Component doesn't have isLoading prop - loading state handled by parent
+  test('shows loading state', () => {
+    render(<ResultsGrid {...mockProps} loading={true} />)
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  test('handles image load error', () => {
+    render(<ResultsGrid {...mockProps} />)
+    const img = screen.getAllByRole('img')[0]
+    fireEvent.error(img)
+    expect(img).toHaveAttribute('src', expect.stringContaining('data:image/svg+xml'))
+  })
+
+  test('handles reveal in folder', async () => {
+    const onReveal = jest.fn()
+    const user = userEvent.setup()
+    render(<ResultsGrid {...mockProps} onRevealInFolder={onReveal} />)
+    
+    const revealBtn = screen.getAllByText(/Show in folder/)[0]
+    await user.click(revealBtn)
+    
+    expect(onReveal).toHaveBeenCalledWith(mockResults[0])
+    // Should not trigger item click due to stopPropagation
+    expect(mockProps.onItemClick).not.toHaveBeenCalled() 
+  })
+
+  test('handles invalid date', () => {
+    const invalidResult = [{ ...mockResults[0], shot_dt: 'invalid-date', file_id: 99 }]
+    render(<ResultsGrid {...mockProps} results={invalidResult} totalMatches={1} />)
+    // Date behavior varies by environment (Unknown from catch, or Invalid Date string)
+    expect(screen.getByText(/Unknown|Invalid Date/)).toBeInTheDocument()
+  })
 
   test('shows empty state when no results', () => {
     render(<ResultsGrid {...mockProps} results={[]} totalMatches={0} />)

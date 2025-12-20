@@ -1,11 +1,10 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Lightbox } from '@/components/Lightbox/Lightbox';
-import { useLightboxStore } from '@/stores/lightboxStore';
-import type { Photo } from '@/types';
+import { useLightboxStore, LightboxPhoto } from '@/stores/lightboxStore';
 
 // Mock child components
 jest.mock('@/components/Lightbox/LightboxImage', () => ({
-  LightboxImage: ({ photo }: { photo: Photo }) => (
+  LightboxImage: ({ photo }: { photo: LightboxPhoto }) => (
     <div data-testid="lightbox-image">{photo.filename}</div>
   ),
 }));
@@ -15,7 +14,7 @@ jest.mock('@/components/Lightbox/LightboxNavigation', () => ({
 }));
 
 jest.mock('@/components/Lightbox/LightboxMetadata', () => ({
-  LightboxMetadata: ({ photo }: { photo: Photo }) => (
+  LightboxMetadata: ({ photo }: { photo: LightboxPhoto }) => (
     <div data-testid="lightbox-metadata">{photo.filename} metadata</div>
   ),
 }));
@@ -32,63 +31,60 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
-const mockPhotos: Photo[] = [
+const mockPhotos: LightboxPhoto[] = [
   {
     id: '1',
     filename: 'photo1.jpg',
-    filepath: '/path/to/photo1.jpg',
-    thumbnail: '/thumb/photo1.jpg',
-    width: 800,
-    height: 600,
-    date_taken: '2024-01-01',
-    file_size: 1024000,
+    path: '/path/to/photo1.jpg',
+    thumbnail_path: '/thumb/photo1.jpg',
+    metadata: {
+      width: 800,
+      height: 600,
+      date_taken: '2024-01-01',
+      camera_make: 'Canon',
+      camera_model: 'EOS R5',
+      iso: 100,
+      aperture: '2.8',
+      shutter_speed: '1/1000',
+      focal_length: '50',
+    },
     tags: [],
-    people: [],
-    location: null,
-    camera_make: 'Canon',
-    camera_model: 'EOS R5',
-    iso: 100,
-    aperture: 2.8,
-    shutter_speed: '1/1000',
-    focal_length: 50,
   },
   {
     id: '2',
     filename: 'photo2.jpg',
-    filepath: '/path/to/photo2.jpg',
-    thumbnail: '/thumb/photo2.jpg',
-    width: 1920,
-    height: 1080,
-    date_taken: '2024-01-02',
-    file_size: 2048000,
+    path: '/path/to/photo2.jpg',
+    thumbnail_path: '/thumb/photo2.jpg',
+    metadata: {
+      width: 1920,
+      height: 1080,
+      date_taken: '2024-01-02',
+      camera_make: 'Sony',
+      camera_model: 'A7III',
+      iso: 200,
+      aperture: '1.8',
+      shutter_speed: '1/500',
+      focal_length: '85',
+    },
     tags: [],
-    people: [],
-    location: null,
-    camera_make: 'Sony',
-    camera_model: 'A7III',
-    iso: 200,
-    aperture: 1.8,
-    shutter_speed: '1/500',
-    focal_length: 85,
   },
   {
     id: '3',
     filename: 'photo3.jpg',
-    filepath: '/path/to/photo3.jpg',
-    thumbnail: '/thumb/photo3.jpg',
-    width: 1600,
-    height: 1200,
-    date_taken: '2024-01-03',
-    file_size: 1536000,
+    path: '/path/to/photo3.jpg',
+    thumbnail_path: '/thumb/photo3.jpg',
+    metadata: {
+      width: 1600,
+      height: 1200,
+      date_taken: '2024-01-03',
+      camera_make: 'Nikon',
+      camera_model: 'D850',
+      iso: 400,
+      aperture: '4.0',
+      shutter_speed: '1/250',
+      focal_length: '24',
+    },
     tags: [],
-    people: [],
-    location: null,
-    camera_make: 'Nikon',
-    camera_model: 'D850',
-    iso: 400,
-    aperture: 4.0,
-    shutter_speed: '1/250',
-    focal_length: 24,
   },
 ];
 

@@ -2,8 +2,7 @@
  * Tests for BatchDeleteDialog component
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BatchDeleteDialog } from '../../src/components/BatchActions/BatchDeleteDialog';
@@ -12,7 +11,7 @@ import axios from 'axios';
 
 // Mock axios
 jest.mock('axios');
-const mockedAxios = axios;
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 // Mock the store
 jest.mock('../../src/stores/batchSelectionStore');

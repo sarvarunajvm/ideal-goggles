@@ -3,8 +3,7 @@
  * Priority: P1 (Core search results display)
  */
 
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import SearchResults from '../../src/components/SearchResults'
@@ -45,7 +44,7 @@ const mockResults: SearchResponse = {
   took_ms: 120,
   items: [
     {
-      file_id: '1',
+      file_id: 1,
       filename: 'beach_sunset.jpg',
       path: '/photos/vacation/beach_sunset.jpg',
       folder: '/photos/vacation',
@@ -56,7 +55,7 @@ const mockResults: SearchResponse = {
       snippet: 'beautiful sunset over the ocean',
     },
     {
-      file_id: '2',
+      file_id: 2,
       filename: 'family_photo.jpg',
       path: '/photos/vacation/family_photo.jpg',
       folder: '/photos/vacation',
@@ -67,7 +66,7 @@ const mockResults: SearchResponse = {
       snippet: null,
     },
     {
-      file_id: '3',
+      file_id: 3,
       filename: 'mountain_view.png',
       path: '/photos/vacation/mountains/mountain_view.png',
       folder: '/photos/vacation/mountains',
@@ -479,7 +478,7 @@ describe('SearchResults Component', () => {
         total_matches: 1,
         took_ms: 50,
         items: [{
-          file_id: '1',
+          file_id: 1,
           filename: 'test.jpg',
           path: '/test.jpg',
           folder: '/',

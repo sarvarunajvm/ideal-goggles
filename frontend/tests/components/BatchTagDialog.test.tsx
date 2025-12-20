@@ -2,8 +2,7 @@
  * Tests for BatchTagDialog component
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BatchTagDialog } from '../../src/components/BatchActions/BatchTagDialog';
@@ -260,7 +259,7 @@ describe('BatchTagDialog Component', () => {
       await user.type(tagInput, 'landscape');
 
       const buttons = screen.getAllByRole('button');
-      const addButton = buttons.find(btn => btn.querySelector('svg') && !btn.disabled);
+      const addButton = buttons.find(btn => btn.querySelector('svg') && !(btn as HTMLButtonElement).disabled);
 
       if (addButton) {
         await user.click(addButton);

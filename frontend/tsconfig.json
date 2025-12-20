@@ -19,7 +19,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules", "dist", "dist-electron", "electron", "playwright.config.ts", "tests/e2e/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

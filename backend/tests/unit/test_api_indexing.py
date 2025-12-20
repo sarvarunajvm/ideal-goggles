@@ -12,7 +12,6 @@ from fastapi import BackgroundTasks, HTTPException
 from src.api.indexing import (
     IndexStatus,
     StartIndexRequest,
-    _get_config_from_db,
     _get_indexed_photo_count,
     _get_photos_for_processing,
     _indexing_state,
@@ -340,42 +339,6 @@ class TestHelperFunctions:
         assert count == 0
 
 
-class TestGetConfigFromDb:
-    """Test _get_config_from_db function."""
-
-    def test_get_config_from_db_success(self, mock_db_manager, db_manager):
-        """Test getting config from database."""
-        db_manager.execute_query = MagicMock(
-            return_value=[
-                ("roots", '["/path1", "/path2"]'),
-                ("face_search_enabled", "true"),
-            ]
-        )
-
-        config = _get_config_from_db(db_manager)
-
-        assert config["roots"] == ["/path1", "/path2"]
-        assert config["face_search_enabled"] is True
-
-    def test_get_config_from_db_defaults(self, mock_db_manager, db_manager):
-        """Test getting config with defaults."""
-        db_manager.execute_query = MagicMock(return_value=[])
-
-        config = _get_config_from_db(db_manager)
-
-        assert config["roots"] == []
-        assert config["face_search_enabled"] is True
-
-    def test_get_config_from_db_error(self, mock_db_manager, db_manager):
-        """Test getting config with error."""
-        db_manager.execute_query = MagicMock(side_effect=Exception("DB error"))
-
-        config = _get_config_from_db(db_manager)
-
-        assert config["roots"] == []
-        assert config["face_search_enabled"] is True
-
-
 class TestGetPhotosForProcessing:
     """Test _get_photos_for_processing function."""
 
@@ -617,7 +580,9 @@ class TestRunIndexingProcess:
 
         db_manager.execute_query = MagicMock(return_value=[])
 
-        await _run_indexing_process(full_reindex=False)
+        # Patch get_default_photo_roots to return empty list so we can test the no-roots error case
+        with patch("src.api.config.get_default_photo_roots", return_value=[]):
+            await _run_indexing_process(full_reindex=False)
 
         # When no roots, status becomes "error" and errors are added
         assert indexing._indexing_state["status"] == "error"

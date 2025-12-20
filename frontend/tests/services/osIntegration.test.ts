@@ -11,7 +11,19 @@ const mockElectronAPI = {
   revealInFolder: jest.fn(),
   openExternal: jest.fn(),
   getVersion: jest.fn(),
-}
+  getBackendLogPath: jest.fn(),
+  getBackendPort: jest.fn(),
+  readBackendLog: jest.fn(),
+  showErrorDialog: jest.fn(),
+  selectDirectory: jest.fn(),
+  startDrag: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn(),
+  invoke: jest.fn(),
+  send: jest.fn(),
+  receive: jest.fn(),
+  removeAllListeners: jest.fn(),
+} as any
 
 // Mock navigator
 const mockNavigator = {
@@ -240,7 +252,7 @@ describe('OSIntegration Service', () => {
     test('shows notification when permission granted', async () => {
       mockNotification.permission = 'granted'
       const NotificationSpy = jest.fn()
-      window.Notification = Object.assign(NotificationSpy, mockNotification)
+      window.Notification = Object.assign(NotificationSpy, mockNotification) as any
 
       await osIntegration.showNotification('Title', 'Body', 'icon.png')
 
@@ -254,7 +266,7 @@ describe('OSIntegration Service', () => {
       mockNotification.permission = 'default'
       mockNotification.requestPermission.mockResolvedValue('granted')
       const NotificationSpy = jest.fn()
-      window.Notification = Object.assign(NotificationSpy, mockNotification)
+      window.Notification = Object.assign(NotificationSpy, mockNotification) as any
 
       await osIntegration.showNotification('Title', 'Body')
 
@@ -268,7 +280,7 @@ describe('OSIntegration Service', () => {
     test('does not show notification when permission denied', async () => {
       mockNotification.permission = 'denied'
       const NotificationSpy = jest.fn()
-      window.Notification = Object.assign(NotificationSpy, mockNotification)
+      window.Notification = Object.assign(NotificationSpy, mockNotification) as any
 
       await osIntegration.showNotification('Title', 'Body')
 

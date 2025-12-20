@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import StatsPage from '../../src/pages/StatsPage'

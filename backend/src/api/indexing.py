@@ -15,6 +15,7 @@ from ..core.config import settings
 from ..core.logging_config import get_logger, log_error_with_context, log_slow_operation
 from ..core.middleware import get_request_id
 from ..db.connection import get_database_manager
+from .config import _get_config_from_db
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -1024,39 +1025,6 @@ async def _run_indexing_process(full_reindex: bool):
         await _state_manager.set_value("status", "error")
         await _state_manager.append_error(str(e))
         logger.exception(f"Indexing process failed: {e}")
-
-
-def _get_config_from_db(db_manager) -> dict[str, Any]:
-    """Get configuration from database."""
-    try:
-        settings_query = "SELECT key, value FROM settings"
-        settings_rows = db_manager.execute_query(settings_query)
-
-        config = {}
-        for row in settings_rows:
-            key, value = row[0], row[1]
-            if key == "roots":
-                import json
-
-                try:
-                    config[key] = json.loads(value)
-                except:
-                    config[key] = []
-            elif key == "face_search_enabled":
-                config[key] = value.lower() in ("true", "1", "yes")
-            else:
-                config[key] = value
-
-        # Set defaults
-        if "roots" not in config:
-            config["roots"] = []
-        if "face_search_enabled" not in config:
-            config["face_search_enabled"] = True
-
-        return config
-
-    except Exception:
-        return {"roots": [], "face_search_enabled": True}
 
 
 def _get_photos_for_processing(db_manager, full_reindex: bool) -> list:

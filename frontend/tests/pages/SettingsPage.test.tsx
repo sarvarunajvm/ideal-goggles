@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, waitFor, act, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -7,7 +6,6 @@ jest.setTimeout(30000)
 
 // Mock toast and Toaster dependency shape to avoid UI internals
 // Create stable mock inside factory to prevent infinite loops from unstable references
-const mockToast = jest.fn()
 jest.mock('../../src/components/ui/use-toast', () => {
   const mockToastFn = jest.fn()
   const stableReturn = { toast: mockToastFn, toasts: [] }
@@ -134,7 +132,10 @@ describe('SettingsPage', () => {
     const ocrSwitch = screen.getByLabelText('Text Recognition')
     await userEvent.click(ocrSwitch)
     await waitDebounce()
-    expect(apiService.updateConfig).toHaveBeenCalledWith({ ocr_enabled: true })
+    expect(apiService.updateConfig).toHaveBeenCalledWith({ 
+      ocr_enabled: true,
+      ocr_languages: [] 
+    })
 
     // Semantic Search toggle
     const semanticSwitch = screen.getByLabelText('Smart Search')
@@ -243,7 +244,7 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Loading settings...')).not.toBeInTheDocument()
     })
-    const stop = await screen.findByText('Stop Indexing')
+    await screen.findByText('Stop Indexing')
     expect(screen.getByText(/Initializing metadata/)).toBeInTheDocument()
   }, 20000)
 
