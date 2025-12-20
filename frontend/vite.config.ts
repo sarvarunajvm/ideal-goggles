@@ -2,27 +2,32 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { codecovVitePlugin } from '@codecov/vite-plugin'
+
+const isAnalyze = process.env.ANALYZE === 'true'
 
 export default defineConfig({
   root: __dirname,
   plugins: [
     react(),
-    // Generate bundle analysis report (HTML)
-    visualizer({
-      filename: './dist/stats.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-      template: 'treemap'
-    }) as any,
-    // Generate bundle analysis report (JSON for Codecov)
-    visualizer({
-      filename: './dist/stats.json',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-      template: 'json'
-    }) as any
+    // Generate bundle analysis report (only when ANALYZE=true)
+    ...(isAnalyze
+      ? [
+          visualizer({
+            filename: './dist/stats.html',
+            open: false,
+            gzipSize: true,
+            brotliSize: true,
+            template: 'treemap'
+          }) as any
+        ]
+      : []),
+    // Codecov bundle analysis (enabled in CI when token is available)
+    codecovVitePlugin({
+      enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+      bundleName: 'ideal-goggles-frontend',
+      uploadToken: process.env.CODECOV_TOKEN,
+    }),
   ],
   base: './',
   css: {

@@ -229,10 +229,12 @@ jobs:
         JEST_JUNIT_OUTPUT_DIR: ./test-results
         JEST_JUNIT_OUTPUT_NAME: junit-${{ matrix.node-version }}.xml
 
-    - name: Build frontend and generate bundle stats
+    - name: Build frontend with bundle analysis
       run: |
         pnpm run build:frontend
       continue-on-error: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Upload coverage to Codecov (frontend)
       uses: codecov/codecov-action@v5
@@ -242,18 +244,6 @@ jobs:
         files: ./frontend/coverage/lcov.info
         flags: frontend
         name: frontend-coverage
-        fail_ci_if_error: false
-        verbose: true
-
-    - name: Upload bundle stats to Codecov
-      uses: codecov/codecov-action@v5
-      if: always()
-      with:
-        use_oidc: true
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./frontend/dist/stats.json
-        flags: bundle
-        name: bundle-stats
         fail_ci_if_error: false
         verbose: true
 
