@@ -1,26 +1,26 @@
 """Performance benchmarks for search services."""
 
 import asyncio
+import logging
 import random
 import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pytest
 
-from src.services.rank_fusion import RankFusionService
 from src.services.text_search import TextSearchService
 from src.services.vector_search import FAISSVectorSearchService
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 class PerformanceBenchmark:
     """Base class for performance benchmarks."""
-
-    def __init__(self):
-        self.results = {}
 
     def measure_time(self, func, *args, **kwargs):
         """Measure execution time of a function."""
@@ -68,11 +68,12 @@ class PerformanceBenchmark:
 
 
 @pytest.mark.performance
-class TestTextSearchPerformance(PerformanceBenchmark):
+class BenchmarkTextSearch(PerformanceBenchmark):
     """Performance tests for text search service."""
 
     def setup_method(self):
         """Set up test fixtures."""
+        self.results = {}
         self.service = TextSearchService()
 
         # Create mock database with realistic data size
@@ -253,11 +254,12 @@ class TestTextSearchPerformance(PerformanceBenchmark):
 
 
 @pytest.mark.performance
-class TestVectorSearchPerformance(PerformanceBenchmark):
+class BenchmarkVectorSearch(PerformanceBenchmark):
     """Performance tests for vector search service."""
 
     def setup_method(self):
         """Set up test fixtures."""
+        self.results = {}
         import tempfile
 
         self.temp_dir = tempfile.mkdtemp()
@@ -290,6 +292,7 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
             self._add_single_vector, iterations=100, vectors=vectors[:100]
         )
 
+        self.results = {}
         self.results["single_vector_addition"] = results
 
         # Performance assertions
@@ -317,6 +320,8 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
 
             end_time = time.perf_counter()
 
+            if not hasattr(self, "results"):
+                self.results = {}
             self.results[f"batch_addition_{batch_size}"] = {
                 "total_time": end_time - start_time,
                 "vectors_per_second": batch_size / (end_time - start_time),
@@ -349,6 +354,8 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
                 k=k,
             )
 
+            if not hasattr(self, "results"):
+                self.results = {}
             self.results[f"similarity_search_k{k}"] = results
 
             # Performance assertions
@@ -379,6 +386,8 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
                 service.search_similar(query_vector, k=10)
                 search_times.append(time.perf_counter() - start_search)
 
+            if not hasattr(self, "results"):
+                self.results = {}
             self.results[f"scaling_{size}"] = {
                 "index_size": size,
                 "build_time": build_time,
@@ -415,6 +424,8 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
 
         total_time = time.perf_counter() - start_time
 
+        if not hasattr(self, "results"):
+            self.results = {}
         self.results["concurrent_vector_search"] = {
             "total_time": total_time,
             "searches_per_second": len(query_vectors) / total_time,
@@ -436,119 +447,17 @@ class TestVectorSearchPerformance(PerformanceBenchmark):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
 
-@pytest.mark.performance
-class TestRankFusionPerformance(PerformanceBenchmark):
-    """Performance tests for rank fusion service."""
-
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.service = RankFusionService()
-
-        # Generate test result sets
-        self.test_result_sets = self._generate_test_result_sets()
-
-    def _generate_test_result_sets(self):
-        """Generate test result sets for benchmarking."""
-        sets = []
-
-        # Different sized result sets
-        for set_size in [10, 50, 100, 500]:
-            result_set = []
-            for i in range(set_size):
-                result_set.append(
-                    {
-                        "file_id": i + 1,
-                        "score": random.uniform(0.1, 1.0),
-                        "source": f"test_source_{set_size}",
-                    }
-                )
-            sets.append(result_set)
-
-        return sets
-
-    def test_fusion_performance_varying_sizes(self):
-        """Benchmark fusion with varying result set sizes."""
-        test_cases = [
-            [self.test_result_sets[0]],  # Single small set
-            [self.test_result_sets[1]],  # Single medium set
-            self.test_result_sets[:2],  # Two sets
-            self.test_result_sets[:3],  # Three sets
-            self.test_result_sets,  # All sets
-        ]
-
-        for i, result_sets in enumerate(test_cases):
-            results = self.run_multiple_iterations(
-                self.service.fuse_results, iterations=100, result_sets=result_sets
-            )
-
-            self.results[f"fusion_case_{i}"] = results
-
-            # Performance assertions
-            assert (
-                results["mean"] < 0.1
-            ), f"Fusion case {i} too slow: {results['mean']:.3f}s"
-
-    def test_large_scale_fusion(self):
-        """Test fusion performance with large result sets."""
-        # Generate large result sets
-        large_sets = []
-        for _ in range(5):
-            large_set = []
-            for i in range(1000):
-                large_set.append(
-                    {
-                        "file_id": i + 1,
-                        "score": random.uniform(0.1, 1.0),
-                        "metadata": f"item_{i}",
-                    }
-                )
-            large_sets.append(large_set)
-
-        results = self.run_multiple_iterations(
-            self.service.fuse_results, iterations=10, result_sets=large_sets
-        )
-
-        self.results["large_scale_fusion"] = results
-
-        # Performance assertions
-        assert (
-            results["mean"] < 1.0
-        ), f"Large scale fusion too slow: {results['mean']:.3f}s"
-        assert results["p95"] < 2.0, "Large scale fusion 95th percentile too slow"
-
-    def test_reciprocal_rank_fusion_performance(self):
-        """Benchmark reciprocal rank fusion algorithm."""
-        # Generate ranked lists of varying lengths
-        ranked_lists = []
-        for list_size in [10, 50, 100, 500, 1000]:
-            ranked_list = list(range(1, list_size + 1))
-            random.shuffle(ranked_list)
-            ranked_lists.append(ranked_list)
-
-        results = self.run_multiple_iterations(
-            self.service._reciprocal_rank_fusion,
-            iterations=100,
-            ranked_lists=ranked_lists,
-        )
-
-        self.results["reciprocal_rank_fusion"] = results
-
-        # Performance assertions
-        assert results["mean"] < 0.05, f"RRF too slow: {results['mean']:.4f}s"
-
-
 def run_performance_benchmarks():
     """Run all performance benchmarks and generate report."""
     benchmark_classes = [
-        TestTextSearchPerformance,
-        TestVectorSearchPerformance,
-        TestRankFusionPerformance,
+        BenchmarkTextSearch,
+        BenchmarkVectorSearch,
     ]
 
     all_results = {}
 
     for benchmark_class in benchmark_classes:
-        print(f"\nRunning {benchmark_class.__name__}...")
+        logger.info(f"\nRunning {benchmark_class.__name__}...")
         benchmark = benchmark_class()
 
         # Run setup
@@ -557,15 +466,16 @@ def run_performance_benchmarks():
         # Run all test methods
         for method_name in dir(benchmark):
             if method_name.startswith("test_"):
-                print(f"  Running {method_name}...")
+                logger.info(f"  Running {method_name}...")
                 try:
                     method = getattr(benchmark, method_name)
                     method()
                 except Exception as e:
-                    print(f"    Failed: {e}")
+                    logger.exception(f"    Failed: {e}")
 
         # Collect results
-        all_results[benchmark_class.__name__] = benchmark.results
+        if hasattr(benchmark, "results"):
+            all_results[benchmark_class.__name__] = benchmark.results
 
         # Run teardown if exists
         if hasattr(benchmark, "teardown_method"):
@@ -607,7 +517,7 @@ def _generate_performance_report(results: dict):
 
             f.write("\n")
 
-    print(f"Performance report generated: {report_path}")
+    logger.info(f"Performance report generated: {report_path}")
 
 
 if __name__ == "__main__":

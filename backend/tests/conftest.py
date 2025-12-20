@@ -15,7 +15,10 @@ mock_numpy.__version__ = "1.26.4"
 class MockNDArray(list):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.shape = (512,)
+        if args and isinstance(args[0], (list, tuple)):
+             self.shape = (len(args[0]),)
+        else:
+             self.shape = (512,)
         # self.dtype needs to equal np.float32 (which is mocked as float)
         self.dtype = float
         # But if code accesses dtype.str, float doesn't have .str
@@ -43,6 +46,9 @@ class MockNDArray(list):
     def flatten(self):
         return self
 
+    def tolist(self):
+        return list(self)
+
     def tobytes(self):
         # Return bytes matching actual length * 4 (float32)
         # If empty (mock default), assume 512
@@ -67,6 +73,9 @@ class MockNDArray(list):
 
     def __array__(self):
         return self
+
+    def __float__(self):
+        return 1.0
 
     # Arithmetic operators
     def __truediv__(self, other):

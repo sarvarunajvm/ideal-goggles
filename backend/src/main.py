@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api import (
-    batch_operations,
     config,
     dependencies,
     health,
@@ -118,7 +117,6 @@ app.include_router(dependencies.router)
 app.include_router(indexing.router)
 app.include_router(logs.router)
 app.include_router(people.router)
-app.include_router(batch_operations.router)
 app.include_router(search.router)
 
 # Mount thumbnails directory for serving generated thumbnails

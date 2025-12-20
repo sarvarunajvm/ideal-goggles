@@ -8,8 +8,6 @@ import {
 import { osIntegration } from '../services/osIntegration'
 import { Lightbox } from '../components/Lightbox/Lightbox'
 import { useLightboxStore, LightboxPhoto } from '../stores/lightboxStore'
-// import { VirtualGrid } from '../components/VirtualGrid/VirtualGrid'
-
 // shadcn/ui components
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
