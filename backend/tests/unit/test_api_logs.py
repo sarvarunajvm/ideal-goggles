@@ -1,6 +1,7 @@
 """Unit tests for logging API endpoints."""
 
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -543,3 +544,128 @@ class TestSubmitErrorReport:
 
             assert result is None
             mock_logger.exception.assert_called_once()
+
+
+class TestFetchLogs:
+    """Test fetch_logs endpoint."""
+
+    def test_fetch_logs_empty(self):
+        """Test fetching logs when no log files exist."""
+        # Use a temporary directory for logs
+        with patch("pathlib.Path.cwd") as mock_cwd:
+            mock_cwd.return_value = Path("/tmp")
+
+            # Mock exists to return False
+            with patch("pathlib.Path.exists", return_value=False):
+                from fastapi.testclient import TestClient
+
+                from src.main import app
+                client = TestClient(app)
+
+                response = client.get("/logs/fetch")
+                assert response.status_code == 200
+                data = response.json()
+                assert data["total"] == 0
+                assert data["logs"] == []
+
+    def test_fetch_logs_parsing(self):
+        """Test fetching and parsing logs."""
+        log_content = (
+            "2025-01-01 12:00:00 - src.api.test - INFO - test_func:10 - Test message\n"
+            "2025-01-01 12:00:01 - src.api.test - ERROR - test_func:20 - Error occurred\n"
+            "Invalid line that should be skipped\n"
+        )
+
+        with patch("pathlib.Path.cwd") as mock_cwd:
+            mock_cwd.return_value = Path("/tmp")
+
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("builtins.open", new_callable=MagicMock) as mock_open:
+                    mock_file = MagicMock()
+                    mock_file.readlines.return_value = log_content.splitlines()
+                    mock_file.__enter__.return_value = mock_file
+                    mock_open.return_value = mock_file
+
+                    from fastapi.testclient import TestClient
+
+                    from src.main import app
+                    client = TestClient(app)
+
+                    response = client.get("/logs/fetch")
+                    assert response.status_code == 200
+                    data = response.json()
+
+                    assert data["total"] == 2
+                    assert len(data["logs"]) == 2
+                    # Should be sorted newest first
+                    assert data["logs"][0]["level"] == "ERROR"
+                    assert data["logs"][1]["level"] == "INFO"
+
+    def test_fetch_logs_filtering(self):
+        """Test filtering logs by level and search term."""
+        log_content = (
+            "2025-01-01 12:00:00 - src.api.test - INFO - test_func:10 - Info message\n"
+            "2025-01-01 12:00:01 - src.api.test - ERROR - test_func:20 - Error message\n"
+        )
+
+        with patch("pathlib.Path.cwd") as mock_cwd:
+            mock_cwd.return_value = Path("/tmp")
+
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("builtins.open", new_callable=MagicMock) as mock_open:
+                    mock_file = MagicMock()
+                    mock_file.readlines.return_value = log_content.splitlines()
+                    mock_file.__enter__.return_value = mock_file
+                    mock_open.return_value = mock_file
+
+                    from fastapi.testclient import TestClient
+
+                    from src.main import app
+                    client = TestClient(app)
+
+                    # Filter by level
+                    response = client.get("/logs/fetch?level=ERROR")
+                    data = response.json()
+                    assert len(data["logs"]) == 1
+                    assert data["logs"][0]["level"] == "ERROR"
+
+                    # Filter by search
+                    response = client.get("/logs/fetch?search=Info")
+                    data = response.json()
+                    assert len(data["logs"]) == 1
+                    assert data["logs"][0]["message"] == "Info message"
+
+    def test_fetch_logs_pagination(self):
+        """Test log pagination."""
+        # Generate 15 logs
+        logs = []
+        for i in range(15):
+            logs.append(f"2025-01-01 12:00:{i:02d} - src - INFO - func:1 - Msg {i}")
+
+        with patch("pathlib.Path.cwd") as mock_cwd:
+            mock_cwd.return_value = Path("/tmp")
+
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("builtins.open", new_callable=MagicMock) as mock_open:
+                    mock_file = MagicMock()
+                    mock_file.readlines.return_value = logs
+                    mock_file.__enter__.return_value = mock_file
+                    mock_open.return_value = mock_file
+
+                    from fastapi.testclient import TestClient
+
+                    from src.main import app
+                    client = TestClient(app)
+
+                    # Page 1 (10 items)
+                    response = client.get("/logs/fetch?limit=10&offset=0")
+                    data = response.json()
+                    assert len(data["logs"]) == 10
+                    assert data["has_more"] is True
+                    assert data["total"] == 15
+
+                    # Page 2 (5 items)
+                    response = client.get("/logs/fetch?limit=10&offset=10")
+                    data = response.json()
+                    assert len(data["logs"]) == 5
+                    assert data["has_more"] is False

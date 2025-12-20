@@ -1,7 +1,7 @@
 """Unit tests for API dependencies module."""
 
 import subprocess
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -307,3 +307,149 @@ class TestInstallDependencies:
         response = client.post("/dependencies/install", json={})
         # Should process with default components
         assert response.status_code in [200, 504]
+
+
+class TestVerifyDependencies:
+    """Test dependency verification."""
+
+    @patch("src.api.dependencies.verify_model_functionality")
+    def test_verify_dependencies_success(self, mock_verify):
+        """Test verifying dependencies when everything is functional."""
+        mock_verify.return_value = {
+            "functional": True,
+            "error": None,
+            "details": {"model_loaded": True},
+        }
+
+        with patch("psutil.virtual_memory") as mock_memory:
+            mock_memory.return_value = Mock(
+                total=16 * 1024**3, available=8 * 1024**3, percent=50.0
+            )
+
+            response = client.get("/dependencies/verify")
+            assert response.status_code == 200
+            data = response.json()
+
+            assert data["summary"]["all_functional"] is True
+            assert len(data["summary"]["issues_found"]) == 0
+            assert "clip" in data["models"]
+            assert "face" in data["models"]
+            assert data["system"]["memory"]["total_gb"] == 16.0
+
+    @patch("src.api.dependencies.verify_model_functionality")
+    def test_verify_dependencies_failure(self, mock_verify):
+        """Test verifying dependencies when some models fail."""
+        # CLIP works, Face fails
+        def side_effect(model_type):
+            if model_type == "clip":
+                return {"functional": True, "error": None, "details": {}}
+            return {"functional": False, "error": "Model not found", "details": {}}
+
+        mock_verify.side_effect = side_effect
+
+        with patch("psutil.virtual_memory") as mock_memory:
+            mock_memory.return_value = Mock(
+                total=16 * 1024**3, available=8 * 1024**3, percent=50.0
+            )
+
+            response = client.get("/dependencies/verify")
+            assert response.status_code == 200
+            data = response.json()
+
+            assert data["summary"]["all_functional"] is False
+            assert len(data["summary"]["issues_found"]) > 0
+            assert data["summary"]["issues_found"][0]["model"] == "face"
+
+    @patch("src.api.dependencies.verify_model_functionality")
+    def test_verify_dependencies_low_memory(self, mock_verify):
+        """Test verifying dependencies with low memory."""
+        mock_verify.return_value = {"functional": True, "error": None, "details": {}}
+
+        with patch("psutil.virtual_memory") as mock_memory:
+            # Low available memory (1GB)
+            mock_memory.return_value = Mock(
+                total=8 * 1024**3, available=1 * 1024**3, percent=90.0
+            )
+
+            response = client.get("/dependencies/verify")
+            assert response.status_code == 200
+            data = response.json()
+
+            # Should include recommendations
+            recommendations = data["recommendations"]
+            assert any("Low memory" in r for r in recommendations)
+
+
+class TestVerifyModelFunctionality:
+    """Test verify_model_functionality function."""
+
+    def test_verify_clip_model_success(self):
+        """Test verifying CLIP model successfully."""
+        from src.api.dependencies import verify_model_functionality
+
+        mock_clip = Mock()
+        mock_clip.load.return_value = (Mock(), Mock())
+
+        # Use MagicMock to handle context managers (__enter__/__exit__)
+        mock_torch = MagicMock()
+        mock_torch.cuda.is_available.return_value = False
+
+        # Ensure chain calls return MagicMocks too
+        mock_torch.randn.return_value.to.return_value = MagicMock()
+
+        with patch.dict("sys.modules", {"clip": mock_clip, "torch": mock_torch}):
+            with patch("psutil.virtual_memory") as mock_memory:
+                mock_memory.return_value = Mock(total=100, available=50)
+
+                result = verify_model_functionality("clip")
+
+                # If it failed, print error for debugging
+                if not result["functional"]:
+                    print(f"Verification failed: {result.get('error')}")
+
+                assert result["functional"] is True
+                assert result["details"]["model_name"] == "ViT-B/32"
+
+    def test_verify_clip_model_failure(self):
+        """Test verifying CLIP model failure."""
+        from src.api.dependencies import verify_model_functionality
+
+        # Mock clip module raising exception
+        mock_clip = Mock()
+        mock_clip.load.side_effect = Exception("Model load failed")
+
+        with patch.dict("sys.modules", {"clip": mock_clip, "torch": Mock()}):
+            with patch("psutil.virtual_memory") as mock_memory:
+                mock_memory.return_value = Mock(total=100, available=50)
+
+                result = verify_model_functionality("clip")
+                assert result["functional"] is False
+                assert "Model load failed" in result["error"]
+
+    def test_verify_face_model_success(self):
+        """Test verifying Face model successfully."""
+        from src.api.dependencies import verify_model_functionality
+
+        with patch("src.workers.face_worker.FaceDetectionWorker") as mock_worker:
+            mock_worker.return_value.is_available.return_value = True
+
+            with patch("psutil.virtual_memory") as mock_memory:
+                mock_memory.return_value = Mock(total=100, available=50)
+
+                result = verify_model_functionality("face")
+                assert result["functional"] is True
+
+    def test_verify_face_model_failure(self):
+        """Test verifying Face model failure."""
+        from src.api.dependencies import verify_model_functionality
+
+        with patch("src.workers.face_worker.FaceDetectionWorker") as mock_worker:
+            mock_worker.return_value.is_available.return_value = False
+
+            with patch("psutil.virtual_memory") as mock_memory:
+                mock_memory.return_value = Mock(total=100, available=50)
+
+                result = verify_model_functionality("face")
+                assert result["functional"] is False
+                assert "not available" in result["error"]
+

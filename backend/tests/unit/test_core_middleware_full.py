@@ -12,9 +12,11 @@ from starlette.datastructures import Headers
 from src.core.middleware import (
     ErrorLoggingMiddleware,
     PerformanceMonitoringMiddleware,
+    RateLimitingMiddleware,
     RequestLoggingMiddleware,
     get_request_id,
     request_id_var,
+    sanitize_error_message,
 )
 
 
@@ -28,6 +30,7 @@ class MockRequest:
         self.url = MagicMock()
         self.url.path = path
         self.query_params = query_params or {}
+        self.headers = Headers({"host": "example.com"})  # Add headers
         self.client = MagicMock()
         self.client.host = client_host if client_host else None
         self._body = b""
@@ -534,6 +537,157 @@ class TestPerformanceMonitoringMiddleware:
         assert avg_time > 0
         assert avg_time >= stats["min_time"]
         assert avg_time <= stats["max_time"]
+
+
+class TestRateLimitingMiddleware:
+    """Test RateLimitingMiddleware functionality."""
+
+    @pytest.mark.asyncio
+    async def test_init_with_defaults(self):
+        """Test initialization with default settings."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+        assert middleware.window_seconds == 60
+        assert "default" in middleware.RATE_LIMITS
+
+    @pytest.mark.asyncio
+    async def test_get_rate_limit(self):
+        """Test getting rate limit for different paths."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Test specific limits
+        assert middleware._get_rate_limit("/search/semantic") == 30
+        assert middleware._get_rate_limit("/index/start") == 5
+
+        # Test default limit
+        assert middleware._get_rate_limit("/api/other") == 120
+
+    @pytest.mark.asyncio
+    async def test_is_rate_limited_allow(self):
+        """Test allowing requests under limit."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Should allow first request
+        is_limited, remaining = middleware._is_rate_limited("127.0.0.1", "/api/test")
+
+        # Note: _is_rate_limited doesn't record the request, just checks history
+        # Since history is empty, it should allow
+        assert not is_limited
+        assert remaining > 0
+
+    @pytest.mark.asyncio
+    async def test_record_request(self):
+        """Test recording requests."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        middleware._record_request("127.0.0.1", "/api/test")
+
+        # Check history updated
+        endpoint_key = middleware._get_endpoint_key("/api/test")
+        assert len(middleware.request_history["127.0.0.1"][endpoint_key]) == 1
+
+    @pytest.mark.asyncio
+    async def test_dispatch_rate_limit_exceeded(self):
+        """Test that requests are blocked when limit exceeded."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Mock _is_rate_limited to return True
+        with patch.object(middleware, "_is_rate_limited", return_value=(True, 0)):
+            # Use external IP to avoid localhost bypass
+            request = MockRequest(client_host="192.168.1.100")
+            async def call_next(req):
+                return MockResponse()
+
+            response = await middleware.dispatch(request, call_next)
+
+            assert response.status_code == 429
+            assert "Retry-After" in response.headers
+
+    @pytest.mark.asyncio
+    async def test_dispatch_rate_limit_ok(self):
+        """Test that requests are allowed when limit not exceeded."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Mock _is_rate_limited to return False
+        with patch.object(middleware, "_is_rate_limited", return_value=(False, 10)):
+            # Use external IP to avoid localhost bypass
+            request = MockRequest(client_host="192.168.1.100")
+            response = MockResponse()
+            async def call_next(req):
+                return response
+
+            result = await middleware.dispatch(request, call_next)
+
+            assert result.status_code == 200
+            assert result.headers["X-RateLimit-Remaining"] == "9"
+
+    @pytest.mark.asyncio
+    async def test_skip_rate_limiting_for_health_checks(self):
+        """Test that health checks skip rate limiting."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        request = MockRequest(path="/health")
+        response = MockResponse()
+
+        async def call_next(req):
+            return response
+
+        with patch.object(middleware, "_is_rate_limited") as mock_check:
+            await middleware.dispatch(request, call_next)
+
+            # Should skip check
+            assert not mock_check.called
+
+    @pytest.mark.asyncio
+    async def test_cleanup_old_entries(self):
+        """Test cleaning up old history entries."""
+        middleware = RateLimitingMiddleware(app=MagicMock())
+
+        # Add old entry
+        old_time = time.time() - 120  # older than window
+        middleware.request_history["127.0.0.1"]["default"].append((old_time, 1))
+
+        middleware._cleanup_old_entries()
+
+        # Should be empty
+        assert "127.0.0.1" not in middleware.request_history
+
+
+class TestSanitizeErrorMessage:
+    """Test sanitize_error_message function."""
+
+    def test_sanitize_no_sensitive_info(self):
+        """Test sanitizing message without sensitive info."""
+        msg = "ReferenceError: variable is not defined"
+        assert sanitize_error_message(ValueError(msg)) == msg
+
+    def test_sanitize_file_paths(self):
+        """Test redaction of file paths."""
+        msg = "Error in /Users/user/project/file.py"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "/Users/***" in sanitized
+        assert "user" not in sanitized
+
+    def test_sanitize_email(self):
+        """Test redaction of email addresses."""
+        msg = "Invalid email user@example.com"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "***@***.***" in sanitized
+        assert "user@example.com" not in sanitized
+
+    def test_sanitize_ip_address(self):
+        """Test redaction of IP addresses."""
+        msg = "Connection failed to 192.168.1.50"
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert "***.***.***.***" in sanitized
+        assert "192.168.1.50" not in sanitized
+
+    def test_truncate_long_message(self):
+        """Test truncation of very long messages."""
+        # Use a message with spaces to avoid matching the "API key" pattern (long alphanumeric)
+        msg = "long message " * 100
+        sanitized = sanitize_error_message(ValueError(msg))
+        assert len(sanitized) < 600
+        assert "truncated" in sanitized
 
 
 class TestGetRequestId:

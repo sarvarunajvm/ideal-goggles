@@ -374,11 +374,11 @@ def sanitize_error_message(error: Exception) -> str:
     # List of sensitive patterns to redact
     sensitive_patterns = [
         # File paths
-        (r"/Users/[^/\s]+", "/Users/***"),
-        (r"/home/[^/\s]+", "/home/***"),
-        (r"C:\\Users\\[^\\]+", "C:\\Users\\***"),
+        (r"/Users/[^/\s]+", r"/Users/***"),
+        (r"/home/[^/\s]+", r"/home/***"),
+        (r"C:\\Users\\[^\\]+", r"C:\\Users\\***"),
         # Database paths
-        (r"sqlite:///[^\s]+", "sqlite:///***"),
+        (r"sqlite:///[^\s]+", r"sqlite:///***"),
         # API keys and tokens (generic patterns)
         (r"[a-zA-Z0-9]{32,}", "***REDACTED***"),
         # Email addresses
