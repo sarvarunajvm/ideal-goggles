@@ -315,6 +315,12 @@ async def create_person(request: CreatePersonRequest) -> PersonResponse:
 
             person = await face_worker.enroll_person(request.name, sample_photos)
 
+            if person is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to enroll person: no suitable faces found in sample photos",
+                )
+
         # Save person to database
         insert_query = """
             INSERT INTO people (name, face_vector, sample_count, created_at, updated_at, active)

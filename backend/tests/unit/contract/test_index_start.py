@@ -41,7 +41,9 @@ class TestIndexStartEndpoint:
         async def mock_is_indexing():
             return True
 
-        with unittest.mock.patch.object(_state_manager, "is_indexing", side_effect=mock_is_indexing):
+        with unittest.mock.patch.object(
+            _state_manager, "is_indexing", side_effect=mock_is_indexing
+        ):
             response2 = client.post("/index/start", json={"full": False})
             assert response2.status_code == 409
 

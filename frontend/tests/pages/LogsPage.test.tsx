@@ -20,7 +20,7 @@ describe('LogsPage', () => {
     const { container } = render(<LogsPage />)
     
     const layoutContainer = container.firstChild as HTMLElement
-    expect(layoutContainer).toHaveClass('h-screen', 'flex', 'flex-col')
+    expect(layoutContainer).toHaveClass('flex-1', 'overflow-auto', 'bg-background')
   })
 
   it('LogViewer is contained within the page', () => {
