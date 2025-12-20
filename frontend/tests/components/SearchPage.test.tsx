@@ -300,10 +300,7 @@ describe('SearchPage Component', () => {
     // Override store action to a mock we can assert on
     useLightboxStore.setState({ openLightbox: openMock })
 
-    // Click second result card - need to find it specifically
-    // The card contains the text "2.jpg"
-    const secondCard = screen.getByText('2.jpg').closest('div[data-testid="search-result-item"]')
-    
+    // Click second result card
     // If not found by text lookup on filename, try getting by test id and index
     const cards = screen.getAllByTestId('search-result-item')
     await user.click(cards[1])
