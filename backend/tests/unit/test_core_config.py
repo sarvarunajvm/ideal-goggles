@@ -185,10 +185,10 @@ class TestSettings:
             assert test_settings.CACHE_DIR.exists()
 
     def test_settings_config_class(self):
-        """Test Settings.Config class attributes."""
-        config = Settings.Config
-        assert config.env_file == ".env"
-        assert config.case_sensitive is True
+        """Test Settings configuration."""
+        config = Settings.model_config
+        assert config["env_file"] == ".env"
+        assert config["case_sensitive"] is True
 
     def test_settings_creates_nested_directories(self):
         """Test that settings creates nested directory structures."""

@@ -447,9 +447,12 @@ class TestGenerateBatch:
         """Test batch generation with some failures."""
         worker = CLIPEmbeddingWorker()
 
+        # Target the second photo for failure
+        target_failure_path = test_photos[1].path
+
         # Mock to return None for second photo
         def mock_generate(path):
-            if "2" in path:
+            if path == target_failure_path:
                 return None
             return np.random.randn(512).astype(np.float32)
 

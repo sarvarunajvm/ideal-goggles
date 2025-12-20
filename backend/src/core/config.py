@@ -4,73 +4,72 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
 
     # Server configuration
-    HOST: str = Field(default="127.0.0.1", env="HOST")
-    PORT: int = Field(default=5555, env="PORT")
-    DEBUG: bool = Field(default=False, env="DEBUG")
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
+    HOST: str = Field(default="127.0.0.1")
+    PORT: int = Field(default=5555)
+    DEBUG: bool = Field(default=False)
+    LOG_LEVEL: str = Field(default="INFO")
 
     # Database configuration
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./data/photos.db", env="DATABASE_URL"
+        default="sqlite+aiosqlite:///./data/photos.db"
     )
 
     # Storage paths - use absolute paths
-    DATA_DIR: Path | None = Field(default=None, env="DATA_DIR")
-    CACHE_DIR: Path | None = Field(default=None, env="CACHE_DIR")
+    DATA_DIR: Path | None = Field(default=None)
+    CACHE_DIR: Path | None = Field(default=None)
     # Compute thumbnails dir relative to CACHE_DIR unless explicitly overridden.
-    THUMBNAILS_DIR: Path | None = Field(default=None, env="THUMBNAILS_DIR")
+    THUMBNAILS_DIR: Path | None = Field(default=None)
 
     # ML model paths (bundled with application)
-    MODELS_DIR: Path = Field(default=Path("./models"), env="MODELS_DIR")
+    MODELS_DIR: Path = Field(default=Path("./models"))
     CLIP_MODEL_PATH: Path = Field(
-        default=Path("./models/clip-vit-b32.onnx"), env="CLIP_MODEL_PATH"
+        default=Path("./models/clip-vit-b32.onnx")
     )
     ARCFACE_MODEL_PATH: Path = Field(
-        default=Path("./models/arcface-r100.onnx"), env="ARCFACE_MODEL_PATH"
+        default=Path("./models/arcface-r100.onnx")
     )
 
     # Performance settings
-    MAX_WORKERS: int = Field(default=4, env="MAX_WORKERS")
-    BATCH_SIZE: int = Field(default=32, env="BATCH_SIZE")
-    MAX_MEMORY_MB: int = Field(default=512, env="MAX_MEMORY_MB")
+    MAX_WORKERS: int = Field(default=4)
+    BATCH_SIZE: int = Field(default=32)
+    MAX_MEMORY_MB: int = Field(default=512)
 
     # Privacy and security
-    FACE_SEARCH_ENABLED: bool = Field(default=False, env="FACE_SEARCH_ENABLED")
-    TELEMETRY_ENABLED: bool = Field(default=False, env="TELEMETRY_ENABLED")
-    NETWORK_MONITORING: bool = Field(default=True, env="NETWORK_MONITORING")
+    FACE_SEARCH_ENABLED: bool = Field(default=False)
+    TELEMETRY_ENABLED: bool = Field(default=False)
+    NETWORK_MONITORING: bool = Field(default=True)
 
     # Timeout and retry configuration (seconds unless specified)
-    DB_CONNECTION_TIMEOUT: float = Field(default=30.0, env="DB_CONNECTION_TIMEOUT")
-    HTTP_REQUEST_TIMEOUT: float = Field(default=5.0, env="HTTP_REQUEST_TIMEOUT")
-    ML_INSTALL_TIMEOUT: float = Field(default=600.0, env="ML_INSTALL_TIMEOUT")
-    ML_VERIFY_TIMEOUT: float = Field(default=120.0, env="ML_VERIFY_TIMEOUT")
-    WORKER_SHUTDOWN_TIMEOUT: float = Field(default=30.0, env="WORKER_SHUTDOWN_TIMEOUT")
-    THREAD_JOIN_TIMEOUT: float = Field(default=5.0, env="THREAD_JOIN_TIMEOUT")
-    QUEUE_GET_TIMEOUT: float = Field(default=0.1, env="QUEUE_GET_TIMEOUT")
+    DB_CONNECTION_TIMEOUT: float = Field(default=30.0)
+    HTTP_REQUEST_TIMEOUT: float = Field(default=5.0)
+    ML_INSTALL_TIMEOUT: float = Field(default=600.0)
+    ML_VERIFY_TIMEOUT: float = Field(default=120.0)
+    WORKER_SHUTDOWN_TIMEOUT: float = Field(default=30.0)
+    THREAD_JOIN_TIMEOUT: float = Field(default=5.0)
+    QUEUE_GET_TIMEOUT: float = Field(default=0.1)
 
     # Performance monitoring
     SLOW_REQUEST_THRESHOLD_MS: int = Field(
-        default=1000, env="SLOW_REQUEST_THRESHOLD_MS"
+        default=1000
     )
 
     # CORS / security
     # Allow "null" origin (file://) only when explicitly enabled (Electron sets this).
-    ALLOW_NULL_ORIGIN: bool = Field(default=False, env="ALLOW_NULL_ORIGIN")
+    ALLOW_NULL_ORIGIN: bool = Field(default=False)
     # Comma separated list of extra allowed origins (besides the built-ins below)
-    EXTRA_ALLOWED_ORIGINS: str | None = Field(default=None, env="EXTRA_ALLOWED_ORIGINS")
+    EXTRA_ALLOWED_ORIGINS: str | None = Field(default=None)
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True
+    )
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize settings and create required directories."""
