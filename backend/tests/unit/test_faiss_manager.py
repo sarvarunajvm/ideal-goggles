@@ -25,7 +25,7 @@ class TestFAISSIndexManagerInitialization:
         """Test FAISSIndexManager initialization."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -49,7 +49,7 @@ class TestFAISSIndexManagerInitialization:
     def test_initialization_with_vector_service(self, mock_get_settings):
         """Test initialization with vector search service."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_vector_service = Mock()
@@ -65,7 +65,7 @@ class TestFAISSIndexManagerInitialization:
         """Test that initialization creates required directories."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -84,7 +84,7 @@ class TestStatsManagement:
         """Test loading statistics from existing file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             # Create stats file
@@ -112,7 +112,7 @@ class TestStatsManagement:
     def test_load_stats_nonexistent_file(self, mock_get_settings):
         """Test loading statistics when file doesn't exist."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_start_background_scheduler"):
@@ -126,7 +126,7 @@ class TestStatsManagement:
         """Test error handling when loading stats fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_start_background_scheduler"):
@@ -145,7 +145,7 @@ class TestStatsManagement:
         """Test saving statistics to file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -168,7 +168,7 @@ class TestStatsManagement:
         """Test saving stats when vector service has index."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -197,7 +197,7 @@ class TestStatsManagement:
         """Test error handling when saving stats fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -217,7 +217,7 @@ class TestOptimizationDecision:
     def test_should_optimize_no_index(self, mock_get_settings):
         """Test should_optimize when no index exists."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -230,7 +230,7 @@ class TestOptimizationDecision:
     def test_should_optimize_below_threshold(self, mock_get_settings):
         """Test should_optimize when below threshold."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -251,7 +251,7 @@ class TestOptimizationDecision:
     ):
         """Test should_optimize when above threshold with no previous optimization."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -270,7 +270,7 @@ class TestOptimizationDecision:
     def test_should_optimize_recent_optimization(self, mock_get_settings):
         """Test should_optimize when recently optimized."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -292,7 +292,7 @@ class TestOptimizationDecision:
     def test_should_optimize_old_optimization(self, mock_get_settings):
         """Test should_optimize when optimization is old enough."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -315,7 +315,7 @@ class TestOptimizationDecision:
     def test_should_optimize_in_progress(self, mock_get_settings):
         """Test should_optimize when optimization is in progress."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -336,7 +336,7 @@ class TestOptimizationDecision:
     def test_should_optimize_invalid_datetime(self, mock_get_settings):
         """Test should_optimize when last_optimization datetime is invalid."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -364,7 +364,7 @@ class TestIndexOptimization:
     async def test_optimize_index_not_needed(self, mock_get_settings):
         """Test optimize_index when optimization not needed."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -381,7 +381,7 @@ class TestIndexOptimization:
     async def test_optimize_index_forced(self, mock_get_settings):
         """Test forced optimization."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -408,7 +408,7 @@ class TestIndexOptimization:
     async def test_optimize_index_already_in_progress(self, mock_get_settings):
         """Test optimization when already in progress."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -426,7 +426,7 @@ class TestIndexOptimization:
     async def test_perform_optimization_small_collection(self, mock_get_settings):
         """Test optimization for small collection."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         # Mock FAISS index
@@ -466,7 +466,7 @@ class TestIndexOptimization:
     async def test_perform_optimization_medium_collection(self, mock_get_settings):
         """Test optimization for medium collection."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -497,7 +497,7 @@ class TestIndexOptimization:
     async def test_perform_optimization_large_collection(self, mock_get_settings):
         """Test optimization for large collection."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -530,7 +530,7 @@ class TestIndexOptimization:
     async def test_perform_optimization_no_vectors(self, mock_get_settings):
         """Test optimization when index has no vectors."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -556,7 +556,7 @@ class TestIndexOptimizationMethods:
     def test_optimize_flat_index(self, mock_get_settings, mock_faiss):
         """Test flat index optimization."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         # Mock original index
@@ -586,7 +586,7 @@ class TestIndexOptimizationMethods:
     def test_optimize_flat_index_non_clip(self, mock_get_settings, mock_faiss):
         """Test flat index optimization for non-CLIP embeddings."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -614,7 +614,7 @@ class TestIndexOptimizationMethods:
     def test_create_ivf_index_without_pq(self, mock_get_settings, mock_faiss):
         """Test IVF index creation without product quantization."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -644,7 +644,7 @@ class TestIndexOptimizationMethods:
     def test_create_ivf_index_with_pq(self, mock_get_settings, mock_faiss):
         """Test IVF index creation with product quantization."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -672,7 +672,7 @@ class TestIndexOptimizationMethods:
     def test_create_ivf_index_error_handling(self, mock_get_settings):
         """Test error handling in IVF index creation."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -696,7 +696,7 @@ class TestBackupFunctionality:
         """Test creating backup."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -735,7 +735,7 @@ class TestBackupFunctionality:
         """Test creating backup with auto-generated name."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -769,7 +769,7 @@ class TestBackupFunctionality:
     async def test_create_backup_no_vector_service(self, mock_get_settings):
         """Test backup creation when no vector service available."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -786,7 +786,7 @@ class TestBackupFunctionality:
         """Test restoring from backup."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             # Create current directory
@@ -826,7 +826,7 @@ class TestBackupFunctionality:
     async def test_restore_backup_not_found(self, mock_get_settings):
         """Test restoring from non-existent backup."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -843,7 +843,7 @@ class TestBackupFunctionality:
         """Test cleanup of old backups."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -879,7 +879,7 @@ class TestPerformanceStats:
         """Test getting performance statistics."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -907,7 +907,7 @@ class TestPerformanceStats:
     def test_record_search_time(self, mock_get_settings):
         """Test recording search time."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -931,7 +931,7 @@ class TestBackgroundScheduler:
     def test_start_background_scheduler(self, mock_get_settings):
         """Test starting background scheduler."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         # The autouse fixture 'prevent_faiss_scheduler' patches _start_background_scheduler.
@@ -945,7 +945,7 @@ class TestBackgroundScheduler:
     async def test_shutdown(self, mock_get_settings):
         """Test graceful shutdown."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -969,7 +969,7 @@ class TestEdgeCases:
     def test_optimization_flag_cleanup_after_error(self, mock_get_settings):
         """Test that optimization flag is cleared after error."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -1001,7 +1001,7 @@ class TestEdgeCases:
     async def test_save_optimized_index_no_service(self, mock_get_settings):
         """Test saving optimized index when no vector service."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1016,7 +1016,7 @@ class TestEdgeCases:
     async def test_create_backup_save_fails(self, mock_get_settings):
         """Test backup creation when save fails."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_vector_service = Mock()
@@ -1035,7 +1035,7 @@ class TestEdgeCases:
     async def test_perform_optimization_no_vector_service(self, mock_get_settings):
         """Test _perform_optimization when no vector service available."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1051,7 +1051,7 @@ class TestEdgeCases:
     async def test_perform_optimization_exception(self, mock_get_settings):
         """Test _perform_optimization when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -1078,7 +1078,7 @@ class TestEdgeCases:
     async def test_perform_optimization_optimized_index_none(self, mock_get_settings):
         """Test _perform_optimization when optimized index is None."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -1106,7 +1106,7 @@ class TestEdgeCases:
         """Test _save_optimized_index when successful."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -1132,7 +1132,7 @@ class TestEdgeCases:
         """Test _save_optimized_index when save fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -1156,7 +1156,7 @@ class TestEdgeCases:
     async def test_save_optimized_index_exception(self, mock_get_settings):
         """Test _save_optimized_index when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_vector_service = Mock()
@@ -1174,7 +1174,7 @@ class TestEdgeCases:
     def test_optimize_flat_index_error(self, mock_get_settings):
         """Test _optimize_flat_index when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_index = Mock()
@@ -1195,7 +1195,7 @@ class TestEdgeCases:
     async def test_create_backup_with_exception(self, mock_get_settings):
         """Test create_backup when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         mock_vector_service = Mock()
@@ -1215,7 +1215,7 @@ class TestEdgeCases:
         """Test restoring from backup with missing index file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1236,7 +1236,7 @@ class TestEdgeCases:
         """Test restore_backup when exception occurs."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_vector_service = Mock()
@@ -1265,7 +1265,7 @@ class TestEdgeCases:
         """Test _cleanup_old_backups when no backups exist."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1281,7 +1281,7 @@ class TestEdgeCases:
         """Test _cleanup_old_backups when backup has invalid info.json."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1303,7 +1303,7 @@ class TestEdgeCases:
         """Test _cleanup_old_backups when removal fails."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1330,7 +1330,7 @@ class TestEdgeCases:
     async def test_shutdown_with_exception(self, mock_get_settings):
         """Test shutdown when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1348,7 +1348,7 @@ class TestEdgeCases:
         """Test get_performance_stats when no vector service."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1369,7 +1369,7 @@ class TestEdgeCases:
     async def test_cleanup_old_backups_exception_handling(self, mock_get_settings):
         """Test _cleanup_old_backups when exception occurs."""
         mock_settings = Mock()
-        mock_settings.app_data_dir = tempfile.mkdtemp()
+        mock_settings.DATA_DIR = tempfile.mkdtemp()
         mock_get_settings.return_value = mock_settings
 
         with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1387,7 +1387,7 @@ class TestEdgeCases:
         """Test _cleanup_old_backups when backup path doesn't exist."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             with patch.object(FAISSIndexManager, "_load_stats"):
@@ -1407,7 +1407,7 @@ class TestEdgeCases:
         """Test create_backup when metadata_path is None."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             mock_index = Mock()
@@ -1439,7 +1439,7 @@ class TestEdgeCases:
         """Test restoring backup when metadata file doesn't exist."""
         with tempfile.TemporaryDirectory() as temp_dir:
             mock_settings = Mock()
-            mock_settings.app_data_dir = temp_dir
+            mock_settings.DATA_DIR = temp_dir
             mock_get_settings.return_value = mock_settings
 
             current_dir = Path(temp_dir) / "current"
