@@ -276,46 +276,46 @@ class TestFileCrawler:
         assert crawler.event_loop == event_loop
         assert crawler.last_crawl_result is None
 
-    def test_add_root_path_valid(self, temp_dir):
+    def test_add_root_path_valid(self, temp_dir, event_loop):
         """Test adding a valid root path."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
         assert str(Path(temp_dir).absolute()) in crawler.root_paths
 
-    def test_add_root_path_nonexistent(self):
+    def test_add_root_path_nonexistent(self, event_loop):
         """Test adding a nonexistent path raises ValueError."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         with pytest.raises(ValueError, match="Path does not exist"):
             crawler.add_root_path("/nonexistent/path")
 
-    def test_add_root_path_not_directory(self, temp_dir):
+    def test_add_root_path_not_directory(self, temp_dir, event_loop):
         """Test adding a file path raises ValueError."""
         file_path = Path(temp_dir) / "file.txt"
         file_path.write_text("test")
 
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         with pytest.raises(ValueError, match="Path is not a directory"):
             crawler.add_root_path(str(file_path))
 
-    def test_remove_root_path(self, temp_dir):
+    def test_remove_root_path(self, temp_dir, event_loop):
         """Test removing a root path."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
         assert len(crawler.root_paths) == 1
 
         crawler.remove_root_path(temp_dir)
         assert len(crawler.root_paths) == 0
 
-    def test_add_crawl_callback(self):
+    def test_add_crawl_callback(self, event_loop):
         """Test adding a crawl callback."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         callback = Mock()
         crawler.add_crawl_callback(callback)
         assert callback in crawler.crawl_callbacks
 
-    def test_add_watch_callback(self):
+    def test_add_watch_callback(self, event_loop):
         """Test adding a watch callback."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         callback = Mock()
         crawler.add_watch_callback(callback)
         assert callback in crawler.watch_callbacks
@@ -450,15 +450,15 @@ class TestFileCrawler:
             # Should record error without failing
             assert result.errors >= 1
 
-    def test_start_watching_no_paths(self):
+    def test_start_watching_no_paths(self, event_loop):
         """Test start watching raises error with no paths."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         with pytest.raises(ValueError, match="No root paths configured"):
             crawler.start_watching()
 
-    def test_start_watching_success(self, temp_dir):
+    def test_start_watching_success(self, temp_dir, event_loop):
         """Test start watching initializes observers."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
 
         with patch("src.workers.crawler.Observer") as mock_observer_class:
@@ -472,9 +472,9 @@ class TestFileCrawler:
             mock_observer.schedule.assert_called_once()
             mock_observer.start.assert_called_once()
 
-    def test_start_watching_already_watching(self, temp_dir):
+    def test_start_watching_already_watching(self, temp_dir, event_loop):
         """Test start watching when already watching."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
         crawler.is_watching = True
 
@@ -483,9 +483,9 @@ class TestFileCrawler:
             # Should not create new observer
             mock_observer_class.assert_not_called()
 
-    def test_stop_watching(self, temp_dir):
+    def test_stop_watching(self, temp_dir, event_loop):
         """Test stop watching."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
 
         with patch("src.workers.crawler.Observer") as mock_observer_class:
@@ -500,9 +500,9 @@ class TestFileCrawler:
             mock_observer.stop.assert_called_once()
             mock_observer.join.assert_called_once()
 
-    def test_stop_watching_not_watching(self):
+    def test_stop_watching_not_watching(self, event_loop):
         """Test stop watching when not watching."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         # Should not raise error
         crawler.stop_watching()
 
@@ -604,9 +604,9 @@ class TestFileCrawler:
         # Should not raise exception
         await crawler._notify_crawl_callbacks("test_event", {"data": "test"})
 
-    def test_get_statistics(self, temp_dir):
+    def test_get_statistics(self, temp_dir, event_loop):
         """Test get statistics."""
-        crawler = FileCrawler()
+        crawler = FileCrawler(event_loop)
         crawler.add_root_path(temp_dir)
 
         stats = crawler.get_statistics()

@@ -13,16 +13,20 @@ from fastapi import HTTPException, UploadFile
 class TestSearchCoverage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Patch dependencies globally for this test class
-        cls.sys_modules_patch = patch.dict("sys.modules", {
-            "src.core.logging_config": MagicMock(),
-            "src.core.middleware": MagicMock(),
-            "src.core.utils": MagicMock(),
-            "src.db.connection": MagicMock(),
-            "src.workers.embedding_worker": MagicMock(),
-            "src.services.vector_search": MagicMock(),
-        })
-        cls.sys_modules_patch.start()
+        # Manually patch sys.modules to ensure reliability
+        cls.original_modules = sys.modules.copy()
+
+        # Create explicit mocks
+        mock_vector_search = MagicMock()
+        mock_vector_search.VectorSearchService = MagicMock()
+
+        # Inject mocks
+        sys.modules["src.core.logging_config"] = MagicMock()
+        sys.modules["src.core.middleware"] = MagicMock()
+        sys.modules["src.core.utils"] = MagicMock()
+        sys.modules["src.db.connection"] = MagicMock()
+        sys.modules["src.workers.embedding_worker"] = MagicMock()
+        sys.modules["src.services.vector_search"] = mock_vector_search
 
         # Import (or reload) the module under test
         import src.api.search
@@ -31,7 +35,9 @@ class TestSearchCoverage(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.sys_modules_patch.stop()
+        # Restore original modules
+        sys.modules.clear()
+        sys.modules.update(cls.original_modules)
 
     def setUp(self):
         self.mock_db_manager = MagicMock()
@@ -180,6 +186,8 @@ class TestExecutionSemanticSearch(TestSearchCoverage):
         mock_module = sys.modules["src.services.vector_search"]
         mock_service = mock_module.VectorSearchService.return_value
 
+        # Reset index mock (might have been set to None by other tests)
+        mock_service.index = MagicMock()
         mock_service.index.ntotal = 100
         mock_service.index.search.return_value = (np.array([[0.1, 0.2]]), np.array([[0, 1]]))
         mock_service.id_map = {0: 101, 1: 102}
@@ -234,11 +242,17 @@ class TestExecutionSemanticSearch(TestSearchCoverage):
 
     def test_faiss_import_error(self):
         """Test brute force fallback on FAISS import error."""
-        module_mock = sys.modules["src.services.vector_search"]
-        original_cls = module_mock.VectorSearchService
-        del module_mock.VectorSearchService
-        # Make access raise ImportError
-        type(module_mock).VectorSearchService = property(lambda _: (_ for _ in ()).throw(ImportError("FAISS Missing")))
+        # Store original module mock
+        original_module = sys.modules["src.services.vector_search"]
+
+        # Create a broken module that raises ImportError on attribute access
+        class BrokenModule:
+            @property
+            def VectorSearchService(self):  # noqa: N802
+                raise ImportError("FAISS Missing")
+
+        # Replace module in sys.modules
+        sys.modules["src.services.vector_search"] = BrokenModule()
 
         try:
             self.mock_db_manager.execute_query.side_effect = [[(0,)]]
@@ -248,7 +262,8 @@ class TestExecutionSemanticSearch(TestSearchCoverage):
 
             self.assertTrue(self.mock_db_manager.execute_query.called)
         finally:
-            module_mock.VectorSearchService = original_cls
+            # Restore original module mock
+            sys.modules["src.services.vector_search"] = original_module
 
 class TestImageSearch(TestSearchCoverage):
     def setUp(self):
