@@ -4,8 +4,11 @@
 
 [![Quick CI](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/ci-quick.yml)
 [![E2E Tests](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/e2e.yml)
-[![Coverage Report](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
 [![Release](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml/badge.svg)](https://github.com/sarvarunajvm/ideal-goggles/actions/workflows/release.yml)
+
+[![Coverage Report](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graph/badge.svg?token=WYPXWO5QU4)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
+
+[![Coverage Tree](https://codecov.io/gh/sarvarunajvm/ideal-goggles/graphs/tree.svg?token=WYPXWO5QU4)](https://codecov.io/gh/sarvarunajvm/ideal-goggles)
 
 Search your photo library using natural language, face recognition, and OCR — all running locally on your machine. No cloud uploads, no subscriptions, no privacy concerns.
 
@@ -41,7 +44,7 @@ Download the latest installer for your platform:
 ### For Developers
 
 ```bash
-# Prerequisites: Node.js 18+, Python 3.12+, pnpm 10+
+# Prerequisites: Node.js 22+, Python 3.13+, pnpm 10+
 git clone https://github.com/sarvarunajvm/ideal-goggles.git
 cd ideal-goggles
 
@@ -93,7 +96,7 @@ pnpm run backend:verify-models
 └─────────────────────────────────┘
 ```
 
-**Tech Stack:** React 19 · Python 3.12 · FastAPI · Electron · SQLite · PyTorch (optional)
+**Tech Stack:** React 19 · Python 3.13 · FastAPI · Electron · SQLite · PyTorch (optional)
 
 ## Development
 

@@ -9,7 +9,7 @@ description = "Backend API for Ideal Goggles"
 authors = [{name = "Ideal Goggles Team"}]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.118.0",
     "uvicorn[standard]>=0.36.0",

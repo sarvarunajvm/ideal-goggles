@@ -105,13 +105,13 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '22'
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
 
     - name: Cache dependencies
       uses: actions/cache@v5
@@ -195,9 +195,9 @@ jobs:
         API_URL: http://localhost:5555
         REUSE_EXISTING_SERVER: true
 
-    - name: Upload test results to Codecov
+    - name: Upload test results to Codecov (E2E)
       uses: codecov/codecov-action@v5
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() && hashFiles('func_tests/test-results/junit.xml') != '' }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./func_tests/test-results/junit.xml
@@ -206,6 +206,8 @@ jobs:
         fail_ci_if_error: false
         verbose: true
         report_type: test_results
+        override_branch: ${{ github.head_ref || github.ref_name }}
+        override_commit: ${{ github.sha }}
 
     - name: Upload test reports
       uses: actions/upload-artifact@v6
@@ -235,7 +237,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '22'
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Install dependencies

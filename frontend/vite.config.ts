@@ -27,6 +27,12 @@ export default defineConfig({
       enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
       bundleName: 'ideal-goggles-frontend',
       uploadToken: process.env.CODECOV_TOKEN,
+      uploadOverrides: {
+        // Ensure proper branch/commit detection in CI
+        branch: process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME,
+        sha: process.env.GITHUB_SHA,
+        slug: process.env.GITHUB_REPOSITORY,
+      },
     }),
   ],
   base: './',
