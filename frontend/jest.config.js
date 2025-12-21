@@ -34,8 +34,6 @@ module.exports = {
     '!src/config/**',                    // Configuration constants
     '!src/config/',                      // Config files
     // Pure presentational components (no business logic)
-    '!src/components/VirtualGrid/LoadingSkeleton.tsx',
-    '!src/components/VirtualGrid/VirtualGridItem.tsx',
     '!src/components/Lightbox/LightboxNavigation.tsx',
     '!src/components/Lightbox/LightboxImage.tsx',
     '!src/components/Lightbox/LightboxMetadata.tsx',

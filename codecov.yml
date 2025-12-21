@@ -67,9 +67,6 @@ ignore:
   - "backend/scripts/"
   - "backend/src/db/migrations/"
   - "backend/src/core/logging_config.py" # Align with pyproject.toml
-  # Unused/Deprecated Backend Files (to be removed)
-  - "backend/src/services/rank_fusion.py"
-  - "backend/src/api/models.py"
   
   # --- Frontend ---
   - "**/*.d.ts"
@@ -85,13 +82,6 @@ ignore:
   - "frontend/src/lib/*-variants.ts"
   
   # Pure presentational components (no business logic)
-  - "frontend/src/components/VirtualGrid/LoadingSkeleton.tsx"
-  - "frontend/src/components/VirtualGrid/VirtualGridItem.tsx"
-  - "frontend/src/components/VirtualGrid/VirtualGrid.tsx"
-  - "frontend/src/components/PhotoGrid.tsx"
-  - "frontend/src/components/ResultsGrid.tsx"
-  - "frontend/src/components/SearchResults.tsx"
-  - "frontend/src/hooks/useVirtualGrid.ts"
   - "frontend/src/components/Lightbox/LightboxNavigation.tsx"
   - "frontend/src/components/Lightbox/LightboxImage.tsx"
   - "frontend/src/components/Lightbox/LightboxMetadata.tsx"
