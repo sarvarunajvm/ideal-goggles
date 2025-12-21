@@ -118,4 +118,4 @@ clientsystem
 *.bak
 *.backup
 .serena/*
-claudedocs/*
+claudedocs/*coverage.json
