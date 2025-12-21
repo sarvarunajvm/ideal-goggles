@@ -47,7 +47,7 @@ class FAISSIndexManager:
         self.vector_service = vector_search_service
 
         # Paths
-        self.base_path = Path(self.settings.app_data_dir) / "faiss"
+        self.base_path = Path(self.settings.DATA_DIR) / "faiss"
         self.index_path = self.base_path / "index.faiss"
         self.metadata_path = self.base_path / "metadata.json"
         self.backup_path = self.base_path / "backups"
