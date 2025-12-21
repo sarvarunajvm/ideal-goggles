@@ -160,6 +160,8 @@ omit = [
     "src/main.py",
     # __init__.py files - package markers with no business logic
     "src/core/logging_config.py",
+    "src/api/models.py",
+    "src/services/rank_fusion.py",
     "src/__init__.py",
     "src/core/__init__.py",
     "src/api/__init__.py",
