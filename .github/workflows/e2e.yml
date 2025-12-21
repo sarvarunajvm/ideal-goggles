@@ -195,9 +195,9 @@ jobs:
         API_URL: http://localhost:5555
         REUSE_EXISTING_SERVER: true
 
-    - name: Upload test results to Codecov Test Analytics (E2E)
-      uses: codecov/test-results-action@v1
-      if: always()
+    - name: Upload test results to Codecov
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./func_tests/test-results/junit.xml
@@ -205,6 +205,7 @@ jobs:
         name: e2e-tests-${{ matrix.browser }}
         fail_ci_if_error: false
         verbose: true
+        report_type: test_results
 
     - name: Upload test reports
       uses: actions/upload-artifact@v6

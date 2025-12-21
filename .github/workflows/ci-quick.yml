@@ -164,9 +164,9 @@ jobs:
         fail_ci_if_error: false
         verbose: true
 
-    - name: Upload test results to Codecov Test Analytics (backend)
-      uses: codecov/test-results-action@v1
-      if: always()
+    - name: Upload test results to Codecov (backend)
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./backend/test-results-${{ matrix.python-version }}.xml
@@ -174,6 +174,7 @@ jobs:
         name: backend-tests
         fail_ci_if_error: false
         verbose: true
+        report_type: test_results
 
     - name: Upload test results
       uses: actions/upload-artifact@v6
@@ -247,9 +248,9 @@ jobs:
         fail_ci_if_error: false
         verbose: true
 
-    - name: Upload test results to Codecov Test Analytics (frontend)
-      uses: codecov/test-results-action@v1
-      if: always()
+    - name: Upload test results to Codecov (frontend)
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./frontend/test-results/junit-${{ matrix.node-version }}.xml
@@ -257,6 +258,7 @@ jobs:
         name: frontend-tests
         fail_ci_if_error: false
         verbose: true
+        report_type: test_results
 
     - name: Upload test results
       uses: actions/upload-artifact@v6
@@ -331,9 +333,9 @@ jobs:
           echo "P0 critical test suite not found, skipping..."
         fi
 
-    - name: Upload test results to Codecov Test Analytics (P0 E2E)
-      uses: codecov/test-results-action@v1
-      if: always()
+    - name: Upload test results to Codecov (P0 E2E)
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() && hashFiles('func_tests/test-results/junit.xml') != '' }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./func_tests/test-results/junit.xml
@@ -341,10 +343,11 @@ jobs:
         name: p0-e2e-tests
         fail_ci_if_error: false
         verbose: true
+        report_type: test_results
 
     - name: Upload P0 test results
       uses: actions/upload-artifact@v6
-      if: always()
+      if: always() && hashFiles('func_tests/test-results/**', 'func_tests/playwright-report/**') != ''
       with:
         name: p0-e2e-results
         path: |
