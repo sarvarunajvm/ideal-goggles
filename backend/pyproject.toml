@@ -140,9 +140,8 @@ addopts = "-ra -q --strict-markers --strict-config --continue-on-collection-erro
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
-    "performance: marks tests as performance tests (deselect with '-m \"not performance\"')",
-    "contract: contract tests for API endpoints (may fail for unimplemented features)",
-    "integration: integration tests that require running services"
+    "unit: unit tests (fast, isolated)",
+    "performance: marks tests as performance tests (deselect with '-m \"not performance\"')"
 ]
 
 [tool.coverage.run]
