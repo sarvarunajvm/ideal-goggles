@@ -56,10 +56,8 @@ flags:
     paths:
       - frontend/src/
     carryforward: true
-  e2e:
-    paths:
-      - func_tests/
-    carryforward: true
+  # Note: e2e flag removed - E2E tests upload test_results (JUnit XML), not coverage.
+  # The e2e/p0-e2e flags in CI are for Test Analytics, not coverage tracking.
 
 # =============================================================================
 # COMPONENTS - Virtual filters for granular module visibility
