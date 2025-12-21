@@ -139,14 +139,16 @@ comment:
 
 # =============================================================================
 # IGNORED PATHS
+# Docs: https://docs.codecov.com/docs/ignoring-paths
+# Note: Use "folder/**" for recursive matching, not "folder/"
 # =============================================================================
 ignore:
   # --- Backend ---
   - "backend/**/__init__.py"
   - "backend/src/main.py"
-  - "backend/alembic/"
-  - "backend/scripts/"
-  - "backend/src/db/migrations/"
+  - "backend/alembic/**"
+  - "backend/scripts/**"
+  - "backend/src/db/migrations/**"
   - "backend/src/core/logging_config.py"
   
   # --- Frontend ---
@@ -154,8 +156,8 @@ ignore:
   - "frontend/src/main.tsx"
   - "frontend/src/App.tsx"
   - "frontend/src/vite-env.d.ts"
-  - "frontend/src/types/"
-  - "frontend/src/config/"
+  - "frontend/src/types/**"
+  - "frontend/src/config/**"
   - "frontend/src/utils/logger.ts"
   
   # UI Components (Presentational / Generated)
@@ -170,17 +172,17 @@ ignore:
   - "frontend/src/components/OnboardingWizard/CompleteStep.tsx"
 
   # --- Tests & Build ---
-  - "frontend/electron/"
-  - "**/tests/"
+  - "frontend/electron/**"
+  - "**/tests/**"
   - "**/test_*"
   - "**/*test*"
   - "**/*spec*"
-  - "**/__tests__/"
-  - "**/__pycache__/"
-  - "**/node_modules/"
-  - "**/dist/"
-  - "**/dist-electron/"
-  - "**/build/"
+  - "**/__tests__/**"
+  - "**/__pycache__/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/dist-electron/**"
+  - "**/build/**"
   
   # --- Config Files ---
   - "**/*.config.*"

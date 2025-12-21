@@ -41,7 +41,7 @@
     "e2e:dev": "USE_EXISTING_SERVER=1 pnpm exec playwright test --config=func_tests/playwright.config.ts",
     "e2e:all": "pnpm exec playwright test --config=func_tests/playwright.config.ts",
     "e2e:all:browser": "pnpm exec playwright test --config=func_tests/playwright.config.ts --project=$PROJECT",
-    "e2e:p0": "pnpm exec playwright test func_tests/e2e/00-p0-critical.test.ts --config=func_tests/playwright.config.ts --reporter=line --reporter=junit",
+    "e2e:p0": "pnpm exec playwright test func_tests/e2e/00-p0-critical.test.ts --config=func_tests/playwright.config.ts --reporter=list --reporter=junit,outputFile=func_tests/test-results/junit.xml",
     "e2e:smoke": "pnpm exec playwright test func_tests/e2e/01-smoke --config=func_tests/playwright.config.ts",
     "e2e:headed": "pnpm exec playwright test --config=func_tests/playwright.config.ts --headed",
     "e2e:debug": "pnpm exec playwright test --config=func_tests/playwright.config.ts --debug",
