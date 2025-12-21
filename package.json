@@ -35,7 +35,6 @@
     "test:coverage": "jest -c frontend/jest.config.js --rootDir frontend --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=html --coverageReporters=text",
     "coverage:all": "concurrently \"pnpm run test:coverage\" \"pnpm run backend:coverage\"",
     "coverage:unit:all": "concurrently \"pnpm run test:coverage\" \"pnpm run backend:coverage:unit\"",
-    "coverage:integration:all": "pnpm run backend:coverage:integration",
     "// === E2E TESTING ===": "",
     "e2e:install": "cd func_tests && pnpm install",
     "e2e:browsers": "pnpm exec playwright install --config=func_tests/playwright.config.ts",
