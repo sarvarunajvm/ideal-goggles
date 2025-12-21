@@ -111,11 +111,22 @@ frontend/DESIGN_TOKENS.md
 BUGS.md
 
 # Temporary/misc
-*.xml
 clientsystem
 *.resolve()'*
 *.orig
 *.bak
 *.backup
 .serena/*
-claudedocs/*coverage.json
+claudedocs/
+
+*coverage.json
+*coverage.xml
+*coverage.html
+*coverage.lcov
+*coverage.clover
+*coverage.cobertura
+*coverage.json.gz
+*coverage.json.bz2
+*coverage.json.xz
+*coverage.json.lzma
+*coverage.json.zstd
