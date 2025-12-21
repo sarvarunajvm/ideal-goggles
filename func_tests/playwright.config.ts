@@ -82,7 +82,7 @@ export default defineConfig({
         },
         {
           // Use exec so Playwright can reliably terminate the backend (avoid orphaned python processes)
-          command: 'cd ../backend && python3 init_test_db.py && exec python3 -m src.main',
+          command: 'cd ../backend && python3 scripts/init_test_db.py && exec python3 -m src.main',
           // Use explicit URL (127.0.0.1) for the same reason as above
           url: 'http://127.0.0.1:5555/health',
           timeout: 120 * 1000,
