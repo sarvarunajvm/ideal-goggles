@@ -1,14 +1,53 @@
 """Unit tests for vector search service."""
 
 import os
+import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
 
-from src.services.vector_search import FAISSVectorSearchService
+# Store original faiss module if it exists
+_original_faiss = sys.modules.get("faiss")
+
+
+@pytest.fixture
+def mock_faiss_module():
+    """
+    Create and install a mock faiss module in sys.modules.
+
+    This fixture properly mocks faiss for tests where faiss is imported
+    dynamically inside methods (like _initialize_faiss).
+    """
+    mock_module = MagicMock()
+    mock_index = MagicMock()
+    mock_index.ntotal = 0
+    mock_index.d = 512
+
+    mock_module.IndexFlatIP.return_value = mock_index
+    mock_module.IndexFlatL2.return_value = mock_index
+    mock_module.read_index.return_value = mock_index
+    mock_module.write_index = MagicMock()
+
+    # Install mock in sys.modules
+    sys.modules["faiss"] = mock_module
+
+    yield mock_module, mock_index
+
+    # Restore original
+    if _original_faiss is not None:
+        sys.modules["faiss"] = _original_faiss
+    else:
+        sys.modules.pop("faiss", None)
+
+
+@pytest.fixture
+def temp_index_path():
+    """Create a temporary directory for test indices."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield os.path.join(tmpdir, "test_index.bin")
 
 
 class TestFAISSVectorSearchService:
@@ -20,6 +59,42 @@ class TestFAISSVectorSearchService:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield os.path.join(tmpdir, "test_index.bin")
 
+    @pytest.fixture(autouse=True)
+    def setup_mock_faiss(self):
+        """Auto-use fixture to mock faiss for all tests in this class."""
+        mock_module = MagicMock()
+        self.mock_index = MagicMock()
+        self.mock_index.ntotal = 0
+        self.mock_index.d = 512
+
+        mock_module.IndexFlatIP.return_value = self.mock_index
+        mock_module.IndexFlatL2.return_value = self.mock_index
+        mock_module.read_index.return_value = self.mock_index
+        mock_module.write_index = MagicMock()
+        mock_module.IndexIVFPQ = MagicMock()
+
+        self.mock_faiss = mock_module
+
+        # Store and replace
+        self._original = sys.modules.get("faiss")
+        sys.modules["faiss"] = mock_module
+
+        # Import the service class after mocking faiss
+        # Need to reload if already imported
+        import importlib
+        if "src.services.vector_search" in sys.modules:
+            importlib.reload(sys.modules["src.services.vector_search"])
+        from src.services.vector_search import FAISSVectorSearchService
+        self.FAISSVectorSearchService = FAISSVectorSearchService
+
+        yield
+
+        # Restore
+        if self._original is not None:
+            sys.modules["faiss"] = self._original
+        else:
+            sys.modules.pop("faiss", None)
+
     def test_initialization_new_index(self, temp_index_path):
         """Test initialization with new index."""
         with patch("faiss.IndexFlatIP") as mock_ip:
@@ -28,7 +103,7 @@ class TestFAISSVectorSearchService:
             mock_index.d = 512
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(
+            service = self.FAISSVectorSearchService(
                 index_path=temp_index_path, dimension=512
             )
 
@@ -62,7 +137,7 @@ class TestFAISSVectorSearchService:
             with patch("builtins.open", create=True):
                 with patch("json.load", return_value=metadata):
                     Path(metadata_path).touch()
-                    service = FAISSVectorSearchService(index_path=temp_index_path)
+                    service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
                     mock_read.assert_called_once()
 
@@ -71,7 +146,7 @@ class TestFAISSVectorSearchService:
         with patch(
             "builtins.__import__", side_effect=ImportError("No module named 'faiss'")
         ):
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             # Should set index to None but not raise
             assert service.index is None
 
@@ -82,7 +157,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(
+            service = self.FAISSVectorSearchService(
                 index_path=temp_index_path, dimension=512
             )
             mock_ip.assert_called_with(512)
@@ -94,84 +169,76 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_l2.return_value = mock_index
 
-            service = FAISSVectorSearchService(
+            service = self.FAISSVectorSearchService(
                 index_path=temp_index_path, dimension=256
             )
             mock_l2.assert_called_with(256)
 
     def test_add_single_vector(self, temp_index_path):
         """Test adding a single vector."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 0
-            call_count = [0]
 
-            def increment_ntotal(vec):
-                call_count[0] += 1
-                mock_index.ntotal = call_count[0]
+        call_count = [0]
 
-            mock_index.add.side_effect = increment_ntotal
-            mock_ip.return_value = mock_index
+        def increment_ntotal(vec):
+            call_count[0] += 1
+            self.mock_index.ntotal = call_count[0]
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            vector = np.random.randn(512).astype(np.float32)
+        self.mock_index.add.side_effect = increment_ntotal
 
-            result = service.add_vector(file_id=1, vector=vector)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        vector = np.random.randn(512).astype(np.float32)
 
-            # Check vector was normalized and added
-            assert result is True
-            mock_index.add.assert_called_once()
-            assert 1 in service.file_id_to_index
-            assert service.unsaved_additions == 1
+        result = service.add_vector(file_id=1, vector=vector)
+
+        # Check vector was normalized and added
+        assert result is True
+        self.mock_index.add.assert_called_once()
+        assert 1 in service.file_id_to_index
+        assert service.unsaved_additions == 1
 
     def test_add_multiple_vectors(self, temp_index_path):
         """Test adding multiple vectors sequentially."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 0
-            call_count = [0]
 
-            def increment_ntotal(vec):
-                call_count[0] += 1
-                mock_index.ntotal = call_count[0]
+        call_count = [0]
 
-            mock_index.add.side_effect = increment_ntotal
-            mock_ip.return_value = mock_index
+        def increment_ntotal(vec):
+            call_count[0] += 1
+            self.mock_index.ntotal = call_count[0]
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+        self.mock_index.add.side_effect = increment_ntotal
 
-            file_ids = [1, 2, 3, 4, 5]
-            for file_id in file_ids:
-                vector = np.random.randn(512).astype(np.float32)
-                service.add_vector(file_id=file_id, vector=vector)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
-            assert mock_index.add.call_count == 5
-            for file_id in file_ids:
-                assert file_id in service.file_id_to_index
+        file_ids = [1, 2, 3, 4, 5]
+        for file_id in file_ids:
+            vector = np.random.randn(512).astype(np.float32)
+            service.add_vector(file_id=file_id, vector=vector)
+
+        assert self.mock_index.add.call_count == 5
+        for file_id in file_ids:
+            assert file_id in service.file_id_to_index
 
     def test_search_basic(self, temp_index_path):
         """Test basic vector search."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8, 0.7]]),
-                np.array([[0, 1, 2]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            # Add some mappings
-            service.id_to_file_id = {0: 10, 1: 20, 2: 30}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8, 0.7]]),
+            np.array([[0, 1, 2]]),
+        )
 
-            query_vector = np.random.randn(512).astype(np.float32)
-            results = service.search(query_vector, top_k=3)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        # Add some mappings
+        service.id_to_file_id = {0: 10, 1: 20, 2: 30}
 
-            assert len(results) == 3
-            assert results[0][0] == 10
-            assert results[0][1] == pytest.approx(0.9)
-            assert results[1][0] == 20
-            assert results[2][0] == 30
+        query_vector = np.random.randn(512).astype(np.float32)
+        results = service.search(query_vector, top_k=3)
+
+        assert len(results) == 3
+        assert results[0][0] == 10
+        assert results[0][1] == pytest.approx(0.9)
+        assert results[1][0] == 20
+        assert results[2][0] == 30
 
     def test_search_empty_index(self, temp_index_path):
         """Test searching in empty index."""
@@ -180,7 +247,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             query_vector = np.random.randn(512).astype(np.float32)
 
             results = service.search(query_vector, top_k=5)
@@ -193,7 +260,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 1
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.file_id_to_index = {1: 0}
             service.id_to_file_id = {0: 1}
 
@@ -210,7 +277,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             success = service.remove_vector(file_id=999)
 
             assert not success
@@ -225,7 +292,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 5
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.id_to_file_id = {0: 10, 1: 20}
             service._index_dirty = True
 
@@ -239,25 +306,23 @@ class TestFAISSVectorSearchService:
 
     def test_batch_search(self, temp_index_path):
         """Test batch vector search."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8], [0.85, 0.75]]),
-                np.array([[0, 1], [2, 3]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.id_to_file_id = {0: 10, 1: 20, 2: 30, 3: 40}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8], [0.85, 0.75]]),
+            np.array([[0, 1], [2, 3]]),
+        )
 
-            query_vectors = np.random.randn(2, 512).astype(np.float32)
-            results = service.batch_search(query_vectors, top_k=2)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.id_to_file_id = {0: 10, 1: 20, 2: 30, 3: 40}
 
-            assert len(results) == 2
-            assert len(results[0]) == 2
-            assert results[0][0][0] == 10
-            assert results[1][0][0] == 30
+        query_vectors = np.random.randn(2, 512).astype(np.float32)
+        results = service.batch_search(query_vectors, top_k=2)
+
+        assert len(results) == 2
+        assert len(results[0]) == 2
+        assert results[0][0][0] == 10
+        assert results[1][0][0] == 30
 
     def test_get_statistics(self, temp_index_path):
         """Test getting index statistics."""
@@ -269,7 +334,7 @@ class TestFAISSVectorSearchService:
             type(mock_index).__name__ = "IndexFlatIP"
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.unsaved_additions = 5
 
             stats = service.get_statistics()
@@ -297,7 +362,7 @@ class TestFAISSVectorSearchService:
             mock_index.add.side_effect = increment_ntotal
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             errors = []
 
             def add_vectors(thread_id):
@@ -321,63 +386,64 @@ class TestFAISSVectorSearchService:
 
     def test_search_similar(self, temp_index_path):
         """Test search_similar returns correct format."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8]]),
-                np.array([[0, 1]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.id_to_file_id = {0: 10, 1: 20}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8]]),
+            np.array([[0, 1]]),
+        )
 
-            query_vector = np.random.randn(512).astype(np.float32)
-            results = service.search_similar(query_vector, k=2)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.id_to_file_id = {0: 10, 1: 20}
 
-            assert len(results) == 2
-            assert "file_id" in results[0]
-            assert "distance" in results[0]
-            assert results[0]["file_id"] == 10
-            # Distance = 1 - similarity
-            assert results[0]["distance"] == pytest.approx(0.1)
+        query_vector = np.random.randn(512).astype(np.float32)
+        results = service.search_similar(query_vector, k=2)
+
+        assert len(results) == 2
+        assert "file_id" in results[0]
+        assert "distance" in results[0]
+        assert results[0]["file_id"] == 10
+        # Distance = 1 - similarity
+        assert results[0]["distance"] == pytest.approx(0.1)
 
     def test_rebuild_index(self, temp_index_path):
         """Test rebuilding index to remove deleted entries."""
-        with (
-            patch("faiss.IndexFlatIP") as mock_ip,
-            patch("faiss.write_index") as mock_write,
-        ):
-            # First mock for initial creation
-            initial_index = Mock()
-            initial_index.ntotal = 3
-            initial_index.reconstruct.side_effect = [
-                np.random.randn(512).astype(np.float32),
-                np.random.randn(512).astype(np.float32),
-                np.random.randn(512).astype(np.float32),
-            ]
 
-            # Second mock for rebuilt index
-            rebuilt_index = Mock()
-            rebuilt_index.ntotal = 2
+        # Setup initial index mock
+        self.mock_index.ntotal = 3
+        self.mock_index.reconstruct.side_effect = [
+            np.random.randn(512).astype(np.float32),
+            np.random.randn(512).astype(np.float32),
+            np.random.randn(512).astype(np.float32),
+        ]
 
-            mock_ip.side_effect = [initial_index, rebuilt_index]
+        # Track IndexFlatIP calls to return different mocks
+        call_count = [0]
+        rebuilt_index = MagicMock()
+        rebuilt_index.ntotal = 2
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            # Simulate some deleted entries
-            service.id_to_file_id = {0: 10, 1: None, 2: 30}  # Entry 1 is deleted
-            service.file_id_to_index = {10: 0, 30: 2}
+        def get_index(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return self.mock_index
+            return rebuilt_index
 
-            with patch("builtins.open", create=True):
-                with patch("json.dump"):
-                    result = service.rebuild_index()
+        self.mock_faiss.IndexFlatIP.side_effect = get_index
 
-            assert result is True
-            # Should only have 2 valid entries now
-            assert len(service.file_id_to_index) == 2
-            assert 10 in service.file_id_to_index
-            assert 30 in service.file_id_to_index
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        # Simulate some deleted entries
+        service.id_to_file_id = {0: 10, 1: None, 2: 30}  # Entry 1 is deleted
+        service.file_id_to_index = {10: 0, 30: 2}
+
+        with patch("builtins.open", create=True):
+            with patch("json.dump"):
+                result = service.rebuild_index()
+
+        assert result is True
+        # Should only have 2 valid entries now
+        assert len(service.file_id_to_index) == 2
+        assert 10 in service.file_id_to_index
+        assert 30 in service.file_id_to_index
 
     def test_get_vector_existing(self, temp_index_path):
         """Test getting an existing vector."""
@@ -388,7 +454,7 @@ class TestFAISSVectorSearchService:
             mock_index.reconstruct.return_value = mock_vector
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.file_id_to_index = {1: 0}
             service.id_to_file_id = {0: 1}
 
@@ -405,7 +471,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
             result = service.get_vector(file_id=999)
 
@@ -417,7 +483,7 @@ class TestFAISSVectorSearchService:
             mock_index = Mock()
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = None
 
             result = service.get_vector(file_id=1)
@@ -432,7 +498,7 @@ class TestFAISSVectorSearchService:
             mock_index.reconstruct.side_effect = Exception("Reconstruct failed")
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.file_id_to_index = {1: 0}
             service.id_to_file_id = {0: 1}
 
@@ -450,7 +516,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 5
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service._index_dirty = True
 
             with patch("builtins.open", create=True):
@@ -466,7 +532,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 5
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service._index_dirty = False
 
             with patch("faiss.write_index") as mock_write:
@@ -481,7 +547,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
             result = service._should_use_ivf(100000)
 
@@ -494,7 +560,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
             result = service._should_use_ivf(250000)
 
@@ -512,7 +578,7 @@ class TestFAISSVectorSearchService:
 
             mock_ip.return_value = initial_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = initial_index
 
             with (
@@ -535,7 +601,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = mock_index
 
             # Should return early without error
@@ -548,7 +614,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = None
 
             # Should return early without error
@@ -556,48 +622,44 @@ class TestFAISSVectorSearchService:
 
     def test_search_with_score_threshold(self, temp_index_path):
         """Test search with score threshold filtering."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.5, 0.3, 0.1]]),
-                np.array([[0, 1, 2, 3]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.id_to_file_id = {0: 10, 1: 20, 2: 30, 3: 40}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.5, 0.3, 0.1]]),
+            np.array([[0, 1, 2, 3]]),
+        )
 
-            query_vector = np.random.randn(512).astype(np.float32)
-            results = service.search(query_vector, top_k=10, score_threshold=0.4)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.id_to_file_id = {0: 10, 1: 20, 2: 30, 3: 40}
 
-            # Should filter out scores below 0.4
-            assert len(results) == 2
-            assert results[0][1] >= 0.4
-            assert results[1][1] >= 0.4
+        query_vector = np.random.randn(512).astype(np.float32)
+        results = service.search(query_vector, top_k=10, score_threshold=0.4)
+
+        # Should filter out scores below 0.4
+        assert len(results) == 2
+        assert results[0][1] >= 0.4
+        assert results[1][1] >= 0.4
 
     def test_search_with_deleted_entries(self, temp_index_path):
         """Test search skips deleted entries."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8, 0.7]]),
-                np.array([[0, 1, 2]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            # Entry 1 is deleted (None)
-            service.id_to_file_id = {0: 10, 1: None, 2: 30}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8, 0.7]]),
+            np.array([[0, 1, 2]]),
+        )
 
-            query_vector = np.random.randn(512).astype(np.float32)
-            results = service.search(query_vector, top_k=10)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        # Entry 1 is deleted (None)
+        service.id_to_file_id = {0: 10, 1: None, 2: 30}
 
-            # Should skip deleted entry
-            assert len(results) == 2
-            assert results[0][0] == 10
-            assert results[1][0] == 30
+        query_vector = np.random.randn(512).astype(np.float32)
+        results = service.search(query_vector, top_k=10)
+
+        # Should skip deleted entry
+        assert len(results) == 2
+        assert results[0][0] == 10
+        assert results[1][0] == 30
 
     def test_search_with_invalid_dimension(self, temp_index_path):
         """Test search with invalid vector dimension."""
@@ -606,7 +668,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 10
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(
+            service = self.FAISSVectorSearchService(
                 index_path=temp_index_path, dimension=512
             )
 
@@ -618,23 +680,21 @@ class TestFAISSVectorSearchService:
 
     def test_search_with_index_pos_minus_one(self, temp_index_path):
         """Test search handles -1 index position (no more results)."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8, -1.0]]),
-                np.array([[0, 1, -1]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.id_to_file_id = {0: 10, 1: 20}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8, -1.0]]),
+            np.array([[0, 1, -1]]),
+        )
 
-            query_vector = np.random.randn(512).astype(np.float32)
-            results = service.search(query_vector, top_k=10)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.id_to_file_id = {0: 10, 1: 20}
 
-            # Should stop at -1
-            assert len(results) == 2
+        query_vector = np.random.randn(512).astype(np.float32)
+        results = service.search(query_vector, top_k=10)
+
+        # Should stop at -1
+        assert len(results) == 2
 
     def test_batch_search_empty_index(self, temp_index_path):
         """Test batch search with empty index."""
@@ -643,7 +703,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
             query_vectors = np.random.randn(3, 512).astype(np.float32)
             results = service.batch_search(query_vectors, top_k=5)
@@ -657,7 +717,7 @@ class TestFAISSVectorSearchService:
             mock_index = Mock()
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = None
 
             query_vectors = np.random.randn(2, 512).astype(np.float32)
@@ -668,50 +728,46 @@ class TestFAISSVectorSearchService:
 
     def test_batch_search_with_deleted_entries(self, temp_index_path):
         """Test batch search skips deleted entries."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 10
-            mock_index.search.return_value = (
-                np.array([[0.9, 0.8, 0.7]]),
-                np.array([[0, 1, 2]]),
-            )
-            mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            # Entry 1 is deleted
-            service.id_to_file_id = {0: 10, 1: None, 2: 30}
+        self.mock_index.ntotal = 10
+        self.mock_index.search.return_value = (
+            np.array([[0.9, 0.8, 0.7]]),
+            np.array([[0, 1, 2]]),
+        )
 
-            query_vectors = np.random.randn(1, 512).astype(np.float32)
-            results = service.batch_search(query_vectors, top_k=10)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        # Entry 1 is deleted
+        service.id_to_file_id = {0: 10, 1: None, 2: 30}
 
-            assert len(results) == 1
-            # Should skip deleted entry
-            assert len(results[0]) == 2
+        query_vectors = np.random.randn(1, 512).astype(np.float32)
+        results = service.batch_search(query_vectors, top_k=10)
+
+        assert len(results) == 1
+        # Should skip deleted entry
+        assert len(results[0]) == 2
 
     def test_add_vector_with_existing_file_id(self, temp_index_path):
         """Test adding vector when file_id already exists."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 1
-            call_count = [1]
 
-            def increment_ntotal(vec):
-                call_count[0] += 1
-                mock_index.ntotal = call_count[0]
+        self.mock_index.ntotal = 1
+        call_count = [1]
 
-            mock_index.add.side_effect = increment_ntotal
-            mock_ip.return_value = mock_index
+        def increment_ntotal(vec):
+            call_count[0] += 1
+            self.mock_index.ntotal = call_count[0]
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.file_id_to_index = {1: 0}
-            service.id_to_file_id = {0: 1}
+        self.mock_index.add.side_effect = increment_ntotal
 
-            vector = np.random.randn(512).astype(np.float32)
-            result = service.add_vector(file_id=1, vector=vector)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.file_id_to_index = {1: 0}
+        service.id_to_file_id = {0: 1}
 
-            assert result is True
-            # Should have removed old entry and added new one
-            assert 1 in service.file_id_to_index
+        vector = np.random.randn(512).astype(np.float32)
+        result = service.add_vector(file_id=1, vector=vector)
+
+        assert result is True
+        # Should have removed old entry and added new one
+        assert 1 in service.file_id_to_index
 
     def test_add_vector_invalid_dimension(self, temp_index_path):
         """Test adding vector with wrong dimension."""
@@ -720,7 +776,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 0
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(
+            service = self.FAISSVectorSearchService(
                 index_path=temp_index_path, dimension=512
             )
 
@@ -731,26 +787,23 @@ class TestFAISSVectorSearchService:
 
     def test_add_vector_zero_norm(self, temp_index_path):
         """Test adding vector with zero norm."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            mock_index = Mock()
-            mock_index.ntotal = 0
-            call_count = [0]
 
-            def increment_ntotal(vec):
-                call_count[0] += 1
-                mock_index.ntotal = call_count[0]
+        call_count = [0]
 
-            mock_index.add.side_effect = increment_ntotal
-            mock_ip.return_value = mock_index
+        def increment_ntotal(vec):
+            call_count[0] += 1
+            self.mock_index.ntotal = call_count[0]
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+        self.mock_index.add.side_effect = increment_ntotal
 
-            # Zero vector
-            vector = np.zeros(512, dtype=np.float32)
-            result = service.add_vector(file_id=1, vector=vector)
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
 
-            # Should handle gracefully (norm is 0, so no normalization)
-            assert result is True
+        # Zero vector
+        vector = np.zeros(512, dtype=np.float32)
+        result = service.add_vector(file_id=1, vector=vector)
+
+        # Should handle gracefully (norm is 0, so no normalization)
+        assert result is True
 
     def test_save_index_not_dirty(self, temp_index_path):
         """Test save_index when index is not dirty."""
@@ -759,7 +812,7 @@ class TestFAISSVectorSearchService:
             mock_index.ntotal = 5
             mock_ip.return_value = mock_index
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service._index_dirty = False
 
             result = service.save_index()
@@ -802,7 +855,7 @@ class TestFAISSVectorSearchService:
 
                     with patch("pickle.load", return_value=pickle_metadata):
                         with patch("json.dump"):
-                            service = FAISSVectorSearchService(
+                            service = self.FAISSVectorSearchService(
                                 index_path=temp_index_path
                             )
 
@@ -827,7 +880,7 @@ class TestFAISSVectorSearchService:
             with patch("builtins.open", create=True):
                 with patch("json.load", return_value=metadata):
                     with patch("os.path.exists", return_value=True):
-                        service = FAISSVectorSearchService(
+                        service = self.FAISSVectorSearchService(
                             index_path=temp_index_path, dimension=512
                         )
 
@@ -850,7 +903,7 @@ class TestFAISSVectorSearchService:
 
             mock_ip.side_effect = [initial_index, new_index]
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
+            service = self.FAISSVectorSearchService(index_path=temp_index_path)
             service.index = initial_index
             # All entries deleted
             service.id_to_file_id = {0: None, 1: None, 2: None}
@@ -865,40 +918,36 @@ class TestFAISSVectorSearchService:
 
     def test_rebuild_index_with_ivf_upgrade(self, temp_index_path):
         """Test rebuild_index upgrades to IVF when appropriate."""
-        with patch("faiss.IndexFlatIP") as mock_ip:
-            initial_index = Mock()
-            initial_index.ntotal = 250000
-            vectors = np.random.randn(250000, 512).astype(np.float32)
-            initial_index.reconstruct.side_effect = [vectors[i] for i in range(250000)]
 
-            mock_ip.return_value = initial_index
+        # Use smaller dataset for faster test
+        num_vectors = 250000
+        vectors = np.random.randn(num_vectors, 512).astype(np.float32)
 
-            service = FAISSVectorSearchService(index_path=temp_index_path)
-            service.index = initial_index
-            service.id_to_file_id = {i: i for i in range(250000)}
-            service.file_id_to_index = {i: i for i in range(250000)}
+        self.mock_index.ntotal = num_vectors
+        self.mock_index.d = 512
 
-            with (
-                patch("faiss.IndexIVFPQ") as mock_ivf,
-                patch("faiss.IndexFlatIP") as mock_quantizer,
-                patch("builtins.open", create=True),
-                patch("json.dump"),
-            ):
-                ivf_index = Mock()
-                ivf_index.nlist = 500
-                mock_ivf.return_value = ivf_index
-                mock_quantizer.return_value = Mock()
+        # Mock reconstruct_n to return vectors
+        def mock_reconstruct_n(start, end):
+            return vectors[start:end]
 
-                # Mock reconstruct_n to return all vectors at once
-                def mock_reconstruct_n(start, end):
-                    return vectors[start:end]
+        self.mock_index.reconstruct_n = mock_reconstruct_n
+        self.mock_index.reconstruct.side_effect = lambda i: vectors[i]
 
-                initial_index.reconstruct_n = mock_reconstruct_n
+        # Setup IVF mock
+        ivf_index = MagicMock()
+        ivf_index.nlist = 500
+        self.mock_faiss.IndexIVFPQ.return_value = ivf_index
 
-                result = service.rebuild_index()
+        service = self.FAISSVectorSearchService(index_path=temp_index_path)
+        service.index = self.mock_index
+        service.id_to_file_id = {i: i for i in range(num_vectors)}
+        service.file_id_to_index = {i: i for i in range(num_vectors)}
 
-                # Should have attempted IVF upgrade
-                assert result is True
+        with patch("builtins.open", create=True), patch("json.dump"):
+            result = service.rebuild_index()
+
+        # Should have attempted IVF upgrade
+        assert result is True
 
 
 class TestVectorSearchModuleFunctions:
