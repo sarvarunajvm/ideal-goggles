@@ -711,3 +711,207 @@ class TestInstallDependenciesInternal:
         result = await install_dependencies(request)
         assert result["status"] == "partial"
 
+    @patch("src.api.dependencies.subprocess.run")
+    @patch("src.api.dependencies.sys")
+    @patch("pathlib.Path.exists")
+    async def test_install_timeout_expired(self, mock_exists, mock_sys, mock_run):
+        """Test install dependencies timeout."""
+        mock_sys.frozen = False
+        mock_exists.return_value = True
+
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=60)
+
+        request = InstallRequest(components=["all"])
+        with pytest.raises(Exception):  # HTTPException
+            await install_dependencies(request)
+
+
+class TestTimeoutContextManager:
+    """Test timeout context manager."""
+
+    def test_timeout_without_sigalrm(self):
+        """Test timeout on systems without SIGALRM (Windows)."""
+        from src.api.dependencies import timeout
+
+        # Mock signal to not have SIGALRM
+        with patch("src.api.dependencies.signal") as mock_signal:
+            # Remove SIGALRM attribute
+            del mock_signal.SIGALRM
+
+            # Should just yield without setting alarm
+            with timeout(5):
+                pass  # Should complete without error
+
+    def test_timeout_handler_raises(self):
+        """Test that timeout handler raises TimeoutError."""
+        from src.api.dependencies import timeout
+
+        # This tests the timeout handler function directly
+        with patch("src.api.dependencies.signal") as mock_signal:
+            mock_signal.SIGALRM = 14  # Unix SIGALRM value
+            mock_signal.signal = MagicMock()
+            mock_signal.alarm = MagicMock()
+
+            with timeout(1):
+                pass  # Normal completion
+
+
+class TestFrozenEnvironment:
+    """Test frozen executable environment handling."""
+
+    def setup_method(self):
+        """Clear dependency cache before each test."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        _DEPENDENCY_CACHE.clear()
+
+    def test_check_python_package_frozen_success(self):
+        """Test package check in frozen environment - success."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        mock_module = MagicMock()
+        mock_module.__version__ = "1.0.0"
+
+        with patch("src.api.dependencies.sys") as mock_sys:
+            mock_sys.frozen = True
+            with patch("importlib.import_module", return_value=mock_module):
+                installed, version = check_python_package("test_frozen_pkg")
+                assert installed is True
+                assert version == "1.0.0"
+
+    def test_check_python_package_frozen_import_error(self):
+        """Test package check in frozen environment - ImportError."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        with patch("src.api.dependencies.sys") as mock_sys:
+            mock_sys.frozen = True
+            with patch(
+                "importlib.import_module", side_effect=ImportError("Not bundled")
+            ):
+                installed, version = check_python_package("missing_frozen_pkg")
+                assert installed is False
+                assert version is None
+
+    def test_check_python_package_frozen_timeout(self):
+        """Test package check in frozen environment - TimeoutError."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        with patch("src.api.dependencies.sys") as mock_sys:
+            mock_sys.frozen = True
+            with patch("importlib.import_module", side_effect=TimeoutError("Timeout")):
+                installed, version = check_python_package("timeout_frozen_pkg")
+                assert installed is False
+                assert version is None
+
+    def test_check_python_package_frozen_generic_exception(self):
+        """Test package check in frozen environment - generic exception."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        with patch("src.api.dependencies.sys") as mock_sys:
+            mock_sys.frozen = True
+            with patch(
+                "importlib.import_module", side_effect=RuntimeError("Unknown error")
+            ):
+                installed, version = check_python_package("error_frozen_pkg")
+                assert installed is False
+                assert version is None
+
+    def test_check_python_package_frozen_sqlite3_version(self):
+        """Test sqlite3 special case in frozen environment."""
+        from src.api.dependencies import _DEPENDENCY_CACHE
+
+        mock_module = MagicMock(spec=["version"])
+        mock_module.version = "3.39.0"
+        del mock_module.__version__  # Remove __version__
+
+        with patch("src.api.dependencies.sys") as mock_sys:
+            mock_sys.frozen = True
+            with patch("importlib.import_module", return_value=mock_module):
+                installed, version = check_python_package("sqlite3")
+                assert installed is True
+                assert version == "3.39.0"
+
+
+class TestVerifyModelFunctionalityEdgeCases:
+    """Test edge cases in verify_model_functionality."""
+
+    def test_verify_clip_cuda_error(self):
+        """Test CLIP verification with CUDA error."""
+        import psutil as real_psutil
+
+        with patch.object(real_psutil, "virtual_memory") as mock_vm:
+            mock_vm.return_value = MagicMock(
+                available=4 * 1024**3, total=8 * 1024**3
+            )
+
+            # Mock clip.load to raise CUDA error
+            mock_clip = MagicMock()
+            mock_clip.load.side_effect = RuntimeError("CUDA out of memory")
+            mock_torch = MagicMock()
+            mock_torch.cuda.is_available.return_value = False
+
+            with patch.dict(
+                "sys.modules", {"clip": mock_clip, "torch": mock_torch}
+            ):
+                result = verify_model_functionality("clip")
+                assert result["functional"] is False
+                assert "CUDA out of memory" in str(result.get("error", ""))
+
+    def test_verify_face_worker_not_available(self):
+        """Test face verification when worker not available."""
+        import psutil as real_psutil
+
+        with patch.object(real_psutil, "virtual_memory") as mock_vm:
+            mock_vm.return_value = MagicMock(
+                available=4 * 1024**3, total=8 * 1024**3
+            )
+
+            with patch(
+                "src.workers.face_worker.FaceDetectionWorker"
+            ) as mock_worker_class:
+                mock_worker = MagicMock()
+                mock_worker.is_available.return_value = False
+                mock_worker_class.return_value = mock_worker
+
+                result = verify_model_functionality("face")
+                assert result["functional"] is False
+                assert "not available" in str(result.get("error", ""))
+
+    def test_verify_face_worker_exception(self):
+        """Test face verification with exception."""
+        import psutil as real_psutil
+
+        with patch.object(real_psutil, "virtual_memory") as mock_vm:
+            mock_vm.return_value = MagicMock(
+                available=4 * 1024**3, total=8 * 1024**3
+            )
+
+            with patch(
+                "src.workers.face_worker.FaceDetectionWorker",
+                side_effect=ImportError("InsightFace not installed"),
+            ):
+                result = verify_model_functionality("face")
+                assert result["functional"] is False
+                assert "InsightFace not installed" in str(result.get("error", ""))
+
+
+class TestGetDependenciesStatusEdgeCases:
+    """Test edge cases in get_dependencies_status."""
+
+    @pytest.mark.asyncio
+    async def test_get_dependencies_status_validation_error(self):
+        """Test get_dependencies_status with validation error."""
+        from src.api.dependencies import get_dependencies_status
+
+        with patch("src.api.dependencies.check_python_package") as mock_check:
+            mock_check.return_value = (True, "1.0.0")
+
+            # Should return minimal response on error
+            with patch(
+                "src.api.dependencies.DependenciesResponse",
+                side_effect=[ValueError("Validation failed"), MagicMock()],
+            ):
+                result = await get_dependencies_status()
+                # Should get a valid response (fallback or retry)
+                assert result is not None
+

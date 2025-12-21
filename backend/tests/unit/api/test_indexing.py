@@ -1178,3 +1178,240 @@ class TestInternalProcesses:
                         assert "No valid root paths found" in state["errors"][-1]
 
 
+class TestMonitorIndexingTaskCancellation:
+    """Tests for _monitor_indexing_task cancellation path."""
+
+    @pytest.fixture(autouse=True)
+    def reset_state(self):
+        """Reset state before each test."""
+        from src.api import indexing
+
+        indexing._indexing_state.clear()
+        indexing._indexing_state.update({
+            "status": "indexing",
+            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
+            "errors": [],
+            "started_at": None,
+            "estimated_completion": None,
+            "task": None,
+            "last_completed_at": None,
+            "request_count": 0,
+        })
+        yield
+
+    @pytest.mark.asyncio
+    async def test_monitor_task_cancelled(self):
+        """Test monitor task handles CancelledError."""
+        async def cancelled_task():
+            raise asyncio.CancelledError
+
+        task = asyncio.create_task(cancelled_task())
+        await _state_manager.set_value("task", task)
+
+        await _monitor_indexing_task(task)
+
+        state = await _state_manager.get_state()
+        assert state["status"] == "stopped"
+        assert state["task"] is None
+
+    @pytest.mark.asyncio
+    async def test_monitor_task_finally_clears_task(self):
+        """Test monitor task clears task in finally block."""
+        async def successful_task():
+            pass
+
+        task = asyncio.create_task(successful_task())
+        await _state_manager.set_value("task", task)
+
+        await _monitor_indexing_task(task)
+
+        state = await _state_manager.get_state()
+        # Task should be cleared in finally block
+        assert state["task"] is None
+
+
+class TestProcessingPhasesDBSave:
+    """Tests for database save operations in processing phases."""
+
+    @pytest.fixture(autouse=True)
+    def reset_state(self):
+        """Reset state before each test."""
+        from src.api import indexing
+
+        indexing._indexing_state.clear()
+        indexing._indexing_state.update({
+            "status": "indexing",
+            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
+            "errors": [],
+            "started_at": None,
+            "estimated_completion": None,
+            "task": None,
+            "last_completed_at": None,
+            "request_count": 0,
+        })
+        yield
+
+    @pytest.mark.asyncio
+    async def test_exif_save_with_all_attributes(self):
+        """Test EXIF extraction is called with all attributes present."""
+        from src.api.indexing import _run_processing_phases
+
+        mock_exif_data = MagicMock()
+        mock_exif_data.shot_dt = "2024-01-01"
+        mock_exif_data.camera_make = "Canon"
+        mock_exif_data.camera_model = "EOS R5"
+        mock_exif_data.lens = "RF 24-70mm"
+        mock_exif_data.iso = 100
+        mock_exif_data.aperture = 2.8
+        mock_exif_data.shutter_speed = "1/250"
+        mock_exif_data.focal_length = 50
+        mock_exif_data.gps_lat = 40.7128
+        mock_exif_data.gps_lon = -74.0060
+        mock_exif_data.orientation = 1
+
+        mock_exif_result = {
+            "extraction_successful": True,
+            "photo_id": 1,
+            "exif_data": mock_exif_data,
+        }
+
+        mock_photo = MagicMock()
+        mock_photo.id = 1
+
+        mock_exif_pipeline = MagicMock()
+        mock_exif_pipeline.process_photos = AsyncMock(return_value=[mock_exif_result])
+
+        mock_workers = {
+            "EXIFExtractionPipeline": MagicMock(return_value=mock_exif_pipeline),
+            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
+                generate_batch_optimized=AsyncMock(return_value=[])
+            )),
+            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
+                generate_batch=AsyncMock(return_value=[])
+            )),
+            "FaceDetectionWorker": MagicMock(return_value=MagicMock(
+                is_available=MagicMock(return_value=False)
+            )),
+        }
+
+        mock_db = MagicMock()
+
+        with patch("src.api.indexing.get_database_manager", return_value=mock_db):
+            with patch("src.api.indexing._is_e2e_test_mode", return_value=True):
+                await _run_processing_phases(
+                    mock_workers,
+                    {"face_search_enabled": False},
+                    [mock_photo]
+                )
+
+        # Verify EXIF pipeline was called
+        mock_exif_pipeline.process_photos.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_face_detection_worker_not_available(self):
+        """Test face detection when worker is not available."""
+        from src.api.indexing import _run_processing_phases
+
+        mock_photo = MagicMock()
+        mock_photo.id = 1
+
+        mock_face_worker = MagicMock()
+        mock_face_worker.is_available.return_value = False
+
+        mock_workers = {
+            "EXIFExtractionPipeline": MagicMock(return_value=MagicMock(
+                process_photos=AsyncMock(return_value=[])
+            )),
+            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
+                generate_batch_optimized=AsyncMock(return_value=[])
+            )),
+            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
+                generate_batch=AsyncMock(return_value=[])
+            )),
+            "FaceDetectionWorker": MagicMock(return_value=mock_face_worker),
+        }
+
+        mock_db = MagicMock()
+
+        with patch("src.api.indexing.get_database_manager", return_value=mock_db):
+            with patch("src.api.indexing._is_e2e_test_mode", return_value=False):
+                await _run_processing_phases(
+                    mock_workers,
+                    {"face_search_enabled": True},
+                    [mock_photo]
+                )
+
+        # Should have logged error about face detection not available
+        state = await _state_manager.get_state()
+        assert any("Face detection model not available" in e for e in state["errors"])
+
+
+class TestRunIndexingProcessMarkIndexed:
+    """Tests for marking photos as indexed."""
+
+    @pytest.fixture(autouse=True)
+    def reset_state(self):
+        """Reset state before each test."""
+        from src.api import indexing
+
+        indexing._indexing_state.clear()
+        indexing._indexing_state.update({
+            "status": "idle",
+            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
+            "errors": [],
+            "started_at": None,
+            "estimated_completion": None,
+            "task": None,
+            "last_completed_at": None,
+            "request_count": 0,
+        })
+        yield
+
+    @pytest.mark.asyncio
+    async def test_mark_photos_as_indexed(self):
+        """Test that photos are marked as indexed after processing."""
+        mock_photo = MagicMock()
+        mock_photo.id = 1
+
+        mock_db = MagicMock()
+        mock_db.execute_query.return_value = []
+
+        mock_crawl_result = MagicMock()
+        mock_crawl_result.total_files = 1
+        mock_crawl_result.errors = 0
+        mock_crawl_result.error_details = []
+        mock_crawl_result.files = []
+
+        mock_crawler = MagicMock()
+        mock_crawler.crawl_all_paths = AsyncMock(return_value=mock_crawl_result)
+
+        mock_workers = {
+            "FileCrawler": MagicMock(return_value=mock_crawler),
+            "EXIFExtractionPipeline": MagicMock(return_value=MagicMock(
+                process_photos=AsyncMock(return_value=[])
+            )),
+            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
+                generate_batch_optimized=AsyncMock(return_value=[])
+            )),
+            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
+                generate_batch=AsyncMock(return_value=[])
+            )),
+            "FaceDetectionWorker": MagicMock(return_value=MagicMock(
+                is_available=MagicMock(return_value=False)
+            )),
+        }
+
+        with patch("src.api.indexing._setup_indexing_workers", return_value=mock_workers):
+            with patch("src.api.indexing.get_database_manager", return_value=mock_db):
+                with patch("src.api.indexing._get_config_from_db", return_value={"roots": ["/valid"]}):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        with patch("src.api.indexing._get_photos_for_processing", return_value=[mock_photo]):
+                            with patch("src.api.indexing._run_discovery_phase"):
+                                with patch("src.api.indexing._run_processing_phases"):
+                                    await _run_indexing_process(full_reindex=False)
+
+        # Verify UPDATE was called to mark photos as indexed
+        calls = [str(c) for c in mock_db.execute_update.call_args_list]
+        assert any("indexed_at" in str(c) for c in calls)
+
+

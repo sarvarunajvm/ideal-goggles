@@ -1465,3 +1465,81 @@ class TestEdgeCases:
                         result = await manager.restore_backup("test_no_metadata")
 
                         assert result is True
+
+
+class TestFAISSNotAvailable:
+    """Test cases when faiss is not available."""
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_perform_optimization_faiss_not_available(self, mock_get_settings):
+        """Test _perform_optimization when faiss is not available."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.DATA_DIR = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_vector_service = Mock()
+            mock_vector_service.index = Mock(ntotal=100, d=512)
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager(
+                        vector_search_service=mock_vector_service
+                    )
+
+                    # Mock faiss to not have IndexFlatL2
+                    with patch("src.services.faiss_manager.faiss") as mock_faiss:
+                        mock_faiss.IndexFlatL2 = None
+
+                        # Should return False when faiss not available
+                        result = await manager._perform_optimization()
+                        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_optimize_flat_index_faiss_not_available(self, mock_get_settings):
+        """Test _optimize_flat_index when faiss is not available."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.DATA_DIR = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_index = Mock()
+            mock_index.ntotal = 100
+            mock_index.d = 512
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    with patch("src.services.faiss_manager.faiss") as mock_faiss:
+                        mock_faiss.IndexFlatL2 = None
+
+                        # Should return None when faiss not available
+                        result = manager._optimize_flat_index(mock_index)
+                        assert result is None
+
+    @pytest.mark.asyncio
+    @patch("src.services.faiss_manager.get_settings")
+    async def test_create_ivf_index_faiss_not_available(self, mock_get_settings):
+        """Test _create_ivf_index when faiss is not available."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_settings = Mock()
+            mock_settings.DATA_DIR = temp_dir
+            mock_get_settings.return_value = mock_settings
+
+            mock_index = Mock()
+            mock_index.ntotal = 10000
+            mock_index.d = 512
+
+            with patch.object(FAISSIndexManager, "_load_stats"):
+                with patch.object(FAISSIndexManager, "_start_background_scheduler"):
+                    manager = FAISSIndexManager()
+
+                    with patch("src.services.faiss_manager.faiss") as mock_faiss:
+                        mock_faiss.IndexFlatL2 = None
+
+                        # Should return None when faiss not available
+                        result = manager._create_ivf_index(mock_index)
+                        assert result is None
