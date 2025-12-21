@@ -5,6 +5,10 @@
   "author": "Ideal Goggles Team",
   "main": "frontend/electron/dist/main.js",
   "homepage": "./",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "// === DEVELOPMENT ===": "",
     "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\" \"pnpm run dev:electron\"",

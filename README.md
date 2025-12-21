@@ -41,7 +41,7 @@ Download the latest installer for your platform:
 ### For Developers
 
 ```bash
-# Prerequisites: Node.js 18+, Python 3.12+, pnpm 10+
+# Prerequisites: Node.js 22+, Python 3.13+, pnpm 10+
 git clone https://github.com/sarvarunajvm/ideal-goggles.git
 cd ideal-goggles
 
@@ -93,7 +93,7 @@ pnpm run backend:verify-models
 └─────────────────────────────────┘
 ```
 
-**Tech Stack:** React 19 · Python 3.12 · FastAPI · Electron · SQLite · PyTorch (optional)
+**Tech Stack:** React 19 · Python 3.13 · FastAPI · Electron · SQLite · PyTorch (optional)
 
 ## Development
 

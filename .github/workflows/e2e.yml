@@ -105,13 +105,13 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '22'
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
 
     - name: Cache dependencies
       uses: actions/cache@v5
@@ -237,7 +237,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '22'
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Install dependencies
