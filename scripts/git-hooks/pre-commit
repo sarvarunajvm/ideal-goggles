@@ -4,6 +4,17 @@
 
 set -e
 
+# Initialize PATH for Node.js and other tools
+# This is needed because git hooks run in a minimal shell environment
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Add common Node.js version managers to PATH
+[ -s "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh"
+[ -s "$HOME/.fnm/fnm" ] && eval "$(~/.fnm/fnm env)"
+[ -d "$HOME/.volta" ] && export PATH="$HOME/.volta/bin:$PATH"
+[ -d "/opt/homebrew/opt/node/bin" ] && export PATH="/opt/homebrew/opt/node/bin:$PATH"
+[ -d "/opt/homebrew/opt/node@22/bin" ] && export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+
 echo "🔍 Running pre-commit checks..."
 
 # Get list of staged files
@@ -133,20 +144,24 @@ fi
 # ============================================================================
 echo ""
 echo "🔢 Checking version consistency..."
-PKG_VERSION=$(node -p "require('./package.json').version")
-MAIN_PY_VERSION=$(grep -E 'version\s*=\s*"' backend/src/main.py | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-PYPROJECT_VERSION=$(grep -E '^version\s*=\s*"' backend/pyproject.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-
-if [ "$PKG_VERSION" != "$MAIN_PY_VERSION" ] || [ "$PKG_VERSION" != "$PYPROJECT_VERSION" ]; then
-  echo "  ❌ Version mismatch detected:"
-  echo "     package.json:           $PKG_VERSION"
-  echo "     backend/pyproject.toml: $PYPROJECT_VERSION"
-  echo "     backend/src/main.py:    $MAIN_PY_VERSION"
-  echo ""
-  echo "  💡 Run: node scripts/update-version.js $PKG_VERSION"
-  ERRORS=$((ERRORS + 1))
+if ! command -v node &> /dev/null; then
+  echo "  ⚠️  Node.js not found in PATH, skipping version check"
 else
-  echo "  ✅ All versions synchronized: $PKG_VERSION"
+  PKG_VERSION=$(node -p "require('./package.json').version")
+  MAIN_PY_VERSION=$(grep -E 'version\s*=\s*"' backend/src/main.py | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+  PYPROJECT_VERSION=$(grep -E '^version\s*=\s*"' backend/pyproject.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+
+  if [ "$PKG_VERSION" != "$MAIN_PY_VERSION" ] || [ "$PKG_VERSION" != "$PYPROJECT_VERSION" ]; then
+    echo "  ❌ Version mismatch detected:"
+    echo "     package.json:           $PKG_VERSION"
+    echo "     backend/pyproject.toml: $PYPROJECT_VERSION"
+    echo "     backend/src/main.py:    $MAIN_PY_VERSION"
+    echo ""
+    echo "  💡 Run: node scripts/update-version.js $PKG_VERSION"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "  ✅ All versions synchronized: $PKG_VERSION"
+  fi
 fi
 
 # ============================================================================

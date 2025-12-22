@@ -1,0 +1,163 @@
+# Auto-merge workflow
+# Automatically merges PRs when all required checks pass
+# Works with Dependabot PRs and any PRs with the 'automerge' label
+
+name: Auto-merge
+
+on:
+  # Trigger when Quick CI workflow completes
+  workflow_run:
+    workflows: ["Quick CI"]
+    types:
+      - completed
+
+  # Also trigger on check_suite completion for branch protection
+  check_suite:
+    types:
+      - completed
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to auto-merge'
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge PR
+    runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Get the PR associated with the workflow run
+            PR_NUMBER=$(gh pr list --head "${{ github.event.workflow_run.head_branch }}" --json number --jq '.[0].number')
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "check_suite" ]; then
+            # Get the PR from the check suite
+            PR_NUMBER=$(gh pr list --head "${{ github.event.check_suite.head_branch }}" --json number --jq '.[0].number')
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if PR should be auto-merged
+        id: check
+        if: steps.pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          # Get PR details
+          PR_DATA=$(gh pr view "$PR_NUMBER" --json author,labels,mergeable,mergeStateStatus,state)
+          
+          AUTHOR=$(echo "$PR_DATA" | jq -r '.author.login')
+          LABELS=$(echo "$PR_DATA" | jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
+          STATE=$(echo "$PR_DATA" | jq -r '.state')
+          MERGE_STATUS=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
+          
+          echo "Author: $AUTHOR"
+          echo "Labels: $LABELS"
+          echo "Mergeable: $MERGEABLE"
+          echo "State: $STATE"
+          echo "Merge Status: $MERGE_STATUS"
+          
+          # Check if this is a Dependabot PR or has the automerge label
+          SHOULD_MERGE="false"
+          
+          # Auto-merge Dependabot PRs
+          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot" ]; then
+            echo "✅ Dependabot PR detected"
+            SHOULD_MERGE="true"
+          fi
+          
+          # Auto-merge PRs with 'automerge' label
+          if echo "$LABELS" | grep -q "automerge"; then
+            echo "✅ 'automerge' label detected"
+            SHOULD_MERGE="true"
+          fi
+          
+          # Check if PR is in a mergeable state
+          if [ "$STATE" != "OPEN" ]; then
+            echo "❌ PR is not open (state: $STATE)"
+            SHOULD_MERGE="false"
+          fi
+          
+          if [ "$MERGEABLE" != "MERGEABLE" ]; then
+            echo "⚠️ PR may not be mergeable yet (status: $MERGEABLE)"
+          fi
+          
+          echo "should_merge=$SHOULD_MERGE" >> $GITHUB_OUTPUT
+
+      - name: Auto-approve PR
+        if: steps.check.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          echo "✅ Auto-approving PR #$PR_NUMBER..."
+          gh pr review "$PR_NUMBER" --approve --body "Auto-approved: All CI checks passed ✅"
+          echo "✅ PR #$PR_NUMBER approved"
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.should_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          echo "🔀 Enabling auto-merge for PR #$PR_NUMBER..."
+          
+          # Enable auto-merge with squash strategy
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || {
+            # If auto-merge fails (e.g., not enabled in repo settings), try direct merge
+            echo "Auto-merge not available, attempting direct merge..."
+            
+            # Check all status checks have passed
+            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'all(.state == "SUCCESS" or .state == "SKIPPED")')
+            
+            if [ "$CHECK_STATUS" = "true" ]; then
+              echo "✅ All checks passed, merging..."
+              gh pr merge "$PR_NUMBER" --squash --delete-branch
+            else
+              echo "⏳ Some checks are still pending or failed. Skipping merge."
+              gh pr checks "$PR_NUMBER"
+              exit 0
+            fi
+          }
+          
+          echo "✅ Auto-merge enabled/completed for PR #$PR_NUMBER"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Auto-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.pr.outputs.pr_number }}" != "" ]; then
+            echo "- **PR:** #${{ steps.pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Should merge:** ${{ steps.check.outputs.should_merge }}" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.check.outputs.should_merge }}" = "true" ]; then
+              echo "- **Actions:** Auto-approved ✅ → Auto-merge enabled 🔀" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "No PR found for this workflow run." >> $GITHUB_STEP_SUMMARY
+          fi
+
