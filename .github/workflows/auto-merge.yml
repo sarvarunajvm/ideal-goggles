@@ -5,14 +5,24 @@
 name: Auto-merge
 
 on:
-  # Trigger when Quick CI workflow completes
+  # Trigger when Quick CI workflow completes (for PRs)
   workflow_run:
     workflows: ["Quick CI"]
     types:
       - completed
 
-  # Also trigger on check_suite completion for branch protection
-  check_suite:
+  # Trigger on PR events to catch status changes
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+      - develop
+
+  # Trigger when checks complete on PRs
+  check_run:
     types:
       - completed
 
@@ -32,11 +42,12 @@ jobs:
   auto-merge:
     name: Auto-merge PR
     runs-on: ubuntu-latest
-    # Only run if the triggering workflow succeeded
+    # Only run if checks passed or manual trigger
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success')
+      (github.event_name == 'check_run' && github.event.check_run.conclusion == 'success') ||
+      github.event_name == 'pull_request_target'
 
     steps:
       - name: Checkout
@@ -49,14 +60,47 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            # Direct PR event - get PR number directly
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             # Get the PR associated with the workflow run
             PR_NUMBER=$(gh pr list --head "${{ github.event.workflow_run.head_branch }}" --json number --jq '.[0].number')
             echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "check_suite" ]; then
-            # Get the PR from the check suite
-            PR_NUMBER=$(gh pr list --head "${{ github.event.check_suite.head_branch }}" --json number --jq '.[0].number')
+          elif [ "${{ github.event_name }}" = "check_run" ]; then
+            # Get PRs for the commit SHA
+            PR_NUMBER=$(gh pr list --search "${{ github.event.check_run.head_sha }}" --json number --jq '.[0].number')
             echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for status checks
+        if: steps.pr.outputs.pr_number != '' && github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          echo "⏳ Waiting for status checks to complete..."
+          # Wait up to 15 minutes for checks to complete
+          MAX_WAIT=900
+          ELAPSED=0
+          INTERVAL=30
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # Check if all required checks have completed
+            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'map(select(.state != "SUCCESS" and .state != "SKIPPED")) | length')
+
+            if [ "$CHECK_STATUS" = "0" ]; then
+              echo "✅ All checks completed successfully"
+              break
+            fi
+
+            echo "⏳ Waiting for checks... ($ELAPSED/$MAX_WAIT seconds)"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "⚠️ Timeout waiting for checks"
           fi
 
       - name: Check if PR should be auto-merged
@@ -68,44 +112,51 @@ jobs:
         run: |
           # Get PR details
           PR_DATA=$(gh pr view "$PR_NUMBER" --json author,labels,mergeable,mergeStateStatus,state)
-          
+
           AUTHOR=$(echo "$PR_DATA" | jq -r '.author.login')
           LABELS=$(echo "$PR_DATA" | jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
           MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
           STATE=$(echo "$PR_DATA" | jq -r '.state')
           MERGE_STATUS=$(echo "$PR_DATA" | jq -r '.mergeStateStatus')
-          
+
           echo "Author: $AUTHOR"
           echo "Labels: $LABELS"
           echo "Mergeable: $MERGEABLE"
           echo "State: $STATE"
           echo "Merge Status: $MERGE_STATUS"
-          
+
           # Check if this is a Dependabot PR or has the automerge label
           SHOULD_MERGE="false"
-          
+
           # Auto-merge Dependabot PRs
-          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot" ]; then
+          if [ "$AUTHOR" = "dependabot[bot]" ] || [ "$AUTHOR" = "dependabot" ] || [ "$AUTHOR" = "app/dependabot" ]; then
             echo "✅ Dependabot PR detected"
             SHOULD_MERGE="true"
           fi
-          
+
           # Auto-merge PRs with 'automerge' label
           if echo "$LABELS" | grep -q "automerge"; then
             echo "✅ 'automerge' label detected"
             SHOULD_MERGE="true"
           fi
-          
+
           # Check if PR is in a mergeable state
           if [ "$STATE" != "OPEN" ]; then
             echo "❌ PR is not open (state: $STATE)"
             SHOULD_MERGE="false"
           fi
-          
+
           if [ "$MERGEABLE" != "MERGEABLE" ]; then
             echo "⚠️ PR may not be mergeable yet (status: $MERGEABLE)"
           fi
-          
+
+          # Verify all status checks passed
+          CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'all(.state == "SUCCESS" or .state == "SKIPPED")')
+          if [ "$CHECK_STATUS" != "true" ]; then
+            echo "❌ Some checks have not passed yet"
+            SHOULD_MERGE="false"
+          fi
+
           echo "should_merge=$SHOULD_MERGE" >> $GITHUB_OUTPUT
 
       - name: Auto-approve PR
