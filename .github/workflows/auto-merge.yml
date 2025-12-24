@@ -21,7 +21,7 @@ on:
       - main
       - develop
 
-  # Trigger when checks complete on PRs
+  # Trigger when checks complete on PRs (excluding self to prevent circular dependency)
   check_run:
     types:
       - completed
@@ -43,10 +43,11 @@ jobs:
     name: Auto-merge PR
     runs-on: ubuntu-latest
     # Only run if checks passed or manual trigger
+    # Skip if triggered by this workflow's own check_run to prevent circular dependency
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'check_run' && github.event.check_run.conclusion == 'success') ||
+      (github.event_name == 'check_run' && github.event.check_run.conclusion == 'success' && github.event.check_run.name != 'Auto-merge PR') ||
       github.event_name == 'pull_request_target'
 
     steps:
@@ -86,8 +87,8 @@ jobs:
           INTERVAL=30
 
           while [ $ELAPSED -lt $MAX_WAIT ]; do
-            # Check if all required checks have completed
-            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'map(select(.state != "SUCCESS" and .state != "SKIPPED")) | length')
+            # Check if all required checks have completed (excluding Auto-merge to avoid circular dependency)
+            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json name,state --jq 'map(select(.name != "Auto-merge PR" and .state != "SUCCESS" and .state != "SKIPPED")) | length')
 
             if [ "$CHECK_STATUS" = "0" ]; then
               echo "✅ All checks completed successfully"
@@ -150,8 +151,9 @@ jobs:
             echo "⚠️ PR may not be mergeable yet (status: $MERGEABLE)"
           fi
 
-          # Verify all status checks passed
-          CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'all(.state == "SUCCESS" or .state == "SKIPPED")')
+          # Verify all status checks passed (excluding Auto-merge to avoid circular dependency)
+          # Ensure at least one check exists and all passed (jq's all() returns true for empty arrays)
+          CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json name,state --jq '[.[] | select(.name != "Auto-merge PR")] | length > 0 and all(.state == "SUCCESS" or .state == "SKIPPED")')
           if [ "$CHECK_STATUS" != "true" ]; then
             echo "❌ Some checks have not passed yet"
             SHOULD_MERGE="false"
@@ -182,8 +184,9 @@ jobs:
             # If auto-merge fails (e.g., not enabled in repo settings), try direct merge
             echo "Auto-merge not available, attempting direct merge..."
             
-            # Check all status checks have passed
-            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json state --jq 'all(.state == "SUCCESS" or .state == "SKIPPED")')
+            # Check all status checks have passed (excluding Auto-merge to avoid circular dependency)
+            # Ensure at least one check exists and all passed (jq's all() returns true for empty arrays)
+            CHECK_STATUS=$(gh pr checks "$PR_NUMBER" --json name,state --jq '[.[] | select(.name != "Auto-merge PR")] | length > 0 and all(.state == "SUCCESS" or .state == "SKIPPED")')
             
             if [ "$CHECK_STATUS" = "true" ]; then
               echo "✅ All checks passed, merging..."
