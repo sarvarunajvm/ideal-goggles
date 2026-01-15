@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO")
 
     # Database configuration
-    DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./data/photos.db"
-    )
+    DATABASE_URL: str = Field(default="sqlite+aiosqlite:///./data/photos.db")
 
     # Storage paths - use absolute paths
     DATA_DIR: Path | None = Field(default=None)
@@ -29,12 +27,8 @@ class Settings(BaseSettings):
 
     # ML model paths (bundled with application)
     MODELS_DIR: Path = Field(default=Path("./models"))
-    CLIP_MODEL_PATH: Path = Field(
-        default=Path("./models/clip-vit-b32.onnx")
-    )
-    ARCFACE_MODEL_PATH: Path = Field(
-        default=Path("./models/arcface-r100.onnx")
-    )
+    CLIP_MODEL_PATH: Path = Field(default=Path("./models/clip-vit-b32.onnx"))
+    ARCFACE_MODEL_PATH: Path = Field(default=Path("./models/arcface-r100.onnx"))
 
     # Performance settings
     MAX_WORKERS: int = Field(default=4)
@@ -56,9 +50,7 @@ class Settings(BaseSettings):
     QUEUE_GET_TIMEOUT: float = Field(default=0.1)
 
     # Performance monitoring
-    SLOW_REQUEST_THRESHOLD_MS: int = Field(
-        default=1000
-    )
+    SLOW_REQUEST_THRESHOLD_MS: int = Field(default=1000)
 
     # CORS / security
     # Allow "null" origin (file://) only when explicitly enabled (Electron sets this).
@@ -66,10 +58,7 @@ class Settings(BaseSettings):
     # Comma separated list of extra allowed origins (besides the built-ins below)
     EXTRA_ALLOWED_ORIGINS: str | None = Field(default=None)
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize settings and create required directories."""

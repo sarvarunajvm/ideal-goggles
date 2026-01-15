@@ -130,7 +130,9 @@ class TestSettings:
         assert test_settings.TELEMETRY_ENABLED is False
         assert test_settings.NETWORK_MONITORING is True
 
-    @pytest.mark.skip(reason="Fails in sandbox due to permission issues with temp files")
+    @pytest.mark.skip(
+        reason="Fails in sandbox due to permission issues with temp files"
+    )
     def test_settings_with_env_file(self):
         """Test loading settings from .env file."""
         # Use current directory for temp file to avoid sandbox issues

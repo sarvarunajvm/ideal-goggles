@@ -594,6 +594,7 @@ class TestRateLimitingMiddleware:
         with patch.object(middleware, "_is_rate_limited", return_value=(True, 0)):
             # Use external IP to avoid localhost bypass
             request = MockRequest(client_host="192.168.1.100")
+
             async def call_next(req):
                 return MockResponse()
 
@@ -612,6 +613,7 @@ class TestRateLimitingMiddleware:
             # Use external IP to avoid localhost bypass
             request = MockRequest(client_host="192.168.1.100")
             response = MockResponse()
+
             async def call_next(req):
                 return response
 

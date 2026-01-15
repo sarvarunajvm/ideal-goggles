@@ -212,6 +212,27 @@ export default function PeoplePage() {
               ➕ Add Person
             </Button>
           </div>
+          
+          {/* AI Model Warning */}
+          {!faceSearchEnabled && (
+            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium text-amber-500 mb-1">Face Recognition Unavailable</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  The AI models required for face recognition are not installed or enabled.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs border-amber-500/30 hover:bg-amber-500/10"
+                  onClick={() => window.open('https://github.com/ideal-goggles/ideal-goggles/blob/main/docs/ML_SETUP.md', '_blank')}
+                >
+                  Install AI Models
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Search */}
           <div className="mb-6 flex items-center gap-3">

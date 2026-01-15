@@ -475,7 +475,7 @@ class TestJobStore:
         store._jobs["old_job"] = {
             "job_id": "old_job",
             "status": "completed",
-            "created_at": old_time.isoformat()
+            "created_at": old_time.isoformat(),
         }
 
         # Create a new job
@@ -483,11 +483,13 @@ class TestJobStore:
         store._jobs["new_job"] = {
             "job_id": "new_job",
             "status": "completed",
-            "created_at": new_time.isoformat()
+            "created_at": new_time.isoformat(),
         }
 
         # Trigger cleanup via add_job
-        await store.add_job("another_job", {"job_id": "another_job", "status": "pending"})
+        await store.add_job(
+            "another_job", {"job_id": "another_job", "status": "pending"}
+        )
 
         # Check that old job is gone
         assert "old_job" not in store._jobs
@@ -505,11 +507,22 @@ class TestJobStore:
         now = datetime.now(UTC)
 
         # Add 2 completed jobs
-        store._jobs["job1"] = {"job_id": "job1", "status": "completed", "created_at": now.isoformat()}
-        store._jobs["job2"] = {"job_id": "job2", "status": "completed", "created_at": now.isoformat()}
+        store._jobs["job1"] = {
+            "job_id": "job1",
+            "status": "completed",
+            "created_at": now.isoformat(),
+        }
+        store._jobs["job2"] = {
+            "job_id": "job2",
+            "status": "completed",
+            "created_at": now.isoformat(),
+        }
 
         # Trigger cleanup via add_job (total 3 jobs now)
-        await store.add_job("job3", {"job_id": "job3", "status": "pending", "created_at": now.isoformat()})
+        await store.add_job(
+            "job3",
+            {"job_id": "job3", "status": "pending", "created_at": now.isoformat()},
+        )
 
         # Should remove oldest completed job (job1) - since OrderedDict preserves insertion order
         # and we iterate to find first completed
@@ -542,7 +555,7 @@ class TestJobStore:
         store._jobs["bad_date"] = {
             "job_id": "bad_date",
             "status": "completed",
-            "created_at": "invalid-date"
+            "created_at": "invalid-date",
         }
 
         # Trigger cleanup
@@ -552,6 +565,7 @@ class TestJobStore:
         # implementation passes on error, so job remains if it doesn't match criteria
         # but here we just want to ensure no crash
         assert "bad_date" in store._jobs
+
 
 class TestValidateExportPath:
     """Test export path validation."""
@@ -574,7 +588,7 @@ class TestValidateExportPath:
         # Mock Path logic
         mock_dest = MagicMock()
         mock_dest.resolve.return_value = Path("/app/data/export")
-        mock_dest.is_relative_to.return_value = True # Is relative to data dir
+        mock_dest.is_relative_to.return_value = True  # Is relative to data dir
         mock_path.return_value = mock_dest
         mock_path.home.return_value = Path("/home/user")
 
@@ -617,7 +631,9 @@ class TestValidateExportPath:
     @patch("src.db.connection.get_database_manager")
     @patch("src.api.batch_operations.Path")
     @patch("src.api.batch_operations.settings")
-    def test_validate_path_with_db_config(self, mock_settings, mock_path, mock_db_manager):
+    def test_validate_path_with_db_config(
+        self, mock_settings, mock_path, mock_db_manager
+    ):
         """Test allowing paths configured in DB."""
         mock_settings.DATA_DIR = Path("/app/data")
         mock_settings.CACHE_DIR = Path("/app/cache")
@@ -637,11 +653,13 @@ class TestValidateExportPath:
         mock_dest.is_relative_to.side_effect = is_relative_to
 
         mock_path.return_value = mock_dest
+
         # Handle Path("/mnt/custom") call in the loop
         def path_side_effect(arg):
             p = MagicMock()
             p.__str__.return_value = str(arg)
             return p
+
         mock_path.side_effect = path_side_effect
         mock_path.home.return_value = Path("/home/user")
 
@@ -650,9 +668,8 @@ class TestValidateExportPath:
         # We can just check if execute_query is called
 
         try:
-             _validate_export_path("/mnt/custom/export")
+            _validate_export_path("/mnt/custom/export")
         except HTTPException:
-            pass # We mainly want to cover the DB lines
+            pass  # We mainly want to cover the DB lines
 
         mock_db.execute_query.assert_called_once()
-

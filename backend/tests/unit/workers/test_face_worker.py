@@ -880,6 +880,7 @@ class TestFaceWorkerCoverage:
             # We'll use a side effect on builtins.__import__ ONLY for insightface
 
             orig_import = __import__
+
             def mock_import(name, *args, **kwargs):
                 if name == "insightface":
                     raise ImportError("No module named insightface")
@@ -891,7 +892,9 @@ class TestFaceWorkerCoverage:
 
     def test_initialize_generic_exception(self):
         """Test initialization with generic Exception."""
-        with patch("insightface.app.FaceAnalysis", side_effect=Exception("Init Failed")):
+        with patch(
+            "insightface.app.FaceAnalysis", side_effect=Exception("Init Failed")
+        ):
             worker = FaceDetectionWorker()
             assert worker.face_app is None
 
@@ -955,11 +958,11 @@ class TestFaceSearchEngineCoverage:
 
         # Create person and faces
         person = MagicMock(spec=Person)
-        person.face_vector = np.array([0.1]*512, dtype=np.float32)
+        person.face_vector = np.array([0.1] * 512, dtype=np.float32)
         person.id = 1
 
         face = MagicMock(spec=Face)
-        face.face_vector = np.array([0.1]*512, dtype=np.float32)
+        face.face_vector = np.array([0.1] * 512, dtype=np.float32)
         face.file_id = 100
         face.person_id = 1
         face.confidence = 0.9
@@ -982,10 +985,9 @@ class TestFaceSearchEngineCoverage:
         matches = await engine.search_by_person(person, [])
         assert matches == []
 
-        person.face_vector = np.array([0.1]*512)
+        person.face_vector = np.array([0.1] * 512)
         face = MagicMock(spec=Face)
         face.face_vector = None
 
         matches = await engine.search_by_person(person, [face])
         assert matches == []
-

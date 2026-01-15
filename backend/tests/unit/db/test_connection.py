@@ -695,18 +695,20 @@ class TestDatabaseManagerInternals:
         # We mock get_settings to avoid it interfering?
         # Actually __init__ imports os but uses Path(__file__)....
 
-        with patch("src.db.connection.get_settings"): # Prevent global access if any
-             # We just test the logic inside __init__
-             # It calls Path(db_path) if provided, else calculates from __file__
+        with patch("src.db.connection.get_settings"):  # Prevent global access if any
+            # We just test the logic inside __init__
+            # It calls Path(db_path) if provided, else calculates from __file__
 
-             # Let's test with None
-             with patch("src.db.connection.Path") as mock_path_inner:
-                 # Mock __file__ resolution
-                 mock_file_path = MagicMock()
-                 mock_path_inner.return_value.resolve.return_value.parent.parent.parent = MagicMock()
+            # Let's test with None
+            with patch("src.db.connection.Path") as mock_path_inner:
+                # Mock __file__ resolution
+                mock_file_path = MagicMock()
+                mock_path_inner.return_value.resolve.return_value.parent.parent.parent = (
+                    MagicMock()
+                )
 
-                 # We can't easily mock __file__ directly, but we can verify the path creation logic
-                 # logic: backend_dir / "data" / "photos.db"
+                # We can't easily mock __file__ directly, but we can verify the path creation logic
+                # logic: backend_dir / "data" / "photos.db"
 
     @patch("src.db.connection.Path")
     def test_init_path_resolution_error(self, mock_path):
@@ -721,18 +723,22 @@ class TestDatabaseManagerInternals:
         # If that also fails, it crashes.
 
         # Let's verify it tries the fallback
-        with patch("src.db.connection.sqlite3"): # Mock sqlite to avoid real DB creation
-             try:
-                 DatabaseManager("test.db")
-             except Exception:
-                 pass
+        with patch(
+            "src.db.connection.sqlite3"
+        ):  # Mock sqlite to avoid real DB creation
+            try:
+                DatabaseManager("test.db")
+            except Exception:
+                pass
 
-             # Check if resolve was called
-             assert mock_path_obj.resolve.called
+            # Check if resolve was called
+            assert mock_path_obj.resolve.called
 
     def test_run_migrations_no_alembic_ini(self):
         """Test fallback when alembic.ini is missing."""
-        with patch("pathlib.Path.exists", side_effect=lambda: False): # alembic.ini not found
+        with patch(
+            "pathlib.Path.exists", side_effect=lambda: False
+        ):  # alembic.ini not found
             with patch.object(DatabaseManager, "_run_legacy_migrations") as mock_legacy:
                 db = DatabaseManager(":memory:")
                 # It calls _initialize_database -> _run_migrations
@@ -741,13 +747,17 @@ class TestDatabaseManagerInternals:
 
     def test_run_legacy_migrations_no_dir(self):
         """Test fallback when migrations dir is missing."""
-        with patch("pathlib.Path.exists", return_value=False): # migrations dir not found
-             with patch.object(DatabaseManager, "_run_embedded_migration") as mock_embedded:
-                 db = DatabaseManager(":memory:")
-                 # _run_legacy_migrations is called by init if alembic missing (or mocked)
-                 # Here we are testing _run_legacy_migrations directly
-                 db._run_legacy_migrations(from_version=0)
-                 mock_embedded.assert_called()
+        with patch(
+            "pathlib.Path.exists", return_value=False
+        ):  # migrations dir not found
+            with patch.object(
+                DatabaseManager, "_run_embedded_migration"
+            ) as mock_embedded:
+                db = DatabaseManager(":memory:")
+                # _run_legacy_migrations is called by init if alembic missing (or mocked)
+                # Here we are testing _run_legacy_migrations directly
+                db._run_legacy_migrations(from_version=0)
+                mock_embedded.assert_called()
 
     @pytest.mark.skip(reason="Flaky mock of open/executescript")
     def test_run_legacy_migrations_files(self):
@@ -755,13 +765,15 @@ class TestDatabaseManagerInternals:
         # Mock glob to return files
         mock_files = [
             Path("001_init.sql"),
-            Path("invalid.sql"), # Should be skipped
-            Path("002_update.sql")
+            Path("invalid.sql"),  # Should be skipped
+            Path("002_update.sql"),
         ]
 
         with patch("pathlib.Path.glob", return_value=mock_files):
             with patch("pathlib.Path.exists", return_value=True):
-                with patch("builtins.open", mock_open(read_data="CREATE TABLE t(i INT);")):
+                with patch(
+                    "builtins.open", mock_open(read_data="CREATE TABLE t(i INT);")
+                ):
                     db = DatabaseManager(":memory:")
 
                     # Mock connection and cursor
@@ -797,6 +809,7 @@ class TestDatabaseManagerInternals:
             info = db.get_database_info()
             assert info["settings"] == {}
 
+
 class TestGlobalFunctions:
     """Test global helper functions."""
 
@@ -809,4 +822,3 @@ class TestGlobalFunctions:
             mock_settings.return_value.DATA_DIR = "."
             db = get_database_manager()
             assert isinstance(db, DatabaseManager)
-

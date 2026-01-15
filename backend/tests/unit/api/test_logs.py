@@ -560,6 +560,7 @@ class TestFetchLogs:
                 from fastapi.testclient import TestClient
 
                 from src.main import app
+
                 client = TestClient(app)
 
                 response = client.get("/logs/fetch")
@@ -589,6 +590,7 @@ class TestFetchLogs:
                     from fastapi.testclient import TestClient
 
                     from src.main import app
+
                     client = TestClient(app)
 
                     response = client.get("/logs/fetch")
@@ -621,6 +623,7 @@ class TestFetchLogs:
                     from fastapi.testclient import TestClient
 
                     from src.main import app
+
                     client = TestClient(app)
 
                     # Filter by level
@@ -655,6 +658,7 @@ class TestFetchLogs:
                     from fastapi.testclient import TestClient
 
                     from src.main import app
+
                     client = TestClient(app)
 
                     # Page 1 (10 items)

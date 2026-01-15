@@ -145,11 +145,13 @@ class MockNDArray(list):
                     elif item:
                         return True
                 return False
+
             return check_any(self._data)
         return False
 
     def all(self):
         if hasattr(self, "_data"):
+
             def check_all(lst):
                 for item in lst:
                     if isinstance(item, (list, tuple, MockNDArray)):
@@ -158,6 +160,7 @@ class MockNDArray(list):
                     elif not item:
                         return False
                 return True
+
             return check_all(self._data)
         return True
 
@@ -209,7 +212,10 @@ class MockNDArray(list):
                     for i, row in enumerate(self._data):
                         divisor = other_data[i]
                         # Unwrap single-element list/array
-                        if isinstance(divisor, (list, MockNDArray)) and len(divisor) == 1:
+                        if (
+                            isinstance(divisor, (list, MockNDArray))
+                            and len(divisor) == 1
+                        ):
                             divisor = divisor[0]
 
                         if isinstance(row, list):
@@ -223,10 +229,16 @@ class MockNDArray(list):
             # Scalar division
             try:
                 other_val = float(other)
-                return MockNDArray([
-                    (x / other_val) if not isinstance(x, list) else [v / other_val for v in x]
-                    for x in self._data
-                ])
+                return MockNDArray(
+                    [
+                        (
+                            (x / other_val)
+                            if not isinstance(x, list)
+                            else [v / other_val for v in x]
+                        )
+                        for x in self._data
+                    ]
+                )
             except (TypeError, ValueError):
                 pass
 
@@ -356,25 +368,37 @@ mock_numpy.max = lambda x, **_kwargs: (
 )
 mock_numpy.abs = lambda x, **_kwargs: x
 
+
 def mock_isnan(x, **_kwargs):
     if hasattr(x, "_data"):
         import math
-        return MockNDArray([math.isnan(v) if isinstance(v, float) else False for v in x._data])
+
+        return MockNDArray(
+            [math.isnan(v) if isinstance(v, float) else False for v in x._data]
+        )
     if isinstance(x, float):
         import math
+
         return math.isnan(x)
     return False
 
+
 mock_numpy.isnan = mock_isnan
+
 
 def mock_isinf(x, **_kwargs):
     if hasattr(x, "_data"):
         import math
-        return MockNDArray([math.isinf(v) if isinstance(v, float) else False for v in x._data])
+
+        return MockNDArray(
+            [math.isinf(v) if isinstance(v, float) else False for v in x._data]
+        )
     if isinstance(x, float):
         import math
+
         return math.isinf(x)
     return False
+
 
 mock_numpy.isinf = mock_isinf
 
@@ -425,7 +449,7 @@ def mock_norm(x, **kwargs):
     # Scalar norm
     res = math.sqrt(sum_sq(x))
     if keepdims:
-        return MockNDArray([res]) # Or [[res]]? Depends on dim.
+        return MockNDArray([res])  # Or [[res]]? Depends on dim.
         # But MockNDArray wraps list.
     return res
 
@@ -555,7 +579,10 @@ def prevent_faiss_scheduler(request):
     """Prevent FAISS background scheduler from starting in any test."""
     # Check if test is marked to allow scheduler
     # We check both markers and keywords
-    if request.node.get_closest_marker("allow_faiss_scheduler") or "allow_faiss_scheduler" in request.keywords:
+    if (
+        request.node.get_closest_marker("allow_faiss_scheduler")
+        or "allow_faiss_scheduler" in request.keywords
+    ):
         yield
         return
 

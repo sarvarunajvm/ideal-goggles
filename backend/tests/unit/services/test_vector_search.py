@@ -82,9 +82,11 @@ class TestFAISSVectorSearchService:
         # Import the service class after mocking faiss
         # Need to reload if already imported
         import importlib
+
         if "src.services.vector_search" in sys.modules:
             importlib.reload(sys.modules["src.services.vector_search"])
         from src.services.vector_search import FAISSVectorSearchService
+
         self.FAISSVectorSearchService = FAISSVectorSearchService
 
         yield
@@ -1001,4 +1003,3 @@ class TestVectorSearchModuleFunctions:
             # Should return same instance after initialization
             assert service1 is service2
             assert service1.dimension == 256
-

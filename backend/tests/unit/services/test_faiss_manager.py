@@ -936,7 +936,9 @@ class TestBackgroundScheduler:
 
         # The autouse fixture 'prevent_faiss_scheduler' patches _start_background_scheduler.
         # We can't access that mock directly, so we patch it again to verify it was called.
-        with patch.object(FAISSIndexManager, "_start_background_scheduler") as mock_start:
+        with patch.object(
+            FAISSIndexManager, "_start_background_scheduler"
+        ) as mock_start:
             manager = FAISSIndexManager()
             mock_start.assert_called_once()
 

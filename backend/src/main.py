@@ -69,7 +69,7 @@ _DOCS_ENABLED = settings.DEBUG or not _UI_AVAILABLE
 
 app = FastAPI(
     title="Ideal Goggles API",
-    version="1.1.0",
+    version="1.1.1",
     description="Local API for Ideal Goggles",
     # If no UI is bundled, expose /docs by default; otherwise follow DEBUG.
     docs_url="/docs" if _DOCS_ENABLED else None,
@@ -143,7 +143,7 @@ async def root() -> dict[str, Any]:
     logger.info("Root endpoint accessed")
     return {
         "message": "Ideal Goggles API",
-        "version": "1.1.0",
+        "version": "1.1.1",
         "ui": "/ui" if _UI_MOUNTED else None,
         "docs": "/docs" if _DOCS_ENABLED else None,
     }

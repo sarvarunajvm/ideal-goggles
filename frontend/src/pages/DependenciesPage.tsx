@@ -264,18 +264,18 @@ export default function DependenciesPage() {
 
   return (
     <>
-      <div className="flex-1 bg-background overflow-hidden">
+      <div className="flex-1 bg-background overflow-auto">
         <div className="w-full max-w-[1920px] mx-auto p-4 h-full flex flex-col">
           {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
-              <Package className="h-6 w-6 text-primary" />
+              <Package className="h-6 w-6 text-primary shrink-0" />
               <div>
                 <h1 className="text-2xl font-bold">Dependencies</h1>
                 <p className="text-xs text-muted-foreground">Manage components and verify system status</p>
               </div>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 shrink-0">
               <Button
                 size="sm"
                 onClick={verifyDependencies}
@@ -288,7 +288,8 @@ export default function DependenciesPage() {
                 ) : (
                   <>
                     <Shield className="h-3 w-3 mr-1" />
-                    Verify
+                    <span className="hidden xs:inline">Verify</span>
+                    <span className="xs:hidden">✓</span>
                   </>
                 )}
               </Button>
@@ -298,8 +299,8 @@ export default function DependenciesPage() {
                 disabled={installing !== null}
                 className="h-8 bg-gradient-to-r from-cyan-400 to-teal-400 text-black font-semibold shadow-md shadow-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Refresh
+                <RefreshCw className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
             </div>
           </div>
@@ -350,9 +351,9 @@ export default function DependenciesPage() {
           )}
 
           {/* Main Grid Layout */}
-          <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0">
             {/* Core & ML Dependencies */}
-            <Card className="col-span-8 overflow-hidden">
+            <Card className="lg:col-span-8 overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center space-x-2 text-base">
                   <Database className="h-4 w-4 text-primary" />
@@ -363,7 +364,7 @@ export default function DependenciesPage() {
                 {/* Core Dependencies */}
                 <div>
                   <h4 className="text-sm font-medium mb-2 text-primary">Core Components (Required)</h4>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {dependencies.core.map(dep => (
                       <div
                         key={dep.name}
@@ -382,27 +383,28 @@ export default function DependenciesPage() {
 
                 {/* ML Dependencies */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 mb-2">
                     <h4 className="text-sm font-medium text-purple-400">Machine Learning Components</h4>
                     {!allMLInstalled && dependencies.ml.length > 0 && (
                       <Button
                         size="sm"
                         onClick={handleInstallAll}
                         disabled={installing !== null}
-                        className="h-8 px-3 text-sm bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold shadow-md shadow-purple-500/30 hover:shadow-lg hover:shadow-purple-500/40 hover:scale-[1.02] transition-all"
+                        className="h-8 px-3 text-sm bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold shadow-md shadow-purple-500/30 hover:shadow-lg hover:shadow-purple-500/40 hover:scale-[1.02] transition-all shrink-0"
                       >
                         {installing === 'all' ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            <Download className="h-4 w-4 mr-1" />
-                            Install All ML
+                            <Download className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Install All ML</span>
+                            <span className="sm:hidden">Install All</span>
                           </>
                         )}
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {dependencies.ml.map(dep => (
                       <div
                         key={dep.name}
@@ -412,17 +414,17 @@ export default function DependenciesPage() {
                             : 'bg-muted/50 border-purple-500/30 hover:border-purple-500/50'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="p-1.5 rounded bg-gradient-to-br from-violet-500/20 to-purple-500/20">
+                        <div className="flex items-center justify-between mb-2 gap-2">
+                          <div className="flex items-center space-x-2 min-w-0">
+                            <div className="p-1.5 rounded bg-gradient-to-br from-violet-500/20 to-purple-500/20 shrink-0">
                               {getIcon(dep.name)}
                             </div>
-                            <p className="text-sm font-medium">{dep.name}</p>
+                            <p className="text-sm font-medium truncate">{dep.name}</p>
                           </div>
                           {dep.installed ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-400" />
+                            <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
                           ) : (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs shrink-0 whitespace-nowrap">
                               Not Installed
                             </Badge>
                           )}
@@ -453,7 +455,7 @@ export default function DependenciesPage() {
             </Card>
 
             {/* Model Verification Status */}
-            <Card className="col-span-4 overflow-hidden">
+            <Card className="lg:col-span-4 overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center space-x-2 text-base">
                   <Brain className="h-4 w-4 text-purple-400" />
@@ -508,7 +510,7 @@ export default function DependenciesPage() {
             </Card>
 
             {/* Features Status */}
-            <Card className="col-span-12 overflow-hidden">
+            <Card className="lg:col-span-12 overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center space-x-2 text-base">
                   <Zap className="h-4 w-4 text-yellow-400" />
@@ -516,7 +518,7 @@ export default function DependenciesPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-2">
-                <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                   {Object.entries(dependencies.features).map(([feature, enabled]) => (
                     <div
                       key={feature}
@@ -544,7 +546,7 @@ export default function DependenciesPage() {
 
             {/* Installation Progress */}
             {installing && (
-              <Card className="col-span-12 border-primary/30 bg-primary/5">
+              <Card className="lg:col-span-12 border-primary/30 bg-primary/5">
                 <CardContent className="py-3">
                   <div className="flex items-center space-x-3">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />

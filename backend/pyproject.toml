@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ideal-goggles-backend"
-version = "1.1.0"
+version = "1.1.1"
 description = "Backend API for Ideal Goggles"
 authors = [{name = "Ideal Goggles Team"}]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.118.0",
     "uvicorn[standard]>=0.36.0",

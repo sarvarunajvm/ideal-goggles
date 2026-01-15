@@ -105,7 +105,8 @@ describe('Navigation', () => {
       );
 
       // The mobile menu toggle button should be present
-      const menuButton = screen.getByRole('button', { name: '' });
+      // It starts with "Open menu" label
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       expect(menuButton).toBeInTheDocument();
       // Menu icon should be visible initially (not X icon)
       expect(document.querySelector('.lucide-menu')).toBeInTheDocument();
@@ -338,12 +339,13 @@ describe('Navigation', () => {
       expect(document.querySelector('.lucide-x')).not.toBeInTheDocument();
 
       // Click to open
-      const menuButton = screen.getByRole('button', { name: '' });
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       await user.click(menuButton);
 
-      // X icon should be shown
+      // X icon should be shown and label should update
       expect(document.querySelector('.lucide-x')).toBeInTheDocument();
       expect(document.querySelector('.lucide-menu')).not.toBeInTheDocument();
+      expect(menuButton).toHaveAttribute('aria-label', 'Close menu');
     });
 
     test('closes mobile menu when navigation item is clicked', async () => {
@@ -355,7 +357,7 @@ describe('Navigation', () => {
       );
 
       // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: '' });
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       await user.click(menuButton);
 
       // Click a navigation item
@@ -367,6 +369,7 @@ describe('Navigation', () => {
       // Menu should close
       expect(document.querySelector('.lucide-menu')).toBeInTheDocument();
       expect(document.querySelector('.lucide-x')).not.toBeInTheDocument();
+      expect(menuButton).toHaveAttribute('aria-label', 'Open menu');
     });
 
     test('shows all navigation items in mobile menu', async () => {
@@ -378,7 +381,7 @@ describe('Navigation', () => {
       );
 
       // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: '' });
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       await user.click(menuButton);
 
       // Check all items are present (will have duplicates from desktop)
@@ -402,7 +405,7 @@ describe('Navigation', () => {
       );
 
       // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: '' });
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       await user.click(menuButton);
 
       // Check developer items are present
@@ -445,7 +448,7 @@ describe('Navigation', () => {
       );
 
       // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: '' });
+      const menuButton = screen.getByRole('button', { name: 'Open menu' });
       await user.click(menuButton);
 
       // Click API Docs in mobile menu

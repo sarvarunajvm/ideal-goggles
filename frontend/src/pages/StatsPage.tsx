@@ -89,11 +89,28 @@ export default function StatsPage() {
         <div className="text-center space-y-4">
           <Database className="h-12 w-12 mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">No statistics available</p>
-          <p className="text-sm text-muted-foreground">
-            {hasConfiguredFolders
-              ? "Your photo library hasn't been indexed yet. Go to Settings to start indexing."
-              : "Configure your photo folders in Settings to begin."}
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {hasConfiguredFolders
+                ? "Your photo library hasn't been indexed yet. Go to Settings to start indexing."
+                : "Configure your photo folders in Settings to begin."}
+            </p>
+            {/* AI Model prompt if needed */}
+            <div className="p-4 bg-secondary/30 rounded-lg border border-border/50 max-w-md mx-auto">
+              <p className="text-sm font-medium mb-1">Missing AI Models?</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                If smart features like Face Recognition or Semantic Search are unavailable, you may need to install the AI models.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => window.open('https://github.com/ideal-goggles/ideal-goggles/blob/main/docs/ML_SETUP.md', '_blank')}
+              >
+                View ML Setup Guide
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )

@@ -130,3 +130,5 @@ claudedocs/
 *coverage.json.xz
 *coverage.json.lzma
 *coverage.json.zstd
+.aider*
+backend/:memory:

@@ -664,12 +664,15 @@ class TestIndexingStateManagerCoverage:
     async def test_calculate_estimated_completion_zero_processed(self):
         """Test estimation with 0 processed files."""
         from datetime import datetime, timedelta
+
         manager = IndexingStateManager()
         now = datetime.now()
-        await manager.update_state({
-            "started_at": now - timedelta(seconds=10),
-            "progress": {"total_files": 100, "processed_files": 0}
-        })
+        await manager.update_state(
+            {
+                "started_at": now - timedelta(seconds=10),
+                "progress": {"total_files": 100, "processed_files": 0},
+            }
+        )
 
         estimate = await manager.calculate_estimated_completion()
         assert estimate is None
@@ -678,13 +681,16 @@ class TestIndexingStateManagerCoverage:
     async def test_calculate_estimated_completion_valid(self):
         """Test valid estimation."""
         from datetime import datetime, timedelta
+
         manager = IndexingStateManager()
         now = datetime.now()
         # 10 seconds for 10 files (1 file/sec) -> 90 files left -> 90 seconds more
-        await manager.update_state({
-            "started_at": now - timedelta(seconds=10),
-            "progress": {"total_files": 100, "processed_files": 10}
-        })
+        await manager.update_state(
+            {
+                "started_at": now - timedelta(seconds=10),
+                "progress": {"total_files": 100, "processed_files": 10},
+            }
+        )
 
         estimate = await manager.calculate_estimated_completion()
         assert estimate is not None
@@ -718,16 +724,21 @@ class TestValidateThumbnailCache:
             "total_checked": 100,
             "valid_files": 95,
             "invalid_files": 5,
-            "missing_files": 0
+            "missing_files": 0,
         }
 
         mock_manager = MagicMock()
         mock_manager.get_cache_statistics = AsyncMock(return_value=mock_stats)
         mock_manager.validate_cache_integrity = AsyncMock(return_value=mock_validation)
 
-        with patch.dict("sys.modules", {
-            "src.workers.thumbnail_worker": MagicMock(ThumbnailCacheManager=MagicMock(return_value=mock_manager))
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.workers.thumbnail_worker": MagicMock(
+                    ThumbnailCacheManager=MagicMock(return_value=mock_manager)
+                )
+            },
+        ):
             # We also need to patch settings
             with patch("src.core.config.settings") as mock_settings:
                 mock_settings.THUMBNAIL_DIR = "/tmp/thumbnails"
@@ -743,9 +754,14 @@ class TestValidateThumbnailCache:
     async def test_validate_thumbnail_cache_exception(self):
         """Test validation failure."""
         with patch("src.core.config.settings"):
-            with patch.dict("sys.modules", {
-                "src.workers.thumbnail_worker": MagicMock(side_effect=Exception("Import Error"))
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "src.workers.thumbnail_worker": MagicMock(
+                        side_effect=Exception("Import Error")
+                    )
+                },
+            ):
                 with pytest.raises(HTTPException) as exc:
                     await validate_thumbnail_cache()
                 assert exc.value.status_code == 500
@@ -765,10 +781,16 @@ class TestModelDiagnostics:
         mock_face.is_available.return_value = True
 
         modules = {
-            "src.workers.embedding_worker": MagicMock(OptimizedCLIPWorker=MagicMock(return_value=mock_clip)),
-            "src.workers.face_worker": MagicMock(FaceDetectionWorker=MagicMock(return_value=mock_face)),
+            "src.workers.embedding_worker": MagicMock(
+                OptimizedCLIPWorker=MagicMock(return_value=mock_clip)
+            ),
+            "src.workers.face_worker": MagicMock(
+                FaceDetectionWorker=MagicMock(return_value=mock_face)
+            ),
             "src.workers.exif_extractor": MagicMock(EXIFExtractionPipeline=MagicMock()),
-            "src.workers.thumbnail_worker": MagicMock(SmartThumbnailGenerator=MagicMock()),
+            "src.workers.thumbnail_worker": MagicMock(
+                SmartThumbnailGenerator=MagicMock()
+            ),
         }
 
         with patch.dict("sys.modules", modules):
@@ -787,13 +809,23 @@ class TestModelDiagnostics:
 
         # To fail import of EXIFExtractionPipeline, we need to make attribute access raise
         mock_exif_module = MagicMock()
-        type(mock_exif_module).EXIFExtractionPipeline = property(lambda _s: (_ for _ in ()).throw(ImportError("Exif Fail")))
+        type(mock_exif_module).EXIFExtractionPipeline = property(
+            lambda _s: (_ for _ in ()).throw(ImportError("Exif Fail"))
+        )
 
         modules = {
-            "src.workers.embedding_worker": MagicMock(OptimizedCLIPWorker=mock_clip_class),
-            "src.workers.face_worker": MagicMock(FaceDetectionWorker=MagicMock(return_value=MagicMock(is_available=lambda: False))),
+            "src.workers.embedding_worker": MagicMock(
+                OptimizedCLIPWorker=mock_clip_class
+            ),
+            "src.workers.face_worker": MagicMock(
+                FaceDetectionWorker=MagicMock(
+                    return_value=MagicMock(is_available=lambda: False)
+                )
+            ),
             "src.workers.exif_extractor": mock_exif_module,
-            "src.workers.thumbnail_worker": MagicMock(SmartThumbnailGenerator=MagicMock()),
+            "src.workers.thumbnail_worker": MagicMock(
+                SmartThumbnailGenerator=MagicMock()
+            ),
         }
 
         with patch.dict("sys.modules", modules):
@@ -816,13 +848,16 @@ class TestInternalHelpers:
         task.__await__ = MagicMock(side_effect=Exception("Task Error"))
 
         from src.api import indexing
+
         # Mock global state manager
         with patch("src.api.indexing._state_manager") as mock_manager:
             # Ensure async methods are AsyncMock
             mock_manager.update_state = AsyncMock()
             mock_manager.append_error = AsyncMock()
             mock_manager.set_value = AsyncMock()
-            mock_manager.get_value = AsyncMock(return_value=task) # for current_task check
+            mock_manager.get_value = AsyncMock(
+                return_value=task
+            )  # for current_task check
 
             # Create a real coroutine that raises
             async def raising_coro():
@@ -830,7 +865,9 @@ class TestInternalHelpers:
 
             await _monitor_indexing_task(raising_coro())
 
-            mock_manager.update_state.assert_called_with({"status": "error", "task": None})
+            mock_manager.update_state.assert_called_with(
+                {"status": "error", "task": None}
+            )
             mock_manager.append_error.assert_called()
 
 
@@ -846,9 +883,7 @@ class TestIndexingProcessCoverage:
         mock_exif_worker = MagicMock()
         mock_exif_worker.process_photos = AsyncMock(return_value=[])
 
-        workers = {
-            "EXIFExtractionPipeline": MagicMock(return_value=mock_exif_worker)
-        }
+        workers = {"EXIFExtractionPipeline": MagicMock(return_value=mock_exif_worker)}
 
         with patch("src.api.indexing._is_e2e_test_mode", return_value=True):
             with patch("src.api.indexing._check_cancellation", new_callable=AsyncMock):
@@ -860,7 +895,7 @@ class TestIndexingProcessCoverage:
                         await indexing._run_processing_phases(
                             workers=workers,
                             config={},
-                            photos_to_process=[MagicMock()] * 10
+                            photos_to_process=[MagicMock()] * 10,
                         )
 
                         # Should mark completed immediately after EXIF
@@ -874,12 +909,18 @@ class TestIndexingProcessCoverage:
         from src.api import indexing
 
         mock_embedding_worker = MagicMock()
-        mock_embedding_worker.generate_batch_optimized = AsyncMock(side_effect=Exception("Embed Error"))
+        mock_embedding_worker.generate_batch_optimized = AsyncMock(
+            side_effect=Exception("Embed Error")
+        )
 
         workers = {
-            "EXIFExtractionPipeline": MagicMock(return_value=MagicMock(process_photos=AsyncMock(return_value=[]))),
+            "EXIFExtractionPipeline": MagicMock(
+                return_value=MagicMock(process_photos=AsyncMock(return_value=[]))
+            ),
             "OptimizedCLIPWorker": MagicMock(return_value=mock_embedding_worker),
-            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(generate_batch=AsyncMock(return_value=[]))),
+            "SmartThumbnailGenerator": MagicMock(
+                return_value=MagicMock(generate_batch=AsyncMock(return_value=[]))
+            ),
             "FaceDetectionWorker": MagicMock(),
         }
 
@@ -893,11 +934,13 @@ class TestIndexingProcessCoverage:
                     await indexing._run_processing_phases(
                         workers,
                         config={"face_search_enabled": False},
-                        photos_to_process=[MagicMock()]
+                        photos_to_process=[MagicMock()],
                     )
 
                 mock_manager.append_error.assert_called()
-                assert "Embedding generation failed" in str(mock_manager.append_error.call_args)
+                assert "Embedding generation failed" in str(
+                    mock_manager.append_error.call_args
+                )
 
     @pytest.mark.asyncio
     async def test_run_indexing_process_db_update_error(self):
@@ -909,28 +952,49 @@ class TestIndexingProcessCoverage:
         mock_db.execute_update.side_effect = Exception("DB Update Error")
 
         with patch("src.api.indexing.get_database_manager", return_value=mock_db):
-            with patch("src.api.indexing._setup_indexing_workers", new_callable=AsyncMock) as mock_setup:
+            with patch(
+                "src.api.indexing._setup_indexing_workers", new_callable=AsyncMock
+            ) as mock_setup:
                 mock_setup.return_value = {}
 
-                with patch("src.api.indexing._get_config_from_db", return_value={"roots": ["/tmp"]}):
+                with patch(
+                    "src.api.indexing._get_config_from_db",
+                    return_value={"roots": ["/tmp"]},
+                ):
                     with patch("pathlib.Path.exists", return_value=True):
-                        with patch("src.api.indexing._run_discovery_phase", new_callable=AsyncMock):
-                            with patch("src.api.indexing._get_photos_for_processing", return_value=[MagicMock(id=1)]):
-                                with patch("src.api.indexing._run_processing_phases", new_callable=AsyncMock):
-                                    with patch("src.api.indexing._state_manager") as mock_manager:
+                        with patch(
+                            "src.api.indexing._run_discovery_phase",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.api.indexing._get_photos_for_processing",
+                                return_value=[MagicMock(id=1)],
+                            ):
+                                with patch(
+                                    "src.api.indexing._run_processing_phases",
+                                    new_callable=AsyncMock,
+                                ):
+                                    with patch(
+                                        "src.api.indexing._state_manager"
+                                    ) as mock_manager:
                                         mock_manager.append_error = AsyncMock()
                                         mock_manager.set_value = AsyncMock()
                                         mock_manager.update_state = AsyncMock()
 
-                                        await indexing._run_indexing_process(full_reindex=False)
+                                        await indexing._run_indexing_process(
+                                            full_reindex=False
+                                        )
 
-                                        mock_manager.set_value.assert_called_with("status", "error")
+                                        mock_manager.set_value.assert_called_with(
+                                            "status", "error"
+                                        )
                                         mock_manager.append_error.assert_called()
 
     @pytest.mark.asyncio
     async def test_check_cancellation(self):
         """Test _check_cancellation raises if status is stopped."""
         from src.api import indexing
+
         with patch("src.api.indexing._state_manager") as mock_manager:
             mock_manager.get_value = AsyncMock(return_value="stopped")
 
@@ -941,10 +1005,10 @@ class TestIndexingProcessCoverage:
     async def test_check_cancellation_continue(self):
         """Test _check_cancellation continues if indexing."""
         from src.api import indexing
+
         with patch("src.api.indexing._state_manager") as mock_manager:
             mock_manager.get_value = AsyncMock(return_value="indexing")
-            await _check_cancellation() # Should not raise
-
+            await _check_cancellation()  # Should not raise
 
 
 # === Merged from test_indexing_internals.py ===
@@ -967,21 +1031,27 @@ class TestIndexingStateManagerInternal:
         assert await manager.calculate_estimated_completion() is None
 
         # Started but 0 total files
-        await manager.update_state({"started_at": datetime.now(), "progress": {"total_files": 0}})
+        await manager.update_state(
+            {"started_at": datetime.now(), "progress": {"total_files": 0}}
+        )
         assert await manager.calculate_estimated_completion() is None
 
         # Started, total > 0, but processed 0
-        await manager.update_state({"progress": {"total_files": 100, "processed_files": 0}})
+        await manager.update_state(
+            {"progress": {"total_files": 100, "processed_files": 0}}
+        )
         assert await manager.calculate_estimated_completion() is None
 
     @pytest.mark.asyncio
     async def test_calculate_estimated_completion_valid(self):
         manager = IndexingStateManager()
         started = datetime.now() - timedelta(seconds=10)
-        await manager.update_state({
-            "started_at": started,
-            "progress": {"total_files": 100, "processed_files": 50}
-        })
+        await manager.update_state(
+            {
+                "started_at": started,
+                "progress": {"total_files": 100, "processed_files": 50},
+            }
+        )
         # 50 files in 10s = 5 files/s. Remaining 50 files = 10s.
         est = await manager.calculate_estimated_completion()
         assert est is not None
@@ -1002,7 +1072,10 @@ class TestIndexingEndpointsErrors:
     @pytest.mark.asyncio
     async def test_start_indexing_exception(self):
         # Mock something inside the try block
-        with patch("src.api.indexing._state_manager.reset_for_new_indexing", side_effect=Exception("Boom")):
+        with patch(
+            "src.api.indexing._state_manager.reset_for_new_indexing",
+            side_effect=Exception("Boom"),
+        ):
             with pytest.raises(HTTPException) as exc:
                 await start_indexing(MagicMock())
             assert exc.value.status_code == 500
@@ -1011,40 +1084,56 @@ class TestIndexingEndpointsErrors:
     async def test_stop_indexing_exception(self):
         # Mock is_indexing to return True so we pass the first check
         with patch("src.api.indexing._state_manager.is_indexing", return_value=True):
-             with patch("src.api.indexing._state_manager.get_value", side_effect=Exception("Boom")):
+            with patch(
+                "src.api.indexing._state_manager.get_value",
+                side_effect=Exception("Boom"),
+            ):
                 with pytest.raises(HTTPException) as exc:
                     await stop_indexing()
                 assert exc.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_get_indexing_statistics_exception(self):
-         with patch("src.api.indexing.get_database_manager", side_effect=Exception("Boom")):
-             with pytest.raises(HTTPException) as exc:
-                 await get_indexing_statistics()
-             assert exc.value.status_code == 500
+        with patch(
+            "src.api.indexing.get_database_manager", side_effect=Exception("Boom")
+        ):
+            with pytest.raises(HTTPException) as exc:
+                await get_indexing_statistics()
+            assert exc.value.status_code == 500
+
 
 class TestThumbnailValidation:
     """Test thumbnail validation logic."""
 
     @pytest.mark.asyncio
     async def test_validate_cache_exception(self):
-         with patch("src.api.indexing.settings", side_effect=Exception("Boom")):
-             with pytest.raises(HTTPException) as exc:
-                 await validate_thumbnail_cache()
-             assert exc.value.status_code == 500
+        with patch("src.api.indexing.settings", side_effect=Exception("Boom")):
+            with pytest.raises(HTTPException) as exc:
+                await validate_thumbnail_cache()
+            assert exc.value.status_code == 500
 
     def test_cache_recommendations(self):
         # Empty
-        assert "healthy" in _get_cache_recommendations({"invalid_files": 0, "total_checked": 100}, {})[0]
+        assert (
+            "healthy"
+            in _get_cache_recommendations(
+                {"invalid_files": 0, "total_checked": 100}, {}
+            )[0]
+        )
 
         # Invalid files
-        recs = _get_cache_recommendations({"invalid_files": 10, "total_checked": 100}, {})
+        recs = _get_cache_recommendations(
+            {"invalid_files": 10, "total_checked": 100}, {}
+        )
         assert any("corrupted" in r for r in recs)
-        assert any("High invalid" in r for r in recs) # 10% > 5%
+        assert any("High invalid" in r for r in recs)  # 10% > 5%
 
         # Large cache
-        recs = _get_cache_recommendations({"invalid_files": 0, "total_checked": 100}, {"total_size_mb": 2000})
+        recs = _get_cache_recommendations(
+            {"invalid_files": 0, "total_checked": 100}, {"total_size_mb": 2000}
+        )
         assert any("exceeds 1GB" in r for r in recs)
+
 
 class TestDiagnosticsErrors:
     """Test diagnostics error handling."""
@@ -1057,17 +1146,26 @@ class TestDiagnosticsErrors:
         # When checking for import, we need to ensure the attribute is missing
         # from module. class import -> getattr(module, class_name)
 
-        with patch.dict("sys.modules", {
-            "src.workers.exif_extractor": bad_module,
-            "src.workers.thumbnail_worker": bad_module,
-        }):
-             with patch("src.workers.embedding_worker.OptimizedCLIPWorker", side_effect=Exception("CLIP Fail")):
-                 with patch("src.workers.face_worker.FaceDetectionWorker", side_effect=Exception("Face Fail")):
-                     diag = await get_model_diagnostics()
-                     assert diag["models"]["clip"]["status"] == "failed"
-                     assert diag["models"]["face_detection"]["status"] == "failed"
-                     assert diag["dependencies"]["exif"]["status"] == "failed"
-                     assert diag["dependencies"]["thumbnails"]["status"] == "failed"
+        with patch.dict(
+            "sys.modules",
+            {
+                "src.workers.exif_extractor": bad_module,
+                "src.workers.thumbnail_worker": bad_module,
+            },
+        ):
+            with patch(
+                "src.workers.embedding_worker.OptimizedCLIPWorker",
+                side_effect=Exception("CLIP Fail"),
+            ):
+                with patch(
+                    "src.workers.face_worker.FaceDetectionWorker",
+                    side_effect=Exception("Face Fail"),
+                ):
+                    diag = await get_model_diagnostics()
+                    assert diag["models"]["clip"]["status"] == "failed"
+                    assert diag["models"]["face_detection"]["status"] == "failed"
+                    assert diag["dependencies"]["exif"]["status"] == "failed"
+                    assert diag["dependencies"]["thumbnails"]["status"] == "failed"
 
 
 class TestInternalProcesses:
@@ -1109,7 +1207,9 @@ class TestInternalProcesses:
 
         # Mock DB to fail on insert
         with patch("src.api.indexing.get_database_manager") as mock_db_mgr:
-            mock_db_mgr.return_value.execute_update.side_effect = Exception("Insert Fail")
+            mock_db_mgr.return_value.execute_update.side_effect = Exception(
+                "Insert Fail"
+            )
 
             await _run_discovery_phase(workers, {"roots": ["/"]}, full_reindex=False)
 
@@ -1124,15 +1224,21 @@ class TestInternalProcesses:
             "EXIFExtractionPipeline": MagicMock(),
             "OptimizedCLIPWorker": MagicMock(),
             "SmartThumbnailGenerator": MagicMock(),
-            "FaceDetectionWorker": MagicMock()
+            "FaceDetectionWorker": MagicMock(),
         }
 
         # EXIF Error
-        workers["EXIFExtractionPipeline"].return_value.process_photos = AsyncMock(side_effect=Exception("EXIF Fail"))
+        workers["EXIFExtractionPipeline"].return_value.process_photos = AsyncMock(
+            side_effect=Exception("EXIF Fail")
+        )
 
         # Mock others to succeed or fail
-        workers["OptimizedCLIPWorker"].return_value.generate_batch_optimized = AsyncMock(side_effect=Exception("CLIP Fail"))
-        workers["SmartThumbnailGenerator"].return_value.generate_batch = AsyncMock(side_effect=Exception("Thumb Fail"))
+        workers["OptimizedCLIPWorker"].return_value.generate_batch_optimized = (
+            AsyncMock(side_effect=Exception("CLIP Fail"))
+        )
+        workers["SmartThumbnailGenerator"].return_value.generate_batch = AsyncMock(
+            side_effect=Exception("Thumb Fail")
+        )
 
         face_worker = workers["FaceDetectionWorker"].return_value
         face_worker.is_available.return_value = True
@@ -1145,7 +1251,9 @@ class TestInternalProcesses:
 
                 # Expect exception because thumbnail generation crashes
                 with pytest.raises(Exception, match="Thumb Fail"):
-                    await _run_processing_phases(workers, {"face_search_enabled": True}, photos)
+                    await _run_processing_phases(
+                        workers, {"face_search_enabled": True}, photos
+                    )
 
                 # Check that previous errors were recorded
                 state = await _state_manager.get_state()
@@ -1159,21 +1267,28 @@ class TestInternalProcesses:
     async def test_run_indexing_process_no_roots(self):
         with patch("src.api.indexing._setup_indexing_workers"):
             with patch("src.api.indexing.get_database_manager"):
-                with patch("src.api.indexing._get_config_from_db", return_value={"roots": []}):
-                     await _run_indexing_process(full_reindex=False)
-                     state = await _state_manager.get_state()
-                     assert "No root paths configured" in state["errors"]
-                     assert state["status"] == "error"
+                with patch(
+                    "src.api.indexing._get_config_from_db", return_value={"roots": []}
+                ):
+                    await _run_indexing_process(full_reindex=False)
+                    state = await _state_manager.get_state()
+                    assert "No root paths configured" in state["errors"]
+                    assert state["status"] == "error"
 
     @pytest.mark.asyncio
     async def test_run_indexing_process_invalid_roots(self):
         with patch("src.api.indexing._setup_indexing_workers"):
             with patch("src.api.indexing.get_database_manager"):
-                with patch("src.api.indexing._get_config_from_db", return_value={"roots": ["/invalid"]}):
-                     with patch("pathlib.Path.exists", return_value=False):
+                with patch(
+                    "src.api.indexing._get_config_from_db",
+                    return_value={"roots": ["/invalid"]},
+                ):
+                    with patch("pathlib.Path.exists", return_value=False):
                         await _run_indexing_process(full_reindex=False)
                         state = await _state_manager.get_state()
-                        assert any("Root path does not exist" in e for e in state["errors"])
+                        assert any(
+                            "Root path does not exist" in e for e in state["errors"]
+                        )
                         # It should complete with no work
                         assert "No valid root paths found" in state["errors"][-1]
 
@@ -1187,21 +1302,28 @@ class TestMonitorIndexingTaskCancellation:
         from src.api import indexing
 
         indexing._indexing_state.clear()
-        indexing._indexing_state.update({
-            "status": "indexing",
-            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
-            "errors": [],
-            "started_at": None,
-            "estimated_completion": None,
-            "task": None,
-            "last_completed_at": None,
-            "request_count": 0,
-        })
+        indexing._indexing_state.update(
+            {
+                "status": "indexing",
+                "progress": {
+                    "total_files": 0,
+                    "processed_files": 0,
+                    "current_phase": "discovery",
+                },
+                "errors": [],
+                "started_at": None,
+                "estimated_completion": None,
+                "task": None,
+                "last_completed_at": None,
+                "request_count": 0,
+            }
+        )
         yield
 
     @pytest.mark.asyncio
     async def test_monitor_task_cancelled(self):
         """Test monitor task handles CancelledError."""
+
         async def cancelled_task():
             raise asyncio.CancelledError
 
@@ -1217,6 +1339,7 @@ class TestMonitorIndexingTaskCancellation:
     @pytest.mark.asyncio
     async def test_monitor_task_finally_clears_task(self):
         """Test monitor task clears task in finally block."""
+
         async def successful_task():
             pass
 
@@ -1239,16 +1362,22 @@ class TestProcessingPhasesDBSave:
         from src.api import indexing
 
         indexing._indexing_state.clear()
-        indexing._indexing_state.update({
-            "status": "indexing",
-            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
-            "errors": [],
-            "started_at": None,
-            "estimated_completion": None,
-            "task": None,
-            "last_completed_at": None,
-            "request_count": 0,
-        })
+        indexing._indexing_state.update(
+            {
+                "status": "indexing",
+                "progress": {
+                    "total_files": 0,
+                    "processed_files": 0,
+                    "current_phase": "discovery",
+                },
+                "errors": [],
+                "started_at": None,
+                "estimated_completion": None,
+                "task": None,
+                "last_completed_at": None,
+                "request_count": 0,
+            }
+        )
         yield
 
     @pytest.mark.asyncio
@@ -1283,15 +1412,17 @@ class TestProcessingPhasesDBSave:
 
         mock_workers = {
             "EXIFExtractionPipeline": MagicMock(return_value=mock_exif_pipeline),
-            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
-                generate_batch_optimized=AsyncMock(return_value=[])
-            )),
-            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
-                generate_batch=AsyncMock(return_value=[])
-            )),
-            "FaceDetectionWorker": MagicMock(return_value=MagicMock(
-                is_available=MagicMock(return_value=False)
-            )),
+            "OptimizedCLIPWorker": MagicMock(
+                return_value=MagicMock(
+                    generate_batch_optimized=AsyncMock(return_value=[])
+                )
+            ),
+            "SmartThumbnailGenerator": MagicMock(
+                return_value=MagicMock(generate_batch=AsyncMock(return_value=[]))
+            ),
+            "FaceDetectionWorker": MagicMock(
+                return_value=MagicMock(is_available=MagicMock(return_value=False))
+            ),
         }
 
         mock_db = MagicMock()
@@ -1299,9 +1430,7 @@ class TestProcessingPhasesDBSave:
         with patch("src.api.indexing.get_database_manager", return_value=mock_db):
             with patch("src.api.indexing._is_e2e_test_mode", return_value=True):
                 await _run_processing_phases(
-                    mock_workers,
-                    {"face_search_enabled": False},
-                    [mock_photo]
+                    mock_workers, {"face_search_enabled": False}, [mock_photo]
                 )
 
         # Verify EXIF pipeline was called
@@ -1319,15 +1448,17 @@ class TestProcessingPhasesDBSave:
         mock_face_worker.is_available.return_value = False
 
         mock_workers = {
-            "EXIFExtractionPipeline": MagicMock(return_value=MagicMock(
-                process_photos=AsyncMock(return_value=[])
-            )),
-            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
-                generate_batch_optimized=AsyncMock(return_value=[])
-            )),
-            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
-                generate_batch=AsyncMock(return_value=[])
-            )),
+            "EXIFExtractionPipeline": MagicMock(
+                return_value=MagicMock(process_photos=AsyncMock(return_value=[]))
+            ),
+            "OptimizedCLIPWorker": MagicMock(
+                return_value=MagicMock(
+                    generate_batch_optimized=AsyncMock(return_value=[])
+                )
+            ),
+            "SmartThumbnailGenerator": MagicMock(
+                return_value=MagicMock(generate_batch=AsyncMock(return_value=[]))
+            ),
             "FaceDetectionWorker": MagicMock(return_value=mock_face_worker),
         }
 
@@ -1336,9 +1467,7 @@ class TestProcessingPhasesDBSave:
         with patch("src.api.indexing.get_database_manager", return_value=mock_db):
             with patch("src.api.indexing._is_e2e_test_mode", return_value=False):
                 await _run_processing_phases(
-                    mock_workers,
-                    {"face_search_enabled": True},
-                    [mock_photo]
+                    mock_workers, {"face_search_enabled": True}, [mock_photo]
                 )
 
         # Should have logged error about face detection not available
@@ -1355,16 +1484,22 @@ class TestRunIndexingProcessMarkIndexed:
         from src.api import indexing
 
         indexing._indexing_state.clear()
-        indexing._indexing_state.update({
-            "status": "idle",
-            "progress": {"total_files": 0, "processed_files": 0, "current_phase": "discovery"},
-            "errors": [],
-            "started_at": None,
-            "estimated_completion": None,
-            "task": None,
-            "last_completed_at": None,
-            "request_count": 0,
-        })
+        indexing._indexing_state.update(
+            {
+                "status": "idle",
+                "progress": {
+                    "total_files": 0,
+                    "processed_files": 0,
+                    "current_phase": "discovery",
+                },
+                "errors": [],
+                "started_at": None,
+                "estimated_completion": None,
+                "task": None,
+                "last_completed_at": None,
+                "request_count": 0,
+            }
+        )
         yield
 
     @pytest.mark.asyncio
@@ -1387,25 +1522,35 @@ class TestRunIndexingProcessMarkIndexed:
 
         mock_workers = {
             "FileCrawler": MagicMock(return_value=mock_crawler),
-            "EXIFExtractionPipeline": MagicMock(return_value=MagicMock(
-                process_photos=AsyncMock(return_value=[])
-            )),
-            "OptimizedCLIPWorker": MagicMock(return_value=MagicMock(
-                generate_batch_optimized=AsyncMock(return_value=[])
-            )),
-            "SmartThumbnailGenerator": MagicMock(return_value=MagicMock(
-                generate_batch=AsyncMock(return_value=[])
-            )),
-            "FaceDetectionWorker": MagicMock(return_value=MagicMock(
-                is_available=MagicMock(return_value=False)
-            )),
+            "EXIFExtractionPipeline": MagicMock(
+                return_value=MagicMock(process_photos=AsyncMock(return_value=[]))
+            ),
+            "OptimizedCLIPWorker": MagicMock(
+                return_value=MagicMock(
+                    generate_batch_optimized=AsyncMock(return_value=[])
+                )
+            ),
+            "SmartThumbnailGenerator": MagicMock(
+                return_value=MagicMock(generate_batch=AsyncMock(return_value=[]))
+            ),
+            "FaceDetectionWorker": MagicMock(
+                return_value=MagicMock(is_available=MagicMock(return_value=False))
+            ),
         }
 
-        with patch("src.api.indexing._setup_indexing_workers", return_value=mock_workers):
+        with patch(
+            "src.api.indexing._setup_indexing_workers", return_value=mock_workers
+        ):
             with patch("src.api.indexing.get_database_manager", return_value=mock_db):
-                with patch("src.api.indexing._get_config_from_db", return_value={"roots": ["/valid"]}):
+                with patch(
+                    "src.api.indexing._get_config_from_db",
+                    return_value={"roots": ["/valid"]},
+                ):
                     with patch("pathlib.Path.exists", return_value=True):
-                        with patch("src.api.indexing._get_photos_for_processing", return_value=[mock_photo]):
+                        with patch(
+                            "src.api.indexing._get_photos_for_processing",
+                            return_value=[mock_photo],
+                        ):
                             with patch("src.api.indexing._run_discovery_phase"):
                                 with patch("src.api.indexing._run_processing_phases"):
                                     await _run_indexing_process(full_reindex=False)
@@ -1413,5 +1558,3 @@ class TestRunIndexingProcessMarkIndexed:
         # Verify UPDATE was called to mark photos as indexed
         calls = [str(c) for c in mock_db.execute_update.call_args_list]
         assert any("indexed_at" in str(c) for c in calls)
-
-

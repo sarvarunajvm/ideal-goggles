@@ -346,6 +346,7 @@ class TestVerifyDependencies:
     @patch("src.api.dependencies.verify_model_functionality")
     def test_verify_dependencies_failure(self, mock_verify):
         """Test verifying dependencies when some models fail."""
+
         # CLIP works, Face fails
         def side_effect(model_type):
             if model_type == "clip":
@@ -455,7 +456,6 @@ class TestVerifyModelFunctionality:
                 result = verify_model_functionality("face")
                 assert result["functional"] is False
                 assert "not available" in result["error"]
-
 
 
 # === Merged from test_dependencies_internals.py ===
@@ -585,7 +585,9 @@ class TestVerifyModelFunctionalityInternal:
         mock_model = MagicMock()
         mock_clip.load.return_value = (mock_model, MagicMock())
 
-        with patch.dict(sys.modules, {"psutil": mock_psutil, "clip": mock_clip, "torch": mock_torch}):
+        with patch.dict(
+            sys.modules, {"psutil": mock_psutil, "clip": mock_clip, "torch": mock_torch}
+        ):
             result = verify_model_functionality("clip")
             assert result["functional"] is True
             assert result["details"]["model_loaded"] is True
@@ -598,7 +600,10 @@ class TestVerifyModelFunctionalityInternal:
         mock_clip = MagicMock()
         mock_clip.load.side_effect = Exception("Load failed")
 
-        with patch.dict(sys.modules, {"psutil": mock_psutil, "clip": mock_clip, "torch": MagicMock()}):
+        with patch.dict(
+            sys.modules,
+            {"psutil": mock_psutil, "clip": mock_clip, "torch": MagicMock()},
+        ):
             result = verify_model_functionality("clip")
             assert result["functional"] is False
             assert "Load failed" in result["error"]
@@ -670,8 +675,8 @@ class TestInstallDependenciesInternal:
     async def test_install_script_success(self, mock_exists, mock_run, mock_sys):
         """Test install via script."""
         mock_sys.frozen = False
-        mock_sys.executable = "/usr/bin/python" # Must be a string
-        mock_exists.return_value = True # Script exists
+        mock_sys.executable = "/usr/bin/python"  # Must be a string
+        mock_exists.return_value = True  # Script exists
 
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = "Success"
@@ -687,7 +692,7 @@ class TestInstallDependenciesInternal:
         """Test install fallback to pip."""
         mock_sys.frozen = False
         mock_sys.executable = "/usr/bin/python"
-        mock_exists.return_value = False # Script does not exist
+        mock_exists.return_value = False  # Script does not exist
 
         mock_run.return_value.returncode = 0
 
@@ -840,9 +845,7 @@ class TestVerifyModelFunctionalityEdgeCases:
         import psutil as real_psutil
 
         with patch.object(real_psutil, "virtual_memory") as mock_vm:
-            mock_vm.return_value = MagicMock(
-                available=4 * 1024**3, total=8 * 1024**3
-            )
+            mock_vm.return_value = MagicMock(available=4 * 1024**3, total=8 * 1024**3)
 
             # Mock clip.load to raise CUDA error
             mock_clip = MagicMock()
@@ -850,9 +853,7 @@ class TestVerifyModelFunctionalityEdgeCases:
             mock_torch = MagicMock()
             mock_torch.cuda.is_available.return_value = False
 
-            with patch.dict(
-                "sys.modules", {"clip": mock_clip, "torch": mock_torch}
-            ):
+            with patch.dict("sys.modules", {"clip": mock_clip, "torch": mock_torch}):
                 result = verify_model_functionality("clip")
                 assert result["functional"] is False
                 assert "CUDA out of memory" in str(result.get("error", ""))
@@ -862,9 +863,7 @@ class TestVerifyModelFunctionalityEdgeCases:
         import psutil as real_psutil
 
         with patch.object(real_psutil, "virtual_memory") as mock_vm:
-            mock_vm.return_value = MagicMock(
-                available=4 * 1024**3, total=8 * 1024**3
-            )
+            mock_vm.return_value = MagicMock(available=4 * 1024**3, total=8 * 1024**3)
 
             with patch(
                 "src.workers.face_worker.FaceDetectionWorker"
@@ -882,9 +881,7 @@ class TestVerifyModelFunctionalityEdgeCases:
         import psutil as real_psutil
 
         with patch.object(real_psutil, "virtual_memory") as mock_vm:
-            mock_vm.return_value = MagicMock(
-                available=4 * 1024**3, total=8 * 1024**3
-            )
+            mock_vm.return_value = MagicMock(available=4 * 1024**3, total=8 * 1024**3)
 
             with patch(
                 "src.workers.face_worker.FaceDetectionWorker",
@@ -914,4 +911,3 @@ class TestGetDependenciesStatusEdgeCases:
                 result = await get_dependencies_status()
                 # Should get a valid response (fallback or retry)
                 assert result is not None
-

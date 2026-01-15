@@ -15,10 +15,14 @@ class TestConfigCoverage(unittest.TestCase):
         self.mock_db_manager = MagicMock()
 
         self.patches = [
-            patch("src.api.config.get_database_manager", return_value=self.mock_db_manager),
+            patch(
+                "src.api.config.get_database_manager", return_value=self.mock_db_manager
+            ),
             patch("src.api.config.run_in_threadpool"),
             patch("src.api.config.validate_path"),
-            patch("src.api.config.get_default_photo_roots", return_value=["/default/path"]),
+            patch(
+                "src.api.config.get_default_photo_roots", return_value=["/default/path"]
+            ),
         ]
 
         self.mock_deps = [p.start() for p in self.patches]
@@ -29,6 +33,7 @@ class TestConfigCoverage(unittest.TestCase):
         # Configure run_in_threadpool to execute the function immediately
         async def side_effect(func, *args, **kwargs):
             return func(*args, **kwargs)
+
         self.mock_run.side_effect = side_effect
 
     def tearDown(self):
@@ -40,7 +45,7 @@ class TestConfigCoverage(unittest.TestCase):
         self.mock_db.execute_query.return_value = [
             ("roots", '["/a/b"]'),
             ("face_search_enabled", "true"),
-            ("batch_size", "100")
+            ("batch_size", "100"),
         ]
 
         result = asyncio.run(config.get_configuration())
@@ -61,9 +66,7 @@ class TestConfigCoverage(unittest.TestCase):
         """Test updating root folders."""
         # Setup existing roots
         # _get_config_from_db mock return
-        self.mock_db.execute_query.return_value = [
-            ("roots", '["/old/root"]')
-        ]
+        self.mock_db.execute_query.return_value = [("roots", '["/old/root"]')]
 
         # Setup validate_path
         self.mock_validate.return_value = Path("/new/root")
@@ -105,9 +108,7 @@ class TestConfigCoverage(unittest.TestCase):
     def test_remove_root_folder(self):
         """Test removing a root folder."""
         # Setup existing roots
-        self.mock_db.execute_query.return_value = [
-            ("roots", '["/root/1", "/root/2"]')
-        ]
+        self.mock_db.execute_query.return_value = [("roots", '["/root/1", "/root/2"]')]
 
         result = asyncio.run(config.remove_root_folder(0))
 
@@ -116,9 +117,7 @@ class TestConfigCoverage(unittest.TestCase):
 
     def test_remove_root_folder_index_error(self):
         """Test removing non-existent index."""
-        self.mock_db.execute_query.return_value = [
-            ("roots", '["/root/1"]')
-        ]
+        self.mock_db.execute_query.return_value = [("roots", '["/root/1"]')]
 
         with self.assertRaises(HTTPException) as cm:
             asyncio.run(config.remove_root_folder(10))
@@ -136,9 +135,7 @@ class TestConfigCoverage(unittest.TestCase):
         request = config.UpdateConfigRequest(batch_size=200)
 
         # Mock _get_config_from_db result after update
-        self.mock_db.execute_query.return_value = [
-            ("batch_size", "200")
-        ]
+        self.mock_db.execute_query.return_value = [("batch_size", "200")]
 
         result = asyncio.run(config.update_configuration(request))
 
@@ -162,11 +159,11 @@ class TestConfigCoverage(unittest.TestCase):
 
         # _parse_int_setting
         self.assertEqual(config._parse_int_setting("key", "123"), 123)
-        self.assertEqual(config._parse_int_setting("key", "invalid"), 0) # Fallback
+        self.assertEqual(config._parse_int_setting("key", "invalid"), 0)  # Fallback
 
         # _parse_json_setting
         self.assertEqual(config._parse_json_setting("roots", '["a"]'), ["a"])
-        self.assertEqual(config._parse_json_setting("roots", "invalid"), []) # Fallback
+        self.assertEqual(config._parse_json_setting("roots", "invalid"), [])  # Fallback
 
     def test_get_config_from_db_error(self):
         """Test DB error fallback in _get_config_from_db."""
@@ -183,5 +180,3 @@ class TestConfigCoverage(unittest.TestCase):
         result = asyncio.run(config.get_default_configuration())
         self.assertIn("roots", result)
         self.assertEqual(result["batch_size"], 50)
-
-

@@ -981,10 +981,14 @@ class TestThumbnailCacheManagerCoverage:
 
         assert result["photos_checked"] == 5
         assert result["thumbnails_exist"] == 1  # Only photo 1
-        assert result["thumbnails_missing"] == 2  # Photo 2 (file missing) + Photo 5 (DB missing)
+        assert (
+            result["thumbnails_missing"] == 2
+        )  # Photo 2 (file missing) + Photo 5 (DB missing)
         assert result["thumbnails_invalid"] == 2  # Photo 3 & 4
         assert 2 in result["missing_photo_ids"]
-        assert 3 in result["missing_photo_ids"] # Invalid counts as missing in the returned list?
+        assert (
+            3 in result["missing_photo_ids"]
+        )  # Invalid counts as missing in the returned list?
         assert 4 in result["missing_photo_ids"]
         assert 5 in result["missing_photo_ids"]
 
@@ -1056,7 +1060,9 @@ class TestThumbnailGeneratorCoverage:
                 mock_img.save.side_effect = Exception("WebP fail")
                 mock_new.return_value = mock_img
 
-                generator = ThumbnailGenerator(cache_root=temp_cache_dir, img_format="webp")
+                generator = ThumbnailGenerator(
+                    cache_root=temp_cache_dir, img_format="webp"
+                )
 
                 assert generator.format == "jpeg"
                 # Verify warning logged (line 73)
@@ -1067,7 +1073,10 @@ class TestThumbnailGeneratorCoverage:
         """Test generic error during PIL validation (line 76-77)."""
         # We need to trigger an exception during _validate_pil while format is NOT webp
         # _validate_pil calls logger.info at the end of try block
-        with patch("src.workers.thumbnail_worker.logger.info", side_effect=Exception("Generic PIL Error")):
+        with patch(
+            "src.workers.thumbnail_worker.logger.info",
+            side_effect=Exception("Generic PIL Error"),
+        ):
             with pytest.raises(RuntimeError, match="PIL format support issue"):
                 ThumbnailGenerator(cache_root=temp_cache_dir, img_format="jpeg")
 
@@ -1128,7 +1137,9 @@ class TestThumbnailGeneratorCoverage:
 
         # 2. Import Error case
         import builtins
+
         original_import = builtins.__import__
+
         def side_effect(name, *args, **kwargs):
             if name == "pillow_heif":
                 raise ImportError("No HEIF")
@@ -1144,8 +1155,10 @@ class TestThumbnailGeneratorCoverage:
                     with patch("PIL.Image.open"):
                         thumbnail = generator._generate_thumbnail_sync(sample_photo)
                     assert thumbnail is None
-                    assert "pillow-heif not available" in mock_logger.warning.call_args[0][0]
-
+                    assert (
+                        "pillow-heif not available"
+                        in mock_logger.warning.call_args[0][0]
+                    )
 
 
 class TestSmartThumbnailGeneratorCoverage:
@@ -1181,6 +1194,7 @@ class TestSmartThumbnailGeneratorCoverage:
 
         # Create a side effect for __import__
         import builtins
+
         original_import = builtins.__import__
 
         def import_side_effect(name, *args, **kwargs):
@@ -1201,7 +1215,10 @@ class TestSmartThumbnailGeneratorCoverage:
 
                     assert thumbnail is None
                     mock_logger.warning.assert_called()
-                    assert "pillow-heif not available" in mock_logger.warning.call_args[0][0]
+                    assert (
+                        "pillow-heif not available"
+                        in mock_logger.warning.call_args[0][0]
+                    )
 
     def test_smart_generator_adaptive_quality_fallthrough(self, temp_cache_dir):
         """Test fallback to super()._get_save_kwargs for non-webp/jpeg."""
@@ -1209,7 +1226,7 @@ class TestSmartThumbnailGeneratorCoverage:
         generator.format = "png"
 
         kwargs = generator._get_adaptive_save_kwargs(quality=80)
-        assert "optimize" in kwargs # PNG uses optimize from super()
+        assert "optimize" in kwargs  # PNG uses optimize from super()
 
     def test_smart_generator_la_mode(self, temp_cache_dir, sample_photo):
         """Test SmartThumbnailGenerator with LA mode."""
@@ -1219,8 +1236,10 @@ class TestSmartThumbnailGeneratorCoverage:
 
         with patch("PIL.Image.open", return_value=img):
             with patch("PIL.ImageOps.exif_transpose", return_value=img):
-                 # Mock _enhance... to avoid complications
-                with patch.object(generator, "_enhance_image_for_thumbnail", side_effect=lambda x: x):
+                # Mock _enhance... to avoid complications
+                with patch.object(
+                    generator, "_enhance_image_for_thumbnail", side_effect=lambda x: x
+                ):
                     thumbnail = generator._generate_thumbnail_sync(sample_photo)
                     assert thumbnail is not None
 
@@ -1238,14 +1257,16 @@ class TestSmartThumbnailGeneratorCoverage:
                 assert "Smart thumbnail generation failed" in args[0]
                 assert "Smart Gen Error" in args[0]
 
-    def test_smart_generator_adaptive_quality_exception(self, temp_cache_dir, sample_photo):
+    def test_smart_generator_adaptive_quality_exception(
+        self, temp_cache_dir, sample_photo
+    ):
         """Test adaptive quality calculation handles exceptions (lines 437-440)."""
         generator = SmartThumbnailGenerator(cache_root=temp_cache_dir)
         img = Mock()
         img.size = (1000, 1000)
 
         # Mock photo.size to raise exception
-        sample_photo.size = "invalid" # This will cause TypeError during division
+        sample_photo.size = "invalid"  # This will cause TypeError during division
 
         quality = generator._calculate_adaptive_quality(img, sample_photo)
         assert quality == generator.quality
@@ -1259,10 +1280,11 @@ class TestSmartThumbnailGeneratorCoverage:
 
         with patch("PIL.Image.open", return_value=img):
             with patch("PIL.ImageOps.exif_transpose", return_value=img):
-                 with patch.object(generator, "_enhance_image_for_thumbnail", side_effect=lambda x: x):
+                with patch.object(
+                    generator, "_enhance_image_for_thumbnail", side_effect=lambda x: x
+                ):
                     thumbnail = generator._generate_thumbnail_sync(sample_photo)
                     assert thumbnail is not None
-
 
 
 # === Merged from test_thumbnail_worker_internals.py ===
@@ -1278,6 +1300,7 @@ class TestThumbnailGeneratorInternals:
         """Test PIL import error."""
         with patch.dict("sys.modules", {"PIL": None}):
             original_import = __import__
+
             def side_effect(name, *args, **kwargs):
                 if name == "PIL":
                     raise ImportError("PIL missing")
@@ -1285,7 +1308,7 @@ class TestThumbnailGeneratorInternals:
 
             with pytest.raises(RuntimeError, match="PIL not available"):
                 with patch("builtins.__import__", side_effect=side_effect):
-                     ThumbnailGenerator(self.cache_root)
+                    ThumbnailGenerator(self.cache_root)
 
     @pytest.mark.skip(reason="Flaky mock of local import")
     def test_validate_pil_exception_fallback(self):
@@ -1300,9 +1323,11 @@ class TestThumbnailGeneratorInternals:
         mock_image_module.new.return_value = mock_img
 
         # We need to patch sys.modules so 'from PIL import Image' gets our mock
-        with patch.dict("sys.modules", {"PIL": mock_pil, "PIL.Image": mock_image_module}):
-             generator = ThumbnailGenerator(self.cache_root, img_format="webp")
-             assert generator.format == "jpeg"
+        with patch.dict(
+            "sys.modules", {"PIL": mock_pil, "PIL.Image": mock_image_module}
+        ):
+            generator = ThumbnailGenerator(self.cache_root, img_format="webp")
+            assert generator.format == "jpeg"
 
     @pytest.mark.skip(reason="Flaky mock of local import")
     def test_validate_pil_exception_fatal(self):
@@ -1312,7 +1337,9 @@ class TestThumbnailGeneratorInternals:
         mock_pil.Image = mock_image_module
         mock_image_module.new.side_effect = Exception("Fatal Error")
 
-        with patch.dict("sys.modules", {"PIL": mock_pil, "PIL.Image": mock_image_module}):
+        with patch.dict(
+            "sys.modules", {"PIL": mock_pil, "PIL.Image": mock_image_module}
+        ):
             with pytest.raises(RuntimeError, match="PIL format support issue"):
                 ThumbnailGenerator(self.cache_root, img_format="jpeg")
 
@@ -1339,17 +1366,18 @@ class TestThumbnailGeneratorInternals:
 
         # Patch import only for pillow_heif
         original_import = __import__
+
         def side_effect(name, *args, **kwargs):
             if name == "pillow_heif":
                 raise ImportError("No heif")
             return original_import(name, *args, **kwargs)
 
         with patch.dict("sys.modules", {"pillow_heif": None}):
-             with patch("builtins.__import__", side_effect=side_effect):
-                 with patch("PIL.Image"): # Prevent actual image open
-                     generator = ThumbnailGenerator(self.cache_root)
-                     result = generator._generate_thumbnail_sync(photo)
-                     assert result is None
+            with patch("builtins.__import__", side_effect=side_effect):
+                with patch("PIL.Image"):  # Prevent actual image open
+                    generator = ThumbnailGenerator(self.cache_root)
+                    result = generator._generate_thumbnail_sync(photo)
+                    assert result is None
 
     def test_generate_thumbnail_sync_exception(self):
         """Test exception during generation."""
@@ -1371,17 +1399,17 @@ class TestSmartThumbnailGeneratorInternals:
     def test_calculate_adaptive_quality_file_size(self):
         generator = SmartThumbnailGenerator(self.cache_root)
         img = MagicMock()
-        img.size = (1000, 1000) # 1MP
+        img.size = (1000, 1000)  # 1MP
 
         photo = MagicMock()
-        photo.size = 500 * 1024 # 500KB (Small)
+        photo.size = 500 * 1024  # 500KB (Small)
 
         q = generator._calculate_adaptive_quality(img, photo)
-        assert q > 85 # Boosted
+        assert q > 85  # Boosted
 
-        photo.size = 25 * 1024 * 1024 # 25MB (Large)
+        photo.size = 25 * 1024 * 1024  # 25MB (Large)
         q = generator._calculate_adaptive_quality(img, photo)
-        assert q < 85 # Reduced
+        assert q < 85  # Reduced
 
     def test_enhance_image_exception(self):
         generator = SmartThumbnailGenerator(self.cache_root)
@@ -1392,7 +1420,7 @@ class TestSmartThumbnailGeneratorInternals:
 
     def test_get_adaptive_save_kwargs(self):
         generator = SmartThumbnailGenerator(self.cache_root)
-        generator.format = "jpeg" # Manually set format
+        generator.format = "jpeg"  # Manually set format
         kwargs = generator._get_adaptive_save_kwargs(90)
         assert kwargs["quality"] == 90
         assert kwargs["progressive"] is True
@@ -1423,7 +1451,7 @@ class TestThumbnailCacheManagerInternals:
         db_manager.execute_query.return_value = [
             (2, "thumb2.jpg"),
             (3, "thumb3.jpg"),
-            (4, "thumb4.jpg")
+            (4, "thumb4.jpg"),
         ]
 
         with patch("pathlib.Path.exists") as mock_exists:
@@ -1478,7 +1506,7 @@ class TestThumbnailCacheManagerInternals:
                         return img3
                     if "thumb4" in s:
                         return img4
-                    return MagicMock() # Will fail size check if used
+                    return MagicMock()  # Will fail size check if used
 
                 mock_open.side_effect = open_side_effect
 
@@ -1488,19 +1516,21 @@ class TestThumbnailCacheManagerInternals:
                 # if result["thumbnails_invalid"] != 1:
                 #    print(f"Invalid: {result['thumbnails_invalid']}, Exist: {result['thumbnails_exist']}")
 
-                assert result["thumbnails_missing"] == 2 # 1 (no DB) + 2 (no file)
-                assert result["thumbnails_invalid"] == 1 # 3
-                assert result["thumbnails_exist"] == 1 # 4
+                assert result["thumbnails_missing"] == 2  # 1 (no DB) + 2 (no file)
+                assert result["thumbnails_invalid"] == 1  # 3
+                assert result["thumbnails_exist"] == 1  # 4
 
     def test_validate_cache_integrity_empty(self):
         manager = ThumbnailCacheManager(self.cache_root)
-        manager.get_cache_statistics = MagicMock() # Needs to be awaitable?
+        manager.get_cache_statistics = MagicMock()  # Needs to be awaitable?
         # validate_cache_integrity calls await self.get_cache_statistics()
         # So we need an AsyncMock
 
         # We can't easily patch the method on the instance to be AsyncMock if it's not
         # defined as async in class (it is async).
-        manager.get_cache_statistics = AsyncMock(return_value={"exists": True, "total_files": 0})
+        manager.get_cache_statistics = AsyncMock(
+            return_value={"exists": True, "total_files": 0}
+        )
 
         # This is an async method
         loop = asyncio.new_event_loop()
@@ -1525,4 +1555,3 @@ class TestThumbnailCacheManagerInternals:
 
             result = manager._validate_cache_sample(10, 1)
             assert result["invalid_files"] == 1
-
