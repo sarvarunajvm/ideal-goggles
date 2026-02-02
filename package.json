@@ -103,7 +103,7 @@
     "cross-env": "^10.1.0",
     "dmg-builder": "26.7.0",
     "electron": "^40.1.0",
-    "electron-builder": "^26.4.0",
+    "electron-builder": "^26.7.0",
     "electron-builder-squirrel-windows": "26.7.0",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
