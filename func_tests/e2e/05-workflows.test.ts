@@ -189,20 +189,24 @@ test.describe('End-to-End Workflows', () => {
       await settingsPage.waitForIndexingStart();
 
       // Remove the initial folder to simulate migration
+      // Use partial matching since macOS resolves /tmp → /private/tmp
       const folders = await settingsPage.getRootFolders();
-      const oldIndex = folders.indexOf(initialFolder);
+      const oldIndex = folders.findIndex(f => f.includes('photos-migration-initial-'));
       if (oldIndex >= 0) {
         await settingsPage.removeRootFolder(oldIndex);
+        // Wait for the auto-save and UI update to settle
+        await page.waitForTimeout(2000);
       }
 
-      // Confirm only the migrated folder remains
+      // Confirm the migrated folder remains (allow for symlink resolution)
       const finalFolders = await settingsPage.getRootFolders();
-      expect(finalFolders).toContain(migratedFolder);
-      expect(finalFolders).not.toContain(initialFolder);
+      expect(finalFolders.some(f => f.includes('photos-migration-new-'))).toBeTruthy();
+      expect(finalFolders.some(f => f.includes('photos-migration-initial-'))).toBeFalsy();
     } finally {
       // Cleanup added roots if still present (avoid affecting other suites)
+      // Use partial matching since macOS resolves /tmp → /private/tmp
       const currentFolders = await settingsPage.getRootFolders();
-      const migratedIdx = currentFolders.indexOf(migratedFolder);
+      const migratedIdx = currentFolders.findIndex(f => f.includes('photos-migration-new-'));
       if (migratedIdx >= 0) {
         await settingsPage.removeRootFolder(migratedIdx);
       }

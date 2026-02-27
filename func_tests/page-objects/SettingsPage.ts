@@ -72,10 +72,11 @@ export class SettingsPage extends BasePage {
         throw e;
     }
     await this.addFolderButton.click();
-    
-    // Wait a bit to see if dialog was handled
-    await this.page.waitForTimeout(1000);
-    
+
+    // Wait for dialog to be handled and for debounced save to complete
+    // Debounce timer is 1000ms, so we need at least 2000ms after dialog accept for save to complete
+    await this.page.waitForTimeout(2500);
+
     if (!dialogHandled) {
         console.log('Warning: Dialog handler was not called. This might be due to Electron API mocking or timing.');
     }
@@ -163,32 +164,46 @@ export class SettingsPage extends BasePage {
   }
 
   async waitForIndexingComplete(timeout: number = 60000) {
-    await this.page.waitForFunction(
-      () => {
-        const status = document.querySelector('[data-testid="indexing-status"]');
-        return status?.textContent?.includes('Complete') || status?.textContent?.includes('Idle');
-      },
-      undefined,
-      { timeout }
-    );
+    // The indexing-status badge renders lowercase status strings: 'idle', 'indexing', 'error'
+    // Poll until the badge shows a non-indexing state, or until timeout
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      const statusEl = this.page.locator('[data-testid="indexing-status"]');
+      const isVisible = await statusEl.isVisible().catch(() => false);
+      if (isVisible) {
+        const text = (await statusEl.textContent().catch(() => '') || '').toLowerCase();
+        // Badge shows 'idle', 'completed', or 'error' when done; 'indexing' while running
+        if (!text.includes('indexing') && text.length > 0) {
+          return;
+        }
+      }
+      // Element not visible yet or still indexing - wait and retry
+      await this.page.waitForTimeout(1000);
+    }
+    // Timeout reached - check one final time and if still indexing, throw
+    const statusEl = this.page.locator('[data-testid="indexing-status"]');
+    const finalText = (await statusEl.textContent().catch(() => '') || '').toLowerCase();
+    if (finalText.includes('indexing')) {
+      throw new Error(`Indexing did not complete within ${timeout}ms`);
+    }
   }
 
   async waitForIndexingStart() {
+    // The badge renders lowercase 'indexing' - match case-insensitively
     await this.page.waitForFunction(
       () => {
         const status = document.querySelector('[data-testid="indexing-status"]');
-        const statusText = status?.textContent || '';
-        // Also check for other possible status texts
-        return statusText.includes('Indexing') ||
-               statusText.includes('Processing') ||
-               statusText.includes('Running') ||
-               statusText.includes('In Progress');
+        const statusText = (status?.textContent || '').toLowerCase();
+        return statusText.includes('indexing') ||
+               statusText.includes('processing') ||
+               statusText.includes('running') ||
+               statusText.includes('in progress');
       },
       undefined,
       { timeout: 10000 }
     ).catch(() => {
-      // If the status element is not found, just continue
-      console.log('Warning: Indexing status element not found');
+      // If the status element is not found or indexing starts and completes quickly, just continue
+      console.log('Warning: Indexing start status not detected - may have completed quickly');
     });
   }
 

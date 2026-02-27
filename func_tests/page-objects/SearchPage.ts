@@ -27,10 +27,14 @@ export class SearchPage extends BasePage {
     this.filterButton = page.locator('button[title="Advanced filters"]').first();
     // Results are displayed in a grid
     this.resultsContainer = page.locator('.grid').first(); // Grid of results
-    // Empty state message - check for common empty state texts
-    this.emptyState = page.locator('text=Start searching your photos, text=No results found, text=Welcome to Ideal Goggles').first();
-    // Upload area for image search mode
-    this.uploadArea = page.locator('text=Drop an image or click to browse, text=Upload').first();
+    // Empty state message - check for common empty state texts using OR logic
+    this.emptyState = page.locator('text=Start searching your photos').or(
+      page.locator('text=Welcome to Ideal Goggles')
+    ).or(
+      page.locator('text=No results found')
+    ).first();
+    // Upload area for image search mode - actual text from SearchPage.tsx CompactSearchBar
+    this.uploadArea = page.locator('text=Drop an image or click to browse').first();
     this.loadingSpinner = page.locator('.animate-spin').first();
   }
 

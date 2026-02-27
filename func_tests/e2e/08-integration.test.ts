@@ -47,8 +47,8 @@ test.describe('Full Integration Tests', () => {
       // Start indexing
       await settingsPage.startIndexing(false); // incremental
 
-      // Wait for indexing to complete - increase timeout
-      await settingsPage.waitForIndexingComplete(120000);
+      // Wait for indexing to complete via API polling (DOM badge doesn't auto-refresh)
+      await apiClient.waitForIndexingComplete(120000);
 
       // Step 2: Perform text search
       searchPage = new SearchPage(page);
@@ -108,8 +108,8 @@ test.describe('Full Integration Tests', () => {
       // Start full indexing
       await settingsPage.startIndexing(true); // full reindex
 
-      // Just wait for completion
-      await settingsPage.waitForIndexingComplete(120000);
+      // Wait for indexing to complete via API polling (DOM badge doesn't auto-refresh)
+      await apiClient.waitForIndexingComplete(120000);
       
       // Should handle large operations without freezing UI
       await page.waitForTimeout(1000);
@@ -251,13 +251,18 @@ test.describe('Full Integration Tests', () => {
       // Change multiple settings
       const persistFolder = '/tmp/persistent-test';
       if (!fs.existsSync(persistFolder)) fs.mkdirSync(persistFolder);
+
+      // Add folder and allow debounced save (2500ms in addRootFolder) to complete
       await settingsPage.addRootFolder(persistFolder);
-      
+
+      // Update config via API after folder save completes
       await apiClient.updateConfig({
         face_search_enabled: true,
-        ocr_enabled: true,
         semantic_search_enabled: false
       });
+
+      // Additional wait to ensure all saves are persisted before reload
+      await page.waitForTimeout(1000);
 
       // Reload page to simulate new session
       await page.reload();
@@ -265,19 +270,22 @@ test.describe('Full Integration Tests', () => {
 
       // Verify settings persisted
       const rootFolders = await settingsPage.getRootFolders();
-      // Handle symlink
+      // Handle symlink resolution - check by partial match
       expect(rootFolders.some(f => f.endsWith('persistent-test'))).toBeTruthy();
 
       // Check configuration via API
       const config = await apiClient.getConfig();
       const configData = await config.json();
       expect(configData.face_search_enabled).toBe(true);
-      // OCR removed
-      // expect(configData.ocr_enabled).toBe(true);
       expect(configData.semantic_search_enabled).toBe(false);
-      
-      // Cleanup
-      if (fs.existsSync(persistFolder)) fs.rmdirSync(persistFolder);
+
+      // Cleanup - remove folder from config then disk
+      const currentFolders = await settingsPage.getRootFolders();
+      const persistIdx = currentFolders.findIndex(f => f.includes('persistent-test'));
+      if (persistIdx >= 0) {
+        await settingsPage.removeRootFolder(persistIdx);
+      }
+      if (fs.existsSync(persistFolder)) fs.rmSync(persistFolder, { recursive: true, force: true });
     });
 
     test('handles configuration conflicts gracefully', async ({ page }) => {
