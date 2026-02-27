@@ -58,13 +58,11 @@ class DriveManager:
         """Initialize drive mappings from database."""
         try:
             with get_database() as db:
-                cursor = db.execute(
-                    """
+                cursor = db.execute("""
                     SELECT device_id, alias, mount_point, last_seen
                     FROM drive_aliases
                     ORDER BY last_seen DESC
-                """
-                )
+                """)
 
                 for row in cursor.fetchall():
                     device_id, alias, mount_point, _last_seen = row

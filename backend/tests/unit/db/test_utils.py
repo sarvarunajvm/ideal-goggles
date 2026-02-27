@@ -21,15 +21,13 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
                     ("test_key", json.dumps({"setting": "value"})),
@@ -48,15 +46,13 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.commit()
 
             with patch("src.db.utils.get_database_manager", return_value=db_manager):
@@ -71,15 +67,13 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table with multiple entries
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
                     ("key1", json.dumps({"value": 1})),
@@ -105,15 +99,13 @@ class TestDatabaseHelperGetConfig:
 
             # Create config table with invalid JSON
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.execute(
                     "INSERT INTO config (key, value, updated_at) VALUES (?, ?, datetime('now'))",
                     ("bad_json", "not valid json"),
@@ -137,15 +129,13 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.commit()
 
             # Mock execute_update method
@@ -164,15 +154,13 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.commit()
 
             db_manager.execute_update = MagicMock(return_value=None)
@@ -196,15 +184,13 @@ class TestDatabaseHelperUpdateConfig:
 
             # Create config table
             with db_manager.get_connection() as conn:
-                conn.execute(
-                    """
+                conn.execute("""
                     CREATE TABLE IF NOT EXISTS config (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
                         updated_at REAL NOT NULL
                     )
-                """
-                )
+                """)
                 conn.commit()
 
             db_manager.execute_update = MagicMock(return_value=None)

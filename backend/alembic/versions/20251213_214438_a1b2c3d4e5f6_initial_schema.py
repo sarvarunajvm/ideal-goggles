@@ -17,8 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS photos (
           id INTEGER PRIMARY KEY,
           path TEXT UNIQUE NOT NULL,
@@ -33,11 +32,9 @@ def upgrade() -> None:
           indexed_at REAL,
           index_version INTEGER DEFAULT 1
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS exif (
           file_id INTEGER PRIMARY KEY,
           shot_dt TEXT,
@@ -52,11 +49,9 @@ def upgrade() -> None:
           gps_lon REAL,
           orientation INTEGER
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS embeddings (
           file_id INTEGER PRIMARY KEY,
           clip_vector BLOB NOT NULL,
@@ -64,11 +59,9 @@ def upgrade() -> None:
           processed_at REAL NOT NULL,
           FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS people (
           id INTEGER PRIMARY KEY,
           name TEXT UNIQUE NOT NULL,
@@ -78,11 +71,9 @@ def upgrade() -> None:
           updated_at REAL NOT NULL,
           active BOOLEAN DEFAULT TRUE
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS faces (
           id INTEGER PRIMARY KEY,
           file_id INTEGER NOT NULL,
@@ -94,11 +85,9 @@ def upgrade() -> None:
           FOREIGN KEY (file_id) REFERENCES photos(id) ON DELETE CASCADE,
           FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE SET NULL
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS thumbnails (
           file_id INTEGER PRIMARY KEY,
           thumb_path TEXT NOT NULL,
@@ -107,29 +96,24 @@ def upgrade() -> None:
           format TEXT NOT NULL,
           generated_at REAL NOT NULL
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS settings (
           key TEXT PRIMARY KEY,
           value TEXT NOT NULL,
           updated_at REAL NOT NULL
         )
-    """
-    )
+    """)
 
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE IF NOT EXISTS drive_aliases (
           device_id TEXT PRIMARY KEY,
           alias TEXT NOT NULL,
           mount_point TEXT,
           last_seen REAL NOT NULL
         )
-    """
-    )
+    """)
 
     op.execute("CREATE INDEX IF NOT EXISTS idx_photos_sha1 ON photos(sha1)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_photos_folder ON photos(folder)")

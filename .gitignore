@@ -131,4 +131,8 @@ claudedocs/
 *coverage.json.lzma
 *coverage.json.zstd
 .aider*
+
+# Test artifacts (SQLite in-memory, Mock files)
 backend/:memory:
+**/\<MagicMock*
+**/:memory:

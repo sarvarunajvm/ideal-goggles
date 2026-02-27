@@ -179,7 +179,7 @@ def _update_root_folders_sync(
     return {
         "message": "Root folders updated successfully",
         "roots": absolute_roots,
-        "removed_roots": removed_roots if removed_roots else [],
+        "removed_roots": removed_roots or [],
         "updated_at": datetime.now().isoformat(),
     }
 

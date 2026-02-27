@@ -1,19 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { visualizer } from 'rollup-plugin-visualizer'
 import { codecovVitePlugin } from '@codecov/vite-plugin'
 
 const isAnalyze = process.env.ANALYZE === 'true'
 
-export default defineConfig({
+export default defineConfig(async () => ({
   root: __dirname,
   plugins: [
     react(),
     // Generate bundle analysis report (only when ANALYZE=true)
     ...(isAnalyze
       ? [
-          visualizer({
+          (await import('rollup-plugin-visualizer')).visualizer({
             filename: './dist/stats.html',
             open: false,
             gzipSize: true,
@@ -94,4 +93,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-})
+}))

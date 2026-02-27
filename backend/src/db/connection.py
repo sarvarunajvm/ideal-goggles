@@ -332,15 +332,13 @@ class DatabaseManager:
         """Create settings table and defaults if missing."""
         with self.get_connection() as conn:
             # Create table if not exists
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS settings (
                   key TEXT PRIMARY KEY,
                   value TEXT NOT NULL,
                   updated_at REAL NOT NULL
                 )
-                """
-            )
+                """)
 
             # Ensure required keys exist
             def ensure_key(key: str, default: str):

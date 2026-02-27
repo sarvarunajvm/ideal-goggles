@@ -201,7 +201,7 @@ class EXIFData:
             return None
 
         cleaned = str(value).strip()
-        return cleaned if cleaned else None
+        return cleaned or None
 
     @staticmethod
     def _safe_int(value: Any) -> int | None:

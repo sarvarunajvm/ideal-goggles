@@ -497,7 +497,7 @@ async def _execute_text_search(
             shot_dt=datetime.fromisoformat(row[5]) if row[5] else None,
             score=row[6],
             badges=badges,
-            snippet=row[7] if row[7] else None,
+            snippet=row[7] or None,
         )
         results.append(item)
 

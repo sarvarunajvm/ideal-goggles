@@ -32,7 +32,7 @@ class MockRequest:
         self.query_params = query_params or {}
         self.headers = Headers({"host": "example.com"})  # Add headers
         self.client = MagicMock()
-        self.client.host = client_host if client_host else None
+        self.client.host = client_host or None
         self._body = b""
 
     async def body(self):

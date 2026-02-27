@@ -50,7 +50,7 @@ help: ## Show this help message
 install: ## Development: Install all dependencies
 	@echo "📦 Installing dependencies..."
 	$(PYTHON) -m pip install --upgrade pip
-	pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 	@echo "✅ Dependencies installed successfully!"
 
 dev: ## Development: Start development server
@@ -104,18 +104,18 @@ coverage-unit: ## Coverage: Coverage report for unit tests only
 
 lint: ## Quality: Check code with ruff linter
 	@echo "🔍 Running ruff linter..."
-	ruff check .
+	$(PYTHON) -m ruff check .
 
 typecheck: ## Quality: Run type checking with mypy
 	@echo "🔍 Running type checker..."
 	$(PYTHON) -m pip install --upgrade pip >/dev/null 2>&1 || true
 	# Ensure dev extras (including mypy and compatible numpy stubs) are available
-	pip install -e ".[dev]" >/dev/null 2>&1 || true
+	$(PYTHON) -m pip install -e ".[dev]" >/dev/null 2>&1 || true
 	$(PYTHON) -m mypy src/
 
 format: ## Quality: Format code with black
 	@echo "✨ Formatting code..."
-	black .
+	$(PYTHON) -m black .
 
 check-style: lint typecheck ## Quality: Run all code quality checks
 	@echo "✅ All quality checks completed!"
@@ -127,21 +127,21 @@ check-style: lint typecheck ## Quality: Run all code quality checks
 package: ## Build: Create standalone binary with PyInstaller (includes ML dependencies)
 	@echo "📦 Building standalone binary with ML dependencies..."
 	$(PYTHON) -m pip install --upgrade pip
-	pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 	@echo "🤖 Installing ML dependencies and verifying models..."
 	$(PYTHON) scripts/setup_ml_models.py --all || (echo "❌ ML setup failed!" && exit 1)
 	@echo "📦 Packaging with PyInstaller..."
-	pip install pyinstaller
-	pyinstaller --clean ideal-goggles-backend.spec
+	$(PYTHON) -m pip install pyinstaller
+	$(PYTHON) -m PyInstaller --clean ideal-goggles-backend.spec
 	@echo "✅ Binary created: dist/ideal-goggles-backend"
 
 package-lite: ## Build: Create standalone binary WITHOUT ML dependencies (smaller size)
 	@echo "📦 Building lite standalone binary (no ML dependencies)..."
 	$(PYTHON) -m pip install --upgrade pip
-	pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 	@echo "⚠️  Skipping ML dependencies (lite build)"
-	pip install pyinstaller
-	pyinstaller --clean ideal-goggles-backend.spec
+	$(PYTHON) -m pip install pyinstaller
+	$(PYTHON) -m PyInstaller --clean ideal-goggles-backend.spec
 	@echo "✅ Lite binary created: dist/ideal-goggles-backend"
 	@echo "ℹ️  ML features will not be available in this build"
 
