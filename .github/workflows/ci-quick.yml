@@ -43,7 +43,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
@@ -99,7 +99,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
@@ -202,7 +202,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
 
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v6
@@ -282,7 +282,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
