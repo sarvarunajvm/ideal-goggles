@@ -21,9 +21,10 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() { return null }
   root = null
   rootMargin = ''
-  thresholds = []
-  takeRecords = () => []
-}
+  scrollMargin = ''
+  thresholds = [] as number[]
+  takeRecords = () => [] as IntersectionObserverEntry[]
+} as any
 
 // Mock window.electron API
 global.window = Object.create(window);

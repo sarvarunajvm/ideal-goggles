@@ -1,11 +1,12 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { codecovVitePlugin } from '@codecov/vite-plugin'
 
 const isAnalyze = process.env.ANALYZE === 'true'
 
-export default defineConfig(async () => ({
+export default defineConfig(async (_env): Promise<UserConfig> => {
+  return {
   root: __dirname,
   plugins: [
     react(),
@@ -46,7 +47,7 @@ export default defineConfig(async () => ({
       '/api': {
         target: 'http://127.0.0.1:5555',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path: string) => path.replace(/^\/api/, ''),
       },
       // Proxy backend OpenAPI + docs directly so Swagger UI works under Vite dev
       '/openapi.json': {
@@ -68,20 +69,23 @@ export default defineConfig(async () => ({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'router': ['react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-tabs', '@radix-ui/react-scroll-area', '@radix-ui/react-checkbox'],
-          'icons': ['lucide-react'],
-          'utils': ['clsx', 'class-variance-authority', 'tailwind-merge']
+        manualChunks(id: string) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'react-vendor'
+          }
+          if (id.includes('node_modules/react-router-dom')) {
+            return 'router'
+          }
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'ui-vendor'
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons'
+          }
+          if (id.includes('node_modules/clsx') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/tailwind-merge')) {
+            return 'utils'
+          }
         }
-      }
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
       }
     },
     sourcemap: false,
@@ -93,4 +97,5 @@ export default defineConfig(async () => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
-}))
+  }
+})

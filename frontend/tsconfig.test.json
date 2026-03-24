@@ -6,7 +6,8 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "allowJs": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": ["jest", "@testing-library/jest-dom", "node"]
   },
   "include": ["src/**/*", "tests/**/*"]
 }

@@ -24,54 +24,43 @@ if (process.env.NODE_ENV === 'production') {
 const createRouter =
   process.env.NODE_ENV === 'production' ? createHashRouter : createBrowserRouter
 
-const router = createRouter(
-  [
-    {
-      path: '/',
-      element: <App />,
-      errorElement: <RouteErrorBoundary />,
-      children: [
-        {
-          index: true,
-          element: <SearchPage />,
-        },
-        {
-          path: 'search',
-          element: <SearchPage />,
-        },
-        {
-          path: 'settings',
-          element: <SettingsPage />,
-        },
-        {
-          path: 'people',
-          element: <PeoplePage />,
-        },
-        {
-          path: 'stats',
-          element: <StatsPage />,
-        },
-        {
-          path: 'dependencies',
-          element: <DependenciesPage />,
-        },
-        {
-          path: 'logs',
-          element: <LogsPage />,
-        },
-      ],
-    },
-  ],
+const router = createRouter([
   {
-    future: {
-      v7_relativeSplatPath: true,
-      v7_fetcherPersist: true,
-      v7_normalizeFormMethod: true,
-      v7_partialHydration: true,
-      v7_skipActionErrorRevalidation: true,
-    },
-  }
-)
+    path: '/',
+    element: <App />,
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        index: true,
+        element: <SearchPage />,
+      },
+      {
+        path: 'search',
+        element: <SearchPage />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
+      },
+      {
+        path: 'people',
+        element: <PeoplePage />,
+      },
+      {
+        path: 'stats',
+        element: <StatsPage />,
+      },
+      {
+        path: 'dependencies',
+        element: <DependenciesPage />,
+      },
+      {
+        path: 'logs',
+        element: <LogsPage />,
+      },
+    ],
+  },
+])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
