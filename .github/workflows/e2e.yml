@@ -196,7 +196,7 @@ jobs:
         REUSE_EXISTING_SERVER: true
 
     - name: Upload test results to Codecov (E2E)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() && hashFiles('func_tests/test-results/junit.xml') != '' }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
