@@ -154,7 +154,7 @@ jobs:
         fi
 
     - name: Upload coverage to Codecov (backend)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         use_oidc: true
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -165,7 +165,7 @@ jobs:
         verbose: true
 
     - name: Upload test results to Codecov (backend)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -239,7 +239,7 @@ jobs:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Upload coverage to Codecov (frontend)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         use_oidc: true
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -250,7 +250,7 @@ jobs:
         verbose: true
 
     - name: Upload test results to Codecov (frontend)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -337,7 +337,7 @@ jobs:
         fi
 
     - name: Upload test results to Codecov (P0 E2E)
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() && hashFiles('func_tests/test-results/junit.xml') != '' }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
