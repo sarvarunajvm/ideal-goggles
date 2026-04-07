@@ -4,7 +4,8 @@
 # Scope:
 #   - Check if new commits exist since last tag
 #   - Bump patch version across all version files
-#   - Create commit and tag, push to trigger release.yml
+#   - Create commit and tag, push to origin
+#   - Trigger release.yml via workflow_dispatch (GITHUB_TOKEN can't trigger tag-based workflows)
 
 name: Auto Release (Weekly)
 
@@ -65,15 +66,27 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json backend/pyproject.toml
+          git add package.json backend/pyproject.toml backend/src/main.py
           git commit -m "chore: release v${VERSION}
 
           Automated weekly release
 
           Updated versions in:
           - package.json
-          - backend/pyproject.toml"
+          - backend/pyproject.toml
+          - backend/src/main.py"
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
           git push origin main
           git push origin "v${VERSION}"
-          echo "✅ Pushed v${VERSION} — release.yml will handle the build"
+
+      - name: Trigger release workflow
+        if: steps.check.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "🚀 Triggering release workflow for v${VERSION}"
+          gh workflow run release.yml \
+            --field tag="v${VERSION}" \
+            --field skip_ci_check="true"
+          echo "✅ Release workflow triggered for v${VERSION}"
