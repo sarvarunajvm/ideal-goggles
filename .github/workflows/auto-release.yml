@@ -1,0 +1,79 @@
+# Auto Release Workflow
+# Purpose: Automatically create weekly patch releases
+# Trigger: Every Sunday at ~11 PM UTC (or manual dispatch)
+# Scope:
+#   - Check if new commits exist since last tag
+#   - Bump patch version across all version files
+#   - Create commit and tag, push to trigger release.yml
+
+name: Auto Release (Weekly)
+
+on:
+  schedule:
+    - cron: '7 23 * * 0'  # Sunday ~11 PM UTC
+  workflow_dispatch:       # Manual trigger option
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for changes since last tag
+        id: check
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing tags found, proceeding with release"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          COMMITS=$(git rev-list ${LATEST_TAG}..HEAD --count)
+          echo "Latest tag: $LATEST_TAG, commits since: $COMMITS"
+          if [ "$COMMITS" -eq 0 ]; then
+            echo "No changes since last tag, skipping release"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.check.outputs.has_changes == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Bump patch version
+        if: steps.check.outputs.has_changes == 'true'
+        id: version
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          echo "Bumping version: $CURRENT -> $NEW_VERSION"
+          node scripts/update-version.js "$NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Commit, tag, and push
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json backend/pyproject.toml
+          git commit -m "chore: release v${VERSION}
+
+          Automated weekly release
+
+          Updated versions in:
+          - package.json
+          - backend/pyproject.toml"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin main
+          git push origin "v${VERSION}"
+          echo "✅ Pushed v${VERSION} — release.yml will handle the build"
