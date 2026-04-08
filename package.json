@@ -114,7 +114,7 @@
     "jest-environment-jsdom": "^30.3.0",
     "jest-junit": "^16.0.0",
     "msw": "^2.13.1",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.9",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^4.2.2",
     "tailwindcss-animate": "^1.0.7",
