@@ -33,7 +33,7 @@ dependencies = [
     "arq>=0.27.0",
     "fakeredis>=2.23.0",
     "send2trash>=2.1.0",
-    "exifread>=3.0.0",
+    "exifread>=3.5.1",
     "matplotlib>=3.10.8",
     "pillow-heif>=0.13.0",
 ]
