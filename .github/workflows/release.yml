@@ -131,7 +131,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v5
+      uses: pnpm/action-setup@v6
 
     - name: Setup Node.js
       uses: actions/setup-node@v6
@@ -217,7 +217,7 @@ jobs:
         fi
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ steps.tag.outputs.tag_name }}
         files: |
