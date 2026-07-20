@@ -34,7 +34,7 @@ dependencies = [
     "fakeredis>=2.36.2",
     "send2trash>=2.1.0",
     "exifread>=3.5.1",
-    "matplotlib>=3.11.0",
+    "matplotlib>=3.11.1",
     "pillow-heif>=1.4.0",
 ]
 
