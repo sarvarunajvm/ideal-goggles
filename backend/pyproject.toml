@@ -81,7 +81,7 @@ ignore = [
     "TD002", "TD003", "FIX002",  # TODO formatting - documentation issues
     "SLF001",  # Private member access - intentional internal usage
     "C901",  # Complex structure - business logic complexity
-    "PLR0913", "PLR0912", "PLR0915", "PLR0911",  # Code complexity - API design
+    "PLR0913", "PLR0912", "PLR0915", "PLR0911", "PLR0917",  # Code complexity - API design
     "B008",  # Function calls in defaults - FastAPI pattern
     "S608",  # Hardcoded SQL - parameterized queries with dynamic structure
     "SIM102",  # Nested if statements - readability preference

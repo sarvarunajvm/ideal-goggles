@@ -238,7 +238,7 @@ def log_error_with_context(
         operation: What operation was being performed
         **context: Additional context about the error
     """
-    logger.exception(
+    logger.error(
         f"Error in {operation}: {error.__class__.__name__}: {error!s}",
         extra=context,
     )
