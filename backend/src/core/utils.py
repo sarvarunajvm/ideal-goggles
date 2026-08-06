@@ -108,7 +108,7 @@ def handle_internal_error(operation: str, error: Exception, **context) -> None:
     Raises:
         HTTPException: 500 Internal Server Error
     """
-    logger.exception(f"{operation} failed: {error}", extra=context)
+    logger.error(f"{operation} failed: {error}", extra=context)
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"{operation} failed: {error!s}",
