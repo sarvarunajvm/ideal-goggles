@@ -120,6 +120,39 @@ class TextSearchService:
         # Join with AND operator for FTS5
         return " AND ".join(processed_words)
 
+    def _build_fts_match_query(self, processed_query: str) -> str:
+        """Turn the AND-joined processed_query into a safely-quoted FTS5
+        MATCH expression.
+
+        _process_search_query() only allows word characters, whitespace,
+        ``-``, ``'``, ``"`` and ``.`` through, so raw user input can still
+        contain FTS5 syntax characters (double quotes, hyphens, and the
+        bare keywords AND/OR/NOT) that would otherwise be parsed as query
+        operators rather than literal text. Wrapping every term in double
+        quotes (escaping any embedded quotes) makes each term a literal
+        FTS5 string/phrase token, so this is the only place user text is
+        turned into a MATCH expression.
+        """
+        if not processed_query:
+            return ""
+
+        terms = []
+        for token in processed_query.split(" AND "):
+            token = token.strip()
+            if not token:
+                continue
+            is_prefix = token.endswith("*")
+            literal = token[:-1] if is_prefix else token
+            literal = literal.replace('"', '""')
+            if not literal:
+                continue
+            quoted = f'"{literal}"'
+            if is_prefix:
+                quoted += "*"
+            terms.append(quoted)
+
+        return " AND ".join(terms)
+
     def _build_search_query(
         self,
         processed_query: str,
@@ -129,12 +162,17 @@ class TextSearchService:
         limit: int,
         offset: int,
     ) -> tuple[str, list[Any]]:
-        """Build the complete search SQL query."""
-        params = []
+        """Build the complete search SQL query.
 
-        # Base query with FTS5 search
-        base_query = """
-            SELECT DISTINCT
+        When there's a text query, this searches the photos_fts FTS5 index
+        (filename/folder/camera_make/camera_model) instead of scanning the
+        photos/exif tables with leading-wildcard LIKE, which can't use an
+        index and forces a full table scan on every search.
+        """
+        params: list[Any] = []
+        use_fts = bool(processed_query)
+
+        columns = """
                 p.id,
                 p.path,
                 p.folder,
@@ -147,35 +185,33 @@ class TextSearchService:
                 e.shot_dt,
                 e.camera_make,
                 e.camera_model
+        """
+
+        if use_fts:
+            base_query = f"""
+            SELECT DISTINCT
+                {columns}
+            FROM photos_fts
+            JOIN photos p ON p.id = photos_fts.rowid
+            LEFT JOIN thumbnails t ON p.id = t.file_id
+            LEFT JOIN exif e ON p.id = e.file_id
+            """
+        else:
+            base_query = f"""
+            SELECT DISTINCT
+                {columns}
             FROM photos p
             LEFT JOIN thumbnails t ON p.id = t.file_id
             LEFT JOIN exif e ON p.id = e.file_id
-        """
+            """
 
         # Build WHERE conditions
         where_conditions = []
 
-        # Text search conditions
-        if processed_query:
-            text_conditions = []
-
-            # Search in filename
-            text_conditions.append("p.filename LIKE ?")
-            params.append(f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%")
-
-            # Search in folder path
-            text_conditions.append("p.folder LIKE ?")
-            params.append(f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%")
-
-            # Search in EXIF data
-            text_conditions.append("(e.camera_make LIKE ? OR e.camera_model LIKE ?)")
-            search_pattern = (
-                f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
-            )
-            params.extend([search_pattern, search_pattern])
-
-            # Combine text conditions with OR
-            where_conditions.append(f"({' OR '.join(text_conditions)})")
+        # Text search condition - matches against the FTS5 index
+        if use_fts:
+            where_conditions.append("photos_fts MATCH ?")
+            params.append(self._build_fts_match_query(processed_query))
 
         # Folder filter
         if folders:
@@ -216,9 +252,13 @@ class TextSearchService:
         else:
             full_query = base_query
 
-        # Add ordering and pagination
-        full_query += """
-            ORDER BY p.modified_ts DESC
+        # Rank by FTS5 relevance (bm25 - lower is a better match) when doing
+        # a text search; otherwise fall back to most-recently-modified.
+        order_clause = (
+            "ORDER BY bm25(photos_fts)" if use_fts else "ORDER BY p.modified_ts DESC"
+        )
+        full_query += f"""
+            {order_clause}
             LIMIT ? OFFSET ?
         """
 
@@ -234,33 +274,29 @@ class TextSearchService:
         file_types: list[str] | None,
     ) -> tuple[str, list[Any]]:
         """Build count query for pagination."""
-        params = []
+        params: list[Any] = []
+        use_fts = bool(processed_query)
 
-        base_query = """
-            SELECT COUNT(DISTINCT p.id)
-            FROM photos p
-            LEFT JOIN exif e ON p.id = e.file_id
-        """
+        if use_fts:
+            base_query = """
+                SELECT COUNT(DISTINCT p.id)
+                FROM photos_fts
+                JOIN photos p ON p.id = photos_fts.rowid
+                LEFT JOIN exif e ON p.id = e.file_id
+            """
+        else:
+            base_query = """
+                SELECT COUNT(DISTINCT p.id)
+                FROM photos p
+                LEFT JOIN exif e ON p.id = e.file_id
+            """
 
         where_conditions = []
 
-        # Text search conditions (same as main query)
-        if processed_query:
-            text_conditions = []
-
-            text_conditions.append("p.filename LIKE ?")
-            params.append(f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%")
-
-            text_conditions.append("p.folder LIKE ?")
-            params.append(f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%")
-
-            text_conditions.append("(e.camera_make LIKE ? OR e.camera_model LIKE ?)")
-            search_pattern = (
-                f"%{processed_query.replace('*', '').replace(' AND ', ' ')}%"
-            )
-            params.extend([search_pattern, search_pattern])
-
-            where_conditions.append(f"({' OR '.join(text_conditions)})")
+        # Text search condition (same as main query)
+        if use_fts:
+            where_conditions.append("photos_fts MATCH ?")
+            params.append(self._build_fts_match_query(processed_query))
 
         # Apply same filters as main query
         if folders:

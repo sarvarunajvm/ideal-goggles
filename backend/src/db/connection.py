@@ -129,8 +129,54 @@ CREATE INDEX IF NOT EXISTS idx_embeddings_model ON embeddings(embedding_model);
 CREATE INDEX IF NOT EXISTS idx_people_active ON people(active);
 CREATE INDEX IF NOT EXISTS idx_people_name ON people(name);
 
+-- Full-text search index (see migration 002_fts5_search.sql for rationale).
+CREATE VIRTUAL TABLE IF NOT EXISTS photos_fts USING fts5(
+  filename,
+  folder,
+  camera_make,
+  camera_model,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS photos_fts_ai AFTER INSERT ON photos BEGIN
+  INSERT INTO photos_fts (rowid, filename, folder, camera_make, camera_model)
+  VALUES (
+    new.id,
+    new.filename,
+    new.folder,
+    (SELECT camera_make FROM exif WHERE file_id = new.id),
+    (SELECT camera_model FROM exif WHERE file_id = new.id)
+  );
+END;
+
+CREATE TRIGGER IF NOT EXISTS photos_fts_ad AFTER DELETE ON photos BEGIN
+  DELETE FROM photos_fts WHERE rowid = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS photos_fts_au AFTER UPDATE OF filename, folder ON photos BEGIN
+  UPDATE photos_fts SET filename = new.filename, folder = new.folder WHERE rowid = new.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS exif_fts_ai AFTER INSERT ON exif BEGIN
+  UPDATE photos_fts
+  SET camera_make = new.camera_make, camera_model = new.camera_model
+  WHERE rowid = new.file_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS exif_fts_au AFTER UPDATE OF camera_make, camera_model ON exif BEGIN
+  UPDATE photos_fts
+  SET camera_make = new.camera_make, camera_model = new.camera_model
+  WHERE rowid = new.file_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS exif_fts_ad AFTER DELETE ON exif BEGIN
+  UPDATE photos_fts
+  SET camera_make = NULL, camera_model = NULL
+  WHERE rowid = old.file_id;
+END;
+
 -- Schema version tracking
-INSERT INTO settings (key, value, updated_at) VALUES ('schema_version', '1', datetime('now'));
+INSERT INTO settings (key, value, updated_at) VALUES ('schema_version', '2', datetime('now'));
 INSERT INTO settings (key, value, updated_at) VALUES ('index_version', '1', datetime('now'));
 
 COMMIT;

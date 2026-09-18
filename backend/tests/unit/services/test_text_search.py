@@ -280,7 +280,7 @@ class TestTextSearchService:
         assert len(stats) == 0
 
     def test_build_search_query_text_conditions(self, text_search_service):
-        """Test building search query with text conditions."""
+        """Test building search query with text conditions uses the FTS5 index."""
         service, _ = text_search_service
 
         query, params = service._build_search_query(
@@ -292,13 +292,37 @@ class TestTextSearchService:
             offset=0,
         )
 
-        # Should contain text search conditions
-        assert "p.filename LIKE ?" in query
-        assert "p.folder LIKE ?" in query
-        assert "(e.camera_make LIKE ? OR e.camera_model LIKE ?)" in query
+        # Should search the FTS5 virtual table, not LIKE-scan photos/exif
+        assert "photos_fts" in query
+        assert "photos_fts MATCH ?" in query
+        assert "ORDER BY bm25(photos_fts)" in query
+        assert "p.filename LIKE ?" not in query
 
-        # Should have appropriate parameters
-        assert "%vacation%" in params
+        # The MATCH parameter should be a safely quoted FTS5 expression,
+        # not a raw '%...%' LIKE pattern.
+        assert '"vacation"*' in params
+        assert not any("%vacation%" in p for p in params if isinstance(p, str))
+
+    def test_build_fts_match_query_quotes_terms(self, text_search_service):
+        """Terms are quoted so FTS5 operators/keywords in input are treated as literal text."""
+        service, _ = text_search_service
+
+        match_query = service._build_fts_match_query("vacation* AND photos*")
+        assert match_query == '"vacation"* AND "photos"*'
+
+        # Reserved FTS5 keywords used as search terms must not be
+        # interpreted as boolean operators.
+        match_query = service._build_fts_match_query("OR AND NOT")
+        assert match_query == '"OR" AND "NOT"'
+
+    def test_build_fts_match_query_escapes_embedded_quotes(self, text_search_service):
+        """Embedded double quotes must be escaped, not break out of the quoted term."""
+        service, _ = text_search_service
+
+        match_query = service._build_fts_match_query('say "hi"*')
+        # The literal quote inside the term is doubled per FTS5 string syntax,
+        # and stays inside the surrounding quotes rather than terminating them.
+        assert match_query == '"say ""hi"""*'
 
     def test_build_search_query_no_conditions(self, text_search_service):
         """Test building search query with no search conditions."""
