@@ -11,7 +11,7 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.141.1",
+    "fastapi>=0.146.0",
     "uvicorn[standard]>=0.52.4",
     "sqlalchemy>=2.0.52",
     "alembic>=1.19.1",
